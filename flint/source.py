@@ -2,18 +2,25 @@ import itertools
 import os
 import shlex
 
-class F90Source(object):
+from flint.program import Program
+
+
+class Source(object):
     def __init__(self):
         self.project = None     # Link to parent
         self.path = None
         self.abspath = None     # Use property to get root from project
 
+        self.programs = []
         self.modules = []
         self.subroutines = []
         self.functions = []
 
-    def parse(self, path):
+        # Temporary debug variable
+        self.lines = None
 
+    def parse(self, path):
+        # Resolve filepath
         if os.path.isabs(path):
             self.abspath = path
 
@@ -38,10 +45,29 @@ class F90Source(object):
             f90lex = shlex.shlex(srcfile)
             f90lex.commenters = '!'
             f90lex.whitespace = ' \t'   # TODO check this
-
             tokens = list(f90lex)
 
-        lines = [list(g) for k,g in itertools.groupby(tokens, lambda x:x == '\n')
+        # Maybe do the lowercase check later...
+        lines = [list(gg.lower() for gg in g if not gg[0] in '\'"')
+                 for k, g in itertools.groupby(tokens, lambda x: x == '\n')
                  if not k]
 
-        print(lines)
+        self.lines = lines
+
+        ilines = iter(lines)
+        for line in ilines:
+            if line[0] == 'program':
+                # Testing
+                print(' '.join(line))
+
+                if len(line) == 2:
+                    # TODO: validate label
+                    prog_name = line[1]
+
+                prog = Program(prog_name)
+                prog.parse(lines)
+
+                self.programs.append(prog)
+            else:
+                # Unresolved line
+                print('XXX: {}'.format(' '.join(line)))

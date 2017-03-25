@@ -1,7 +1,8 @@
 import os
 import sys
 
-from flint.f90src import F90Source
+from flint.source import Source
+
 
 class Project(object):
 
@@ -15,7 +16,9 @@ class Project(object):
             fpath = os.path.join(root_path, fname)
 
             if os.path.isfile(fpath):
-                f90file = F90Source(fpath)
+                f90file = Source()
+                f90file.parse(fpath)
+
                 self.files.append(f90file)
 
             elif os.path.isdir(fpath):
