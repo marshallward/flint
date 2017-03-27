@@ -2,6 +2,7 @@ import itertools
 import os
 import shlex
 
+from flint.fortlines import FortLines
 from flint.program import Program
 
 
@@ -54,7 +55,8 @@ class Source(object):
 
         self.lines = lines
 
-        ilines = iter(lines)
+        #ilines = iter(lines)
+        ilines = FortLines(lines)
         for line in ilines:
             if line[0] == 'program':
                 # Testing
