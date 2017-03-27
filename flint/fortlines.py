@@ -12,4 +12,13 @@ class FortLines(object):
         return self.__next__()
 
     def __next__(self):
-        return next(self.lines)
+        line = next(self.lines)
+
+        # Join extended lines
+        while (line[-1] == '&'):
+            line = line[:-1] + next(self.lines)
+
+        # TODO: Combine tokens incorrectly split by shlex
+        # (Or, you know, use a better tokenizer)
+
+        return line

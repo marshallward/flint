@@ -11,11 +11,6 @@ class Program(object):
 
     def parse(self, lines):
         for line in lines:
-            # Join extended lines
-            # (TODO: Roll this into a lines iterator)
-            while (line[-1] == '&'):
-                line = line[:-1] + next(lines)
-
             # Execution constructs
             if line[0] in CONSTRUCTS:
                 print(' '.join(line))
@@ -36,6 +31,11 @@ class Program(object):
 
     def parse_construct(self, ctype, lines):
         for line in lines:
+            # Execution constructs
+            if line[0] in CONSTRUCTS:
+                print(' '.join(line))
+                self.parse_construct(line[0], lines)
+
             if line[0].startswith('end'):
                 if (line[0] == 'end' and line[1] == ctype or
                         line[0] == 'end' + ctype):
