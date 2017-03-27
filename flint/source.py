@@ -55,7 +55,6 @@ class Source(object):
 
         self.lines = lines
 
-        #ilines = iter(lines)
         ilines = FortLines(lines)
         for line in ilines:
             if line[0] == 'program':
