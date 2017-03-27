@@ -1,5 +1,3 @@
-CONSTRUCTS = ['do', 'if']
-
 class Program(object):
 
     def __init__(self, name):
@@ -12,19 +10,18 @@ class Program(object):
     def parse(self, lines):
         for line in lines:
             # Execution constructs
-            if line[0] in CONSTRUCTS:
-                print(' '.join(line))
+            if line[0] == 'do' or (line[0], line[-1] == 'if', 'then'):
+                print('*: {} '.format(' '.join(line)))
                 self.parse_construct(line[0], lines)
 
             # Termination
             elif line[0].startswith('end'):
                 if (line[0] == 'end' and line[1] == 'program' or
                         line[0] == 'endprogram'):
-                    print(' '.join(line))
-                    break
+                    print('*: {} '.format(' '.join(line)))
                 else:
                     # Should never happen?
-                    print('X: {}'.format(line))
+                    print('X1: {}'.format(line))
             else:
                 # Unhandled
                 print('P: {}'.format(line))
@@ -32,18 +29,17 @@ class Program(object):
     def parse_construct(self, ctype, lines):
         for line in lines:
             # Execution constructs
-            if line[0] in CONSTRUCTS:
-                print(' '.join(line))
+            if line[0] == 'do' or (line[0], line[-1] == 'if', 'then'):
+                print('*: {} '.format(' '.join(line)))
                 self.parse_construct(line[0], lines)
 
-            if line[0].startswith('end'):
+            elif line[0].startswith('end'):
                 if (line[0] == 'end' and line[1] == ctype or
                         line[0] == 'end' + ctype):
-                    print(' '.join(line))
-                    break
+                    print('*: {} '.format(' '.join(line)))
                 else:
                     # Should never happen?
-                    print('X: {}'.format(line))
+                    print('X2: {}'.format(line))
             else:
                 # Unhandled
                 print('C: {}'.format(line))
