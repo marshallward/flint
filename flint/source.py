@@ -48,7 +48,7 @@ class Source(object):
             tokens = list(f90lex)
 
         # Maybe do the lowercase check later...
-        lines = [list(gg.lower() for gg in g if not gg[0] in '\'"')
+        lines = [list(gg.lower() if not gg[0] in '\'"' else gg for gg in g)
                  for k, g in itertools.groupby(tokens, lambda x: x == '\n')
                  if not k]
 
@@ -65,7 +65,7 @@ class Source(object):
                     prog_name = line[1]
 
                 prog = Program(prog_name)
-                prog.parse(lines)
+                prog.parse(ilines)
 
                 self.programs.append(prog)
             else:
