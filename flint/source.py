@@ -12,16 +12,14 @@ class Source(object):
         self.path = None
         self.abspath = None     # Use property to get root from project
 
+        # Source attributes
         self.programs = []
         self.modules = []
         self.subroutines = []
         self.functions = []
 
-        # Temporary debug variable
-        self.lines = None
-
     def parse(self, path):
-        # Resolve filepath
+        # Resolve filepaths
         if os.path.isabs(path):
             self.abspath = path
 
@@ -44,18 +42,23 @@ class Source(object):
         # Create tokenizer
         with open(self.path) as srcfile:
             f90lex = shlex.shlex(srcfile)
-            f90lex.commenters = '!'
+            f90lex.commenters = ''
             f90lex.whitespace = ' \t'   # TODO check this
             tokens = list(f90lex)
 
         # Maybe do the lowercase check later...
-        lines = [list(gg.lower() if not gg[0] in '\'"' else gg for gg in g)
-                 for k, g in itertools.groupby(tokens, lambda x: x == '\n')
-                 if not k]
+        raw_lines = [list(gg.lower() if not gg[0] in '\'"' else gg for gg in g)
+                     for k, g in itertools.groupby(tokens, lambda x: x == '\n')
+                     if not k]
 
-        self.lines = lines
+        # Strip comments
+        decomment_lines = [l[:l.index('!')] if '!' in l else l
+                           for l in raw_lines]
 
-        ilines = FortLines(lines)
+        # Remove empty lines
+        src_lines = [l for l in decomment_lines if l]
+
+        ilines = FortLines(src_lines)
         for line in ilines:
             if line[0] == 'program':
                 # Testing
