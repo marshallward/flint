@@ -41,7 +41,7 @@ class Source(object):
 
         # Create tokenizer
         with open(self.path) as srcfile:
-            f90lex = shlex.shlex(srcfile)
+            f90lex = shlex.shlex(srcfile, punctuation_chars='*/=<>:')
             f90lex.commenters = ''
             f90lex.whitespace = ' \t'   # TODO check this
             tokens = list(f90lex)
@@ -58,15 +58,17 @@ class Source(object):
         # Remove empty lines
         src_lines = [l for l in decomment_lines if l]
 
+        for line in src_lines:
+            print(line)
+
         ilines = FortLines(src_lines)
         for line in ilines:
             if line[0] == 'program':
                 # Testing
                 print(' '.join(line))
 
-                if len(line) == 2:
-                    # TODO: validate label
-                    prog_name = line[1]
+                # TODO: Validate prog_name (need to deal with whitespace)
+                prog_name = None
 
                 prog = Program(prog_name)
                 prog.parse(ilines)
