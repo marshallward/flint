@@ -43,7 +43,11 @@ class Source(object):
         with open(self.path) as srcfile:
             f90lex = shlex.shlex(srcfile, punctuation_chars='*/=<>:')
             f90lex.commenters = ''
-            f90lex.whitespace = ' \t'   # TODO check this
+            f90lex.whitespace = ' \t'   # TODO tokenize whitespace
+            # shlex mangles wordchars when punctuation_chars is used...
+            t = f90lex.wordchars.maketrans(dict.fromkeys('~-.?'))
+            f90lex.wordchars = f90lex.wordchars.translate(t)
+
             tokens = list(f90lex)
 
         # Maybe do the lowercase check later...
