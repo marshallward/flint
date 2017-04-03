@@ -1,6 +1,7 @@
-import itertools
+from itertools import groupby
 import os
 import shlex
+import sys
 
 from flint.fortlines import FortLines
 from flint.program import Program
@@ -17,6 +18,10 @@ class Source(object):
         self.modules = []
         self.subroutines = []
         self.functions = []
+
+        # Diagnostics
+        self.linewidths = []
+        self.whitespace = []
 
     def parse(self, path):
         # Resolve filepaths
@@ -43,31 +48,71 @@ class Source(object):
         with open(self.path) as srcfile:
             f90lex = shlex.shlex(srcfile, punctuation_chars='*/=<>:')
             f90lex.commenters = ''
-            f90lex.whitespace = ' \t'   # TODO tokenize whitespace
+            f90lex.whitespace = ''
+
             # shlex mangles wordchars when punctuation_chars is used...
             t = f90lex.wordchars.maketrans(dict.fromkeys('~-.?'))
             f90lex.wordchars = f90lex.wordchars.translate(t)
 
             tokens = list(f90lex)
 
-        # Maybe do the lowercase check later...
-        raw_lines = [list(gg.lower() if not gg[0] in '\'"' else gg for gg in g)
-                     for k, g in itertools.groupby(tokens, lambda x: x == '\n')
-                     if not k]
+        # Tokenized lines
+        # NOTE: Try to do this with list comprehensions
+        raw_lines = []
+        start = end = 0
+        while True:
+            try:
+                end = start + tokens[start:].index('\n')
+                raw_lines.append(tokens[start:end])
+                start = end + 1
+            except ValueError:
+                break
 
-        # Strip comments
-        decomment_lines = [l[:l.index('!')] if '!' in l else l
-                           for l in raw_lines]
+        # Line cleanup
 
-        # Remove empty lines
-        src_lines = [l for l in decomment_lines if l]
+        src_lines = []
+        for line in raw_lines:
+            # Record line widths
+            width = len(''.join(line))
+            self.linewidths.append(width)
+
+            # Strip comments
+            if '!' in line:
+                line = line[:line.index('!')]
+                commented = True
+            else:
+                commented = False
+
+            # Merge unhandled tokens
+            # TODO  m(-_-)m
+            #   1. Operators
+            #   2. Boolean values
+            #   3. Floating point values
+
+            # Track whitespace between tokens
+            # TODO
+            #if line == [] or line[0] != ' ':
+            #    ws_count = [0]
+            #else:
+            #    ws_count = []
+
+            #ws_count.extend([len(list(g))
+            #                 for k, g in groupby(line, lambda x: x == ' ')
+            #                 if k])
+
+            #self.whitespace.append(ws_count)
+
+            # Remove whitespace
+            tokenized_line = [tok for tok in line if not tok == ' ']
+            if tokenized_line:
+                src_lines.append(tokenized_line)
 
         for line in src_lines:
             print(line)
 
         ilines = FortLines(src_lines)
         for line in ilines:
-            if line[0] == 'program':
+            if line[0].lower() == 'program':
                 # Testing
                 print(' '.join(line))
 
