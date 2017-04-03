@@ -50,14 +50,14 @@ class Source(object):
             f90lex.commenters = ''
             f90lex.whitespace = ''
 
-            # shlex mangles wordchars when punctuation_chars is used...
+            # When punctuation_chars is set, certain tokens are added to
+            # wordchars.  Here we undo this change and remove them.
             t = f90lex.wordchars.maketrans(dict.fromkeys('~-.?'))
             f90lex.wordchars = f90lex.wordchars.translate(t)
 
             tokens = list(f90lex)
 
         # Tokenized lines
-        # NOTE: Try to do this with list comprehensions
         raw_lines = []
         start = end = 0
         while True:
@@ -69,9 +69,9 @@ class Source(object):
                 break
 
         # Line cleanup
-
         src_lines = []
         for line in raw_lines:
+
             # Record line widths
             width = len(''.join(line))
             self.linewidths.append(width)
