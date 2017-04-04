@@ -22,6 +22,7 @@ class Source(object):
         # Diagnostics
         self.linewidths = []
         self.whitespace = []
+        self.commented = []
 
     def parse(self, path):
         # Resolve filepaths
@@ -79,9 +80,9 @@ class Source(object):
             # Strip comments
             if '!' in line:
                 line = line[:line.index('!')]
-                commented = True
+                self.commented.append(True)
             else:
-                commented = False
+                self.commented.append(False)
 
             # Merge unhandled tokens
             # TODO  m(-_-)m
@@ -90,25 +91,23 @@ class Source(object):
             #   3. Floating point values
 
             # Track whitespace between tokens
-            # TODO
-            #if line == [] or line[0] != ' ':
-            #    ws_count = [0]
-            #else:
-            #    ws_count = []
+            # TODO: Move first whitespace to `self.indent`?
+            ws = []
+            ws_count = 0
+            for tok in line:
+                if tok == ' ':
+                    ws_count += 1
+                else:
+                    ws.append(ws_count)
+                    ws_count = 0
 
-            #ws_count.extend([len(list(g))
-            #                 for k, g in groupby(line, lambda x: x == ' ')
-            #                 if k])
-
-            #self.whitespace.append(ws_count)
+            ws.append(ws_count)
+            self.whitespace.append(ws)
 
             # Remove whitespace
             tokenized_line = [tok for tok in line if not tok == ' ']
             if tokenized_line:
                 src_lines.append(tokenized_line)
-
-        for line in src_lines:
-            print(line)
 
         ilines = FortLines(src_lines)
         for line in ilines:
