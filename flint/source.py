@@ -1,7 +1,5 @@
-from itertools import groupby
 import os
 import shlex
-import sys
 
 from flint.fortlines import FortLines
 from flint.program import Program
@@ -104,24 +102,43 @@ class Source(object):
             ws.append(ws_count)
             self.whitespace.append(ws)
 
+            # TODO: Check token case consistenc
+            #       For now just convert to lowercase
+            line = [tok.lower() for tok in line if tok[0] not in '\'"']
+
             # Remove whitespace
             tokenized_line = [tok for tok in line if not tok == ' ']
             if tokenized_line:
                 src_lines.append(tokenized_line)
 
-        ilines = FortLines(src_lines)
-        for line in ilines:
-            if line[0].lower() == 'program':
+        flines = FortLines(src_lines)
+
+        # R202
+        program_units = {
+            'program': Program,     # R1101
+            'function': None,       # R1229 (R203)
+            'subroutine': None,     # R1235 (R203)
+            'module': None,         # R1104
+            'submodule': None,      # R1116
+            'block': None,          # R1120
+        }
+
+        for line in flines:
+            if line[0] in program_units:
                 # Testing
-                print(' '.join(line))
+                print('{}: {}'.format(line[0][0].upper(), ' '.join(line)))
 
-                # TODO: Validate prog_name (need to deal with whitespace)
-                prog_name = None
+                if len(line) > 1:
+                    unit_name = line[1]
+                else:
+                    unit_name = None
 
-                prog = Program(prog_name)
-                prog.parse(ilines)
+                unit = program_units[line[0]](unit_name)
+                unit.parse(flines)
 
-                self.programs.append(prog)
+                # How to sort?
+                self.programs.append(unit)
+
             else:
                 # Unresolved line
-                print('XXX: {}'.format(' '.join(line)))
+                print('X: {}'.format(' '.join(line)))

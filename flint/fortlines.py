@@ -31,7 +31,7 @@ class FortLines(object):
 
         # Join extended lines
         # TODO: 255-limit line check
-        while (line[-1] == '&'):
+        while line[-1] == '&':
             line = line[:-1] + next(self.lines)
 
         return line
