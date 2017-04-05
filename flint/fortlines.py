@@ -1,5 +1,5 @@
 class FortLines(object):
-    """Fortran source line iterator"""
+    """Fortran source line iterator."""
 
     def __init__(self, lines):
         self.lines = iter(lines)

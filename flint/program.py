@@ -1,5 +1,6 @@
 from flint.unit import Unit
 
+
 class Program(Unit):
 
     def __init__(self, name):
