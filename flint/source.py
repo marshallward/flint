@@ -6,16 +6,24 @@ from flint.program import Program
 
 
 class Source(object):
+    # R202
+    program_units = {
+        'program': Program,     # R1101
+        'function': None,       # R1229 (R203)
+        'subroutine': None,     # R1235 (R203)
+        'module': None,         # R1104
+        'submodule': None,      # R1116
+        'block': None,          # R1120
+    }
+
     def __init__(self):
+        # Filepath
         self.project = None     # Link to parent
         self.path = None
-        self.abspath = None     # Use property to get root from project
+        self.abspath = None     # TODO: Use a property to get root from project
 
-        # Source attributes
-        self.programs = []
-        self.modules = []
-        self.subroutines = []
-        self.functions = []
+        # Program units
+        self.units = []
 
         # Diagnostics
         self.linewidths = []
@@ -51,8 +59,8 @@ class Source(object):
 
             # When punctuation_chars is set, certain tokens are added to
             # wordchars.  Here we undo this change and remove them.
-            t = f90lex.wordchars.maketrans(dict.fromkeys('~-.?'))
-            f90lex.wordchars = f90lex.wordchars.translate(t)
+            wcmap = f90lex.wordchars.maketrans(dict.fromkeys('~-.?'))
+            f90lex.wordchars = f90lex.wordchars.translate(wcmap)
 
             tokens = list(f90lex)
 
@@ -90,17 +98,17 @@ class Source(object):
 
             # Track whitespace between tokens
             # TODO: Move first whitespace to `self.indent`?
-            ws = []
+            line_ws = []
             ws_count = 0
             for tok in line:
                 if tok == ' ':
                     ws_count += 1
                 else:
-                    ws.append(ws_count)
+                    line_ws.append(ws_count)
                     ws_count = 0
 
-            ws.append(ws_count)
-            self.whitespace.append(ws)
+            line_ws.append(ws_count)
+            self.whitespace.append(line_ws)
 
             # TODO: Check token case consistenc
             #       For now just convert to lowercase
@@ -113,31 +121,22 @@ class Source(object):
 
         flines = FortLines(src_lines)
 
-        # R202
-        program_units = {
-            'program': Program,     # R1101
-            'function': None,       # R1229 (R203)
-            'subroutine': None,     # R1235 (R203)
-            'module': None,         # R1104
-            'submodule': None,      # R1116
-            'block': None,          # R1120
-        }
-
         for line in flines:
-            if line[0] in program_units:
+            if line[0] in Source.program_units:
                 # Testing
                 print('{}: {}'.format(line[0][0].upper(), ' '.join(line)))
 
-                if len(line) > 1:
-                    unit_name = line[1]
-                else:
-                    unit_name = None
+                utype = line[0]
+                Unit = Source.program_units[utype]
 
-                unit = program_units[line[0]](unit_name)
+                # Get unit name if present
+                uname = Unit.parse_name(line)
+
+                unit = Unit(uname)
                 unit.parse(flines)
 
-                # How to sort?
-                self.programs.append(unit)
+                # How to select container?
+                self.units.append(unit)
 
             else:
                 # Unresolved line

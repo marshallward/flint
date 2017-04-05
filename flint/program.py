@@ -7,6 +7,18 @@ class Program(object):
         self.functions = []
         self.variables = []
 
+    @staticmethod
+    def parse_name(line):
+        assert(len(line) <= 2)
+        assert(line[0] == 'program')
+
+        if len(line) == 2:
+            name = line[1]
+        else:
+            name = None
+
+        return name
+
     def parse(self, lines):
         for line in lines:
             # Execution constructs
@@ -39,7 +51,7 @@ class Program(object):
                     print('*: {} '.format(' '.join(line)))
                 else:
                     # Should never happen?
-                    print('X2: {}'.format(line))
+                    print('X: {}'.format(line))
             else:
                 # Unhandled
                 print('C: {}'.format(line))
