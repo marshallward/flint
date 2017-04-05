@@ -2,6 +2,7 @@ import os
 import shlex
 
 from flint.fortlines import FortLines
+from flint.module import Module
 from flint.program import Program
 
 
@@ -11,7 +12,7 @@ class Source(object):
         'program': Program,     # R1101
         'function': None,       # R1229 (R203)
         'subroutine': None,     # R1235 (R203)
-        'module': None,         # R1104
+        'module': Module,       # R1104
         'submodule': None,      # R1116
         'block': None,          # R1120
     }
