@@ -1,20 +1,20 @@
 class Construct(object):
 
     construct_kw = [
-            'associate',
-            'block',
-            'critical',
-            'do',
-            'if',
-            'forall',
-            'where',
+        'associate',
+        'block',
+        'critical',
+        'do',
+        'if',
+        'forall',
+        'where',
     ]
 
     construct_kw_pairs = [
-            ('change', 'team'),
-            ('select', 'case'),
-            ('select', 'rank'),
-            ('select', 'type'),
+        ('change', 'team'),
+        ('select', 'case'),
+        ('select', 'rank'),
+        ('select', 'type'),
     ]
 
     def __init__(self):
@@ -49,4 +49,5 @@ class Construct(object):
                 print('C: {}'.format(' '.join(line)))
 
     def get_block_type(self, line):
-
+        # TODO
+        pass

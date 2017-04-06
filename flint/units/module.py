@@ -1,4 +1,4 @@
-from flint.unit import Unit
+from flint.units.unit import Unit
 
 
 class Module(Unit):

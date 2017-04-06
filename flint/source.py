@@ -2,8 +2,8 @@ import os
 import shlex
 
 from flint.fortlines import FortLines
-from flint.module import Module
-from flint.program import Program
+from flint.units.module import Module
+from flint.units.program import Program
 
 
 logical_kw = ['not', 'and', 'or', 'eqv', 'neqv']
@@ -35,7 +35,6 @@ class Source(object):
         # Diagnostics
         self.linewidths = []
         self.whitespace = []
-        self.commented = []
 
     def parse(self, path):
         # Resolve filepaths
@@ -93,54 +92,9 @@ class Source(object):
             # Strip comments
             if '!' in line:
                 line = line[:line.index('!')]
-                self.commented.append(True)
-            else:
-                self.commented.append(False)
 
             # Merge unhandled tokens
-            # TODO  m(-_-)m
-            #   1. Operators
-            #   2. Boolean values
-            #   3. Floating point values
-            newline = []
-            tokens = iter(line)
-            for tok in tokens:
-                # Floating point re-tokenizer
-                if tok.isdigit():
-                    # TODO leading sign (hard!)
-                    # TODO kind (e.g. 1_8)
-                    value = tok
-                    try:
-                        tok = next(tokens)
-                        if tok == '.':
-                            value += tok
-                            tok = next(tokens)
-                            if tok.isdigit():
-                                value += tok
-                                tok = next(tokens)
-                    except StopIteration:
-                        tok = None
-
-                    newline.append(value)
-                    if tok is not None:
-                        newline.append(tok)
-
-                elif tok == '.':
-                    value = tok
-                    tok = next(tokens)
-                    assert tok.lower() in (logical_kw + relational_kw
-                                           + logical_value)
-                    value += tok
-                    tok = next(tokens)
-                    assert tok == '.'
-                    value += tok
-                    # TODO: logical values support kind (_) params!
-
-                    newline.append(value)
-                else:
-                    newline.append(tok)
-
-            line = newline
+            line = retokenize_line(line)
 
             # Track whitespace between tokens
             # TODO: Move first whitespace to `self.indent`?
@@ -174,10 +128,7 @@ class Source(object):
                 print('{}: {}'.format(line[0][0].upper(), ' '.join(line)))
 
                 utype = line[0]
-                Unit = Source.program_units[utype]
-
-                # Get unit name if present
-                unit = Unit()
+                unit = Source.program_units[utype]()
                 unit.parse(flines)
 
                 # How to select container?
@@ -186,3 +137,59 @@ class Source(object):
             else:
                 # Unresolved line
                 print('X: {}'.format(' '.join(line)))
+
+
+def retokenize_line(line):
+    """Retokenize line to include literal numbers and operators.
+
+    The shlex tokenizer resolves most Fortran tokens, but fails to gather
+    tokens associated with numbers and dot-operators.
+
+    For example, the number -2.4e3 is tokenized into the following:
+    >>> ['1', '2', '.', '4', 'e', '3']
+
+    Similarly, the .and. operator is tokenzed into the following:
+    >>> ['.', 'and', '.']
+
+    This is a first attempt to resolve such tokens, although it is still a
+    work in progress.
+    """
+    newline = []
+    tokens = iter(line)
+    for tok in tokens:
+        # Floating point re-tokenizer
+        if tok.isdigit():
+            # TODO leading sign (hard!)
+            # TODO kind (e.g. 1_8)
+            value = tok
+            try:
+                tok = next(tokens)
+                if tok == '.':
+                    value += tok
+                    tok = next(tokens)
+                    if tok.isdigit():
+                        value += tok
+                        tok = next(tokens)
+            except StopIteration:
+                tok = None
+
+            newline.append(value)
+            if tok is not None:
+                newline.append(tok)
+
+        elif tok == '.':
+            value = tok
+            tok = next(tokens)
+            assert tok.lower() in (logical_kw + relational_kw
+                                   + logical_value)
+            value += tok
+            tok = next(tokens)
+            assert tok == '.'
+            value += tok
+            # TODO: logical values support kind (_) params!
+
+            newline.append(value)
+        else:
+            newline.append(tok)
+
+    return newline

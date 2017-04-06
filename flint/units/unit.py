@@ -31,19 +31,19 @@ class Unit(object):
         self.functions = []
         self.variables = []
 
-    def parse_name(self, line):
-        """Parse the name of the program unit, if present.
-
-        Each program unit has a different header format, so this method must be
-        overridden by each subclass.
-        """
-        raise NotImplementedError
-
     def parse(self, lines):
         """Parse the lines of a program unit.
 
         Program units are generally very similar, but we leave it undefined
         here due to some slight differences.
+        """
+        raise NotImplementedError
+
+    def parse_name(self, line):
+        """Parse the name of the program unit, if present.
+
+        Each program unit has a different header format, so this method must be
+        overridden by each subclass.
         """
         raise NotImplementedError
 
@@ -124,7 +124,6 @@ class Unit(object):
                     # Should never happen?
                     print('XXX: {}'.format(' '.join(line)))
             elif line[0] == 'contains':
-                print('contains!')
                 break
             else:
                 # Unhandled
@@ -151,7 +150,6 @@ class Unit(object):
 
     def parse_subprogram(self, lines):
         line = lines.current_line
-        print('contains??')
 
         # Replace 'program'...
         self.parse_construct('program', lines)
