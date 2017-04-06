@@ -56,6 +56,7 @@ class Unit(object):
         self.parse_name(lines.current_line)
         self.parse_specification(lines)
         self.parse_execution(lines)
+        self.parse_subprogram(lines)
 
     # Specification
 
@@ -95,6 +96,7 @@ class Unit(object):
         print('D: {}'.format(' '.join(line)))
 
     # Execution
+    # XXX: This is a mess...
 
     def parse_execution(self, lines):
         # First parse the line which terminated specification
@@ -132,6 +134,9 @@ class Unit(object):
                 else:
                     # Should never happen?
                     print('XXX: {}'.format(' '.join(line)))
+            elif line[0] == 'contains':
+                print('contains!')
+                break
             else:
                 # Unhandled
                 print('E: {}'.format(' '.join(line)))
@@ -154,3 +159,10 @@ class Unit(object):
             else:
                 # Unhandled
                 print('C: {}'.format(' '.join(line)))
+
+    def parse_subprogram(self, lines):
+        line = lines.current_line
+        print('contains??')
+
+        # Replace 'program'...
+        self.parse_construct('program', lines)

@@ -6,6 +6,11 @@ from flint.module import Module
 from flint.program import Program
 
 
+logical_kw = ['not', 'and', 'or', 'eqv', 'neqv']
+relational_kw = ['lt', 'le', 'gt', 'ge', 'eq', 'ne']
+logical_value = ['true', 'false']
+
+
 class Source(object):
     # R202
     program_units = {
@@ -18,8 +23,9 @@ class Source(object):
     }
 
     def __init__(self):
-        # Filepath
         self.project = None     # Link to parent
+
+        # Filepath
         self.path = None
         self.abspath = None     # TODO: Use a property to get root from project
 
@@ -96,6 +102,45 @@ class Source(object):
             #   1. Operators
             #   2. Boolean values
             #   3. Floating point values
+            newline = []
+            tokens = iter(line)
+            for tok in tokens:
+                # Floating point re-tokenizer
+                if tok.isdigit():
+                    # TODO leading sign (hard!)
+                    # TODO kind (e.g. 1_8)
+                    value = tok
+                    try:
+                        tok = next(tokens)
+                        if tok == '.':
+                            value += tok
+                            tok = next(tokens)
+                            if tok.isdigit():
+                                value += tok
+                                tok = next(tokens)
+                    except StopIteration:
+                        tok = None
+
+                    newline.append(value)
+                    if tok is not None:
+                        newline.append(tok)
+
+                elif tok == '.':
+                    value = tok
+                    tok = next(tokens)
+                    assert tok.lower() in (logical_kw + relational_kw
+                                           + logical_value)
+                    value += tok
+                    tok = next(tokens)
+                    assert tok == '.'
+                    value += tok
+                    # TODO: logical values support kind (_) params!
+
+                    newline.append(value)
+                else:
+                    newline.append(tok)
+
+            line = newline
 
             # Track whitespace between tokens
             # TODO: Move first whitespace to `self.indent`?
@@ -111,10 +156,10 @@ class Source(object):
             line_ws.append(ws_count)
             self.whitespace.append(line_ws)
 
-            # TODO: Check token case consistenc
+            # TODO: Check token case consistency
             #       For now just convert to lowercase
-            line = [tok.lower() if tok[0] not in '\'"'
-                    else tok for tok in line]
+            line = [tok.lower() if tok[0] not in '\'"' else tok
+                    for tok in line]
 
             # Remove whitespace
             tokenized_line = [tok for tok in line if not tok == ' ']
