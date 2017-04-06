@@ -131,9 +131,7 @@ class Source(object):
                 Unit = Source.program_units[utype]
 
                 # Get unit name if present
-                uname = Unit.parse_name(line)
-
-                unit = Unit(uname)
+                unit = Unit()
                 unit.parse(flines)
 
                 # How to select container?

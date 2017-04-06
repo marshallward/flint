@@ -21,8 +21,8 @@ class Unit(object):
             'entry',        # R1242 (obsolete)
     ]
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
+        self.name = None
 
         # Implicit state
         self.implicit = {}
@@ -31,8 +31,7 @@ class Unit(object):
         self.functions = []
         self.variables = []
 
-    @staticmethod
-    def parse_name(line):
+    def parse_name(self, line):
         """Parse the name of the program unit, if present.
 
         Each program unit has a different header format, so this method must be
@@ -55,7 +54,7 @@ class Unit(object):
         handling of DO and IF constructs.
         """
         # TODO: Might as well do this here, rather than a static function
-        #self.parse_name(lines.prior_line)
+        self.parse_name(lines.current_line)
 
         self.parse_specification(lines)
         self.parse_execution(lines)

@@ -3,15 +3,14 @@ from flint.unit import Unit
 
 class Program(Unit):
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self):
+        self.name = None
 
         self.modules = []
         self.functions = []
         self.variables = []
 
-    @staticmethod
-    def parse_name(line):
+    def parse_name(self, line):
         assert(len(line) <= 2)
         assert(line[0] == 'program')
 
@@ -20,4 +19,4 @@ class Program(Unit):
         else:
             name = None
 
-        return name
+        self.name = name
