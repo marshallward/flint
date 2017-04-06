@@ -54,25 +54,13 @@ class Unit(object):
         None of this has yet been implemented.  Below is just some basic
         handling of DO and IF constructs.
         """
+        # TODO: Might as well do this here, rather than a static function
+        #self.parse_name(lines.prior_line)
+
         self.parse_specification(lines)
+        self.parse_execution(lines)
 
-        for line in lines:
-            # Execution constructs
-            if line[0] == 'do' or (line[0], line[-1] == 'if', 'then'):
-                print('*: {} '.format(' '.join(line)))
-                self.parse_construct(line[0], lines)
-
-            # Termination
-            elif line[0].startswith('end'):
-                if (line[0] == 'end' and line[1] == 'program' or
-                        line[0] == 'endprogram'):
-                    print('*: {} '.format(' '.join(line)))
-                else:
-                    # Should never happen?
-                    print('XXX: {}'.format(line))
-            else:
-                # Unhandled
-                print('X: {}'.format(line))
+    # Specification
 
     def parse_specification(self, lines):
         """Parse the specification part (R204) of a program unit (R202).
@@ -86,9 +74,7 @@ class Unit(object):
 
         """
         for line in lines:
-            # Testing
-            print('S: {}'.format(' '.join(line)))
-
+            # TODO: Reorganise as a dict
             if line[0] == 'use':
                 self.parse_use_stmt(line)
             elif line[0] == 'import':
@@ -97,39 +83,77 @@ class Unit(object):
                 self.parse_implicit_stmt(line)
             elif line[0] in Unit.declaration_types:
                 # TODO: function statements (R1245)? (probably never...)
-                self.parse_declaration_construct(lines)
+                self.parse_declaration_construct(line)
             else:
-                # Any other keyword indicates the beginning of execution.
-                print('break:', line)
+                # Any other keyword indicates the end of specification.
                 break
 
     def parse_use_stmt(self, line):
-        pass
-        #raise NotImplementedError
+        print('U: {}'.format(' '.join(line)))
 
     def parse_import_stmt(self, line):
-        pass
-        #raise NotImplementedError
+        print('i: {}'.format(' '.join(line)))
 
     def parse_implicit_stmt(self, line):
-        pass
-        #raise NotImplementedError
+        print('I: {}'.format(' '.join(line)))
 
     def parse_declaration_construct(self, line):
-        pass
-        #raise NotImplementedError
+        print('D: {}'.format(' '.join(line)))
+
+    # Execution
+
+    def parse_execution(self, lines):
+        # First parse the line which terminated specification
+        # TODO: How to merge with iteration below?
+        line = lines.current_line
+        if line[0] == 'do' or (line[0], line[-1]) == ('if', 'then'):
+            print('C: {} '.format(' '.join(line)))
+            self.parse_construct(line[0], lines)
+
+        # Termination
+        elif line[0].startswith('end'):
+            if (line[0] == 'end' and line[1] == 'program' or
+                    line[0] == 'endprogram'):
+                print('P: {} '.format(' '.join(line)))
+            else:
+                # Should never happen?
+                print('XXX: {}'.format(line))
+        else:
+            # Unhandled
+            print('E: {}'.format(line))
+
+        # Now iterate over the rest of the lines
+        for line in lines:
+            # Execution constructs
+            if line[0] == 'do' or (line[0], line[-1]) == ('if', 'then'):
+                print('C: {} '.format(' '.join(line)))
+                self.parse_construct(line[0], lines)
+
+            # Termination
+            elif line[0].startswith('end'):
+                if (line[0] == 'end' and line[1] == 'program' or
+                        line[0] == 'endprogram'):
+                    print('P: {} '.format(' '.join(line)))
+                    break
+                else:
+                    # Should never happen?
+                    print('XXX: {}'.format(line))
+            else:
+                # Unhandled
+                print('X: {}'.format(line))
 
     def parse_construct(self, ctype, lines):
         for line in lines:
             # Execution constructs
-            if line[0] == 'do' or (line[0], line[-1] == 'if', 'then'):
-                print('*: {} '.format(' '.join(line)))
+            if line[0] == 'do' or (line[0], line[-1]) == ('if', 'then'):
+                print('c: {} '.format(' '.join(line)))
                 self.parse_construct(line[0], lines)
 
             elif line[0].startswith('end'):
                 if (line[0] == 'end' and line[1] == ctype or
                         line[0] == 'end' + ctype):
-                    print('*: {} '.format(' '.join(line)))
+                    print('C: {} '.format(' '.join(line)))
+                    break
                 else:
                     # Should never happen?
                     print('X: {}'.format(line))

@@ -4,6 +4,8 @@ class FortLines(object):
     def __init__(self, lines):
         self.lines = iter(lines)
 
+        self.current_line = None
+
         # Split lines
         self.buffered_line = None
 
@@ -34,4 +36,5 @@ class FortLines(object):
         while line[-1] == '&':
             line = line[:-1] + next(self.lines)
 
+        self.current_line = line
         return line
