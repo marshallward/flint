@@ -113,7 +113,8 @@ class Source(object):
 
             # TODO: Check token case consistenc
             #       For now just convert to lowercase
-            line = [tok.lower() for tok in line if tok[0] not in '\'"']
+            line = [tok.lower() if tok[0] not in '\'"'
+                    else tok for tok in line]
 
             # Remove whitespace
             tokenized_line = [tok for tok in line if not tok == ' ']

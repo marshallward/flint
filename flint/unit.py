@@ -53,9 +53,7 @@ class Unit(object):
         None of this has yet been implemented.  Below is just some basic
         handling of DO and IF constructs.
         """
-        # TODO: Might as well do this here, rather than a static function
         self.parse_name(lines.current_line)
-
         self.parse_specification(lines)
         self.parse_execution(lines)
 
@@ -69,8 +67,7 @@ class Unit(object):
         1. USE statements (R1109)
         2. IMPORT statements (R1211)
         3. IMPLICIT statements (R205)
-        4. "declaration constructs"
-
+        4. Declaration constructs (R207)
         """
         for line in lines:
             # TODO: Reorganise as a dict
@@ -81,10 +78,8 @@ class Unit(object):
             elif line[0] == 'implicit':
                 self.parse_implicit_stmt(line)
             elif line[0] in Unit.declaration_types:
-                # TODO: function statements (R1245)? (probably never...)
                 self.parse_declaration_construct(line)
             else:
-                # Any other keyword indicates the end of specification.
                 break
 
     def parse_use_stmt(self, line):
@@ -119,7 +114,7 @@ class Unit(object):
                 print('XXX: {}'.format(line))
         else:
             # Unhandled
-            print('E: {}'.format(line))
+            print('E: {}'.format(' '.join(line)))
 
         # Now iterate over the rest of the lines
         for line in lines:
@@ -136,16 +131,16 @@ class Unit(object):
                     break
                 else:
                     # Should never happen?
-                    print('XXX: {}'.format(line))
+                    print('XXX: {}'.format(' '.join(line)))
             else:
                 # Unhandled
-                print('X: {}'.format(line))
+                print('E: {}'.format(' '.join(line)))
 
     def parse_construct(self, ctype, lines):
         for line in lines:
             # Execution constructs
             if line[0] == 'do' or (line[0], line[-1]) == ('if', 'then'):
-                print('c: {} '.format(' '.join(line)))
+                print('C: {} '.format(' '.join(line)))
                 self.parse_construct(line[0], lines)
 
             elif line[0].startswith('end'):
@@ -155,7 +150,7 @@ class Unit(object):
                     break
                 else:
                     # Should never happen?
-                    print('X: {}'.format(line))
+                    print('X: {}'.format(' '.join(line)))
             else:
                 # Unhandled
-                print('C: {}'.format(line))
+                print('C: {}'.format(' '.join(line)))
