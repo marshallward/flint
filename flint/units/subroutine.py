@@ -1,12 +1,7 @@
 from flint.units.unit import Unit
-from flint.units.subroutine import Subroutine
 
 
-class Module(Unit):
-    subprograms = {
-            'function': None,
-            'subroutine': Subroutine,
-    }
+class Subroutine(Unit):
 
     def __init__(self):
         self.name = None
@@ -17,14 +12,14 @@ class Module(Unit):
 
     def parse_name(self, line):
         assert(len(line) <= 2)
-        assert(line[0] == 'module')
+        assert(line[0] == 'subroutine')
 
         if len(line) == 2:
             name = line[1]
         else:
             name = None
 
-        self.name
+        self.name = name
 
     def parse(self, lines):
         """Parse the lines of a program unit.
@@ -42,19 +37,5 @@ class Module(Unit):
         """
         self.parse_name(lines.current_line)
         self.parse_specification(lines)
+        self.parse_execution(lines)
         self.parse_subprogram(lines)
-
-    def parse_subprogram(self, lines):
-        print('begin subprogram?', lines.current_line)
-
-        for line in lines:
-            if line[0] in Module.subprograms:
-                print('{}: {}'.format(line[0][0].upper(), ' '.join(line)))
-
-            subname = line[0]
-            subprog = Module.subprograms[subname]()
-            subprog.parse(lines)
-
-        else:
-            # Unresolved line
-            print('X: {}'.format(' '.join(line)))
