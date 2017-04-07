@@ -8,7 +8,25 @@ class Unit(object):
             'logical',      # R404
     ]
 
-    declaration_types = intrinsic_types + [
+    attribute_specs = [
+            'codimension',
+            'contiguous',
+            'dimension',
+            'external',
+            'intent',
+            'namelist',
+            'optional',
+            'pointer',
+            'protected',
+            'save',
+            'target',
+            'volatile',
+            'value',
+            'common',       # Deprecated
+            'equivalence',  # Deprecated
+    ]
+
+    declaration_types = intrinsic_types + attribute_specs + [
             'type',         # R426, R403
             'enum',         # R459 ("ENUM, BIND(C)")
             'generic',      # R1210
