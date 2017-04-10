@@ -1,6 +1,6 @@
 class Construct(object):
 
-    construct_kw = [
+    construct_types = [
         'associate',
         'block',
         'critical',
@@ -8,8 +8,12 @@ class Construct(object):
         'if',
         'forall',
         'where',
+        # TODO: Deal with pairs later
+        'change',
+        'select',
     ]
 
+    # TODO: Ignore these for now
     construct_kw_pairs = [
         ('change', 'team'),
         ('select', 'case'),
@@ -17,37 +21,53 @@ class Construct(object):
         ('select', 'type'),
     ]
 
-    def __init__(self):
+    @staticmethod
+    def is_construct(line):
+        # Pop off construct label
+        if line[0][-1] == ':':
+            line = line[1:]
+
+        # TODO: Actual rules vary for every construct type, not just 'if'
+        if line[0] in Construct.construct_types:
+            if line[0] == 'if':
+                return (line[0], line[-1]) == ('if', 'then')
+            else:
+                return True
+
+    def __init__(self, depth=1):
         self.ctype = None
         self.name = None
 
-    def parse(self, lines):
-        line = self.current_line
+        # Testing
+        self.depth = depth
 
+    def parse(self, lines):
+        line = lines.current_line
+
+        # Check for construct label (and pop off)
         if line[0][-1] == ':':
             self.name = line[0][:-1]
             line = line[1:]
 
-        self.ctype = self.get_block_type(line)
+        if line[0] == 'select':
+            self.ctype = line[1]
+        else:
+            self.ctype = line[0]
 
         for line in lines:
-            # Execution constructs
-            if line[0] == 'do' or (line[0], line[-1]) == ('if', 'then'):
-                print('C: {} '.format(' '.join(line)))
-                self.parse_construct(line[0], lines)
+            if Construct.is_construct(line):
+                print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
+                cons = Construct(depth=self.depth + 1)
+                cons.parse(lines)
 
             elif line[0].startswith('end'):
-                if (line[0] == 'end' and line[1] == ctype or
-                        line[0] == 'end' + ctype):
-                    print('C: {} '.format(' '.join(line)))
+                if (line[0] == 'end' and line[1] == self.ctype or
+                        line[0] == 'end' + self.ctype):
+                    print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
                     break
                 else:
                     # Should never happen?
-                    print('X: {}'.format(' '.join(line)))
+                    print('X: {}{} '.format(' ' * self.depth, ' '.join(line)))
             else:
                 # Unhandled
-                print('C: {}'.format(' '.join(line)))
-
-    def get_block_type(self, line):
-        # TODO
-        pass
+                print('c: {}{} '.format(' ' * self.depth, ' '.join(line)))

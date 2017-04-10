@@ -4,6 +4,7 @@ import shlex
 from flint.fortlines import FortLines
 from flint.units.module import Module
 from flint.units.program import Program
+from flint.units.subroutine import Subroutine
 
 
 logical_kw = ['not', 'and', 'or', 'eqv', 'neqv']
@@ -14,12 +15,12 @@ logical_value = ['true', 'false']
 class Source(object):
     # R202
     program_units = {
-        'program': Program,     # R1101
-        'function': None,       # R1229 (R203)
-        'subroutine': None,     # R1235 (R203)
-        'module': Module,       # R1104
-        'submodule': None,      # R1116
-        'block': None,          # R1120
+        'program': Program,         # R1101
+        'function': None,           # R1229 (R203)
+        'subroutine': Subroutine,   # R1235 (R203)
+        'module': Module,           # R1104
+        'submodule': None,          # R1116
+        'block': None,              # R1120
     }
 
     def __init__(self):
@@ -160,6 +161,7 @@ def retokenize_line(line):
         # Floating point re-tokenizer
         if tok.isdigit():
             # TODO leading sign (hard!)
+            # TODO E-notation
             # TODO kind (e.g. 1_8)
             value = tok
             try:

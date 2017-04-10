@@ -45,8 +45,6 @@ class Module(Unit):
         self.parse_subprogram(lines)
 
     def parse_subprogram(self, lines):
-        print('begin subprogram?', lines.current_line)
-
         for line in lines:
             if line[0] in Module.subprograms:
                 print('{}: {}'.format(line[0][0].upper(), ' '.join(line)))

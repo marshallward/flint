@@ -1,3 +1,5 @@
+from flint.construct import Construct
+
 class Unit(object):
     intrinsic_types = [
             'integer',      # R405
@@ -33,7 +35,6 @@ class Unit(object):
             'interface',    # R1201
             'parameter',    # R551
             'procedure',    # R1213: Procedure declaration statement
-            # Skipping R213... (mostly for pre-declared variables)
             'data',         # R537
             'format',       # R1001
             'entry',        # R1242 (obsolete)
@@ -77,8 +78,9 @@ class Unit(object):
         3. IMPLICIT statements (R205)
         4. Declaration constructs (R207)
         """
+        # TODO: `use`, `implicit`, and declarations must appear in that order.
+        #       This loop does not check order.
         for line in lines:
-            # TODO: Reorganise as a dict
             if line[0] == 'use':
                 self.parse_use_stmt(line)
             elif line[0] == 'import':
@@ -108,29 +110,25 @@ class Unit(object):
     def parse_execution(self, lines):
         # First parse the line which terminated specification
         # TODO: How to merge with iteration below?
-        line = lines.current_line
-        if line[0] == 'do' or (line[0], line[-1]) == ('if', 'then'):
-            print('C: {} '.format(' '.join(line)))
-            self.parse_construct(line[0], lines)
 
-        # Termination
-        elif line[0].startswith('end'):
-            if (line[0] == 'end' and line[1] == 'program' or
-                    line[0] == 'endprogram'):
-                print('P: {} '.format(' '.join(line)))
-            else:
-                # Should never happen?
-                print('XXX: {}'.format(line))
+        line = lines.current_line
+
+        # TODO: need to include label support here
+        # TODO: probably need to check for end statement too
+        if Construct.is_construct(line):
+            print('C: {} '.format(' '.join(line)))
+            cons = Construct()
+            cons.parse(lines)
         else:
-            # Unhandled
             print('E: {}'.format(' '.join(line)))
 
         # Now iterate over the rest of the lines
         for line in lines:
             # Execution constructs
-            if line[0] == 'do' or (line[0], line[-1]) == ('if', 'then'):
+            if Construct.is_construct(line):
                 print('C: {} '.format(' '.join(line)))
-                self.parse_construct(line[0], lines)
+                cons = Construct()
+                cons.parse(lines)
 
             # Termination
             elif line[0].startswith('end'):
@@ -147,27 +145,10 @@ class Unit(object):
                 # Unhandled
                 print('E: {}'.format(' '.join(line)))
 
-    def parse_construct(self, ctype, lines):
-        for line in lines:
-            # Execution constructs
-            if line[0] == 'do' or (line[0], line[-1]) == ('if', 'then'):
-                print('C: {} '.format(' '.join(line)))
-                self.parse_construct(line[0], lines)
-
-            elif line[0].startswith('end'):
-                if (line[0] == 'end' and line[1] == ctype or
-                        line[0] == 'end' + ctype):
-                    print('C: {} '.format(' '.join(line)))
-                    break
-                else:
-                    # Should never happen?
-                    print('X: {}'.format(' '.join(line)))
-            else:
-                # Unhandled
-                print('C: {}'.format(' '.join(line)))
-
     def parse_subprogram(self, lines):
         line = lines.current_line
+        print('X: {}'.format(' '.join(line)))
 
-        # Replace 'program'...
-        self.parse_construct('program', lines)
+        for line in lines:
+            print('X: {}'.format(' '.join(line)))
+
