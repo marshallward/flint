@@ -115,7 +115,7 @@ class Unit(object):
 
         # TODO: need to include label support here
         # TODO: probably need to check for end statement too
-        if Construct.is_construct(line):
+        if Construct.statement(line):
             print('C: {} '.format(' '.join(line)))
             cons = Construct()
             cons.parse(lines)
@@ -125,7 +125,7 @@ class Unit(object):
         # Now iterate over the rest of the lines
         for line in lines:
             # Execution constructs
-            if Construct.is_construct(line):
+            if Construct.statement(line):
                 print('C: {} '.format(' '.join(line)))
                 cons = Construct()
                 cons.parse(lines)

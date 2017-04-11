@@ -8,8 +8,8 @@ class Construct(object):
         'if',
         'forall',
         'where',
-        # TODO: Deal with pairs later
-        'change',
+        # Proxy for keyword pairs below
+        'change'
         'select',
     ]
 
@@ -21,8 +21,9 @@ class Construct(object):
         ('select', 'type'),
     ]
 
+    # TODO: Override for individual constructs?
     @staticmethod
-    def is_construct(line):
+    def statement(line):
         # Pop off construct label
         if line[0][-1] == ':':
             line = line[1:]
@@ -33,6 +34,22 @@ class Construct(object):
                 return (line[0], line[-1]) == ('if', 'then')
             else:
                 return True
+
+    def end_statement(self, line):
+        # TODO: Try to streamline this
+        if line[0].startswith('end'):
+            if len(line) == 1 and line[0] in ('end', 'end' + self.ctype):
+                return True
+            elif len(line) == 2 and (line[0], line[1]) == ('end', self.ctype):
+                return True
+            else:
+                return False
+        elif self.ctype == 'do' and line[1] == 'continue':
+            # TODO: Will line[0] always be a label?
+            # TODO: Check if label is inside the 'do' construct?
+            return True
+        else:
+            return False
 
     def __init__(self, depth=1):
         self.ctype = None
@@ -55,19 +72,13 @@ class Construct(object):
             self.ctype = line[0]
 
         for line in lines:
-            if Construct.is_construct(line):
+            if Construct.statement(line):
                 print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
                 cons = Construct(depth=self.depth + 1)
                 cons.parse(lines)
-
-            elif line[0].startswith('end'):
-                if (line[0] == 'end' and line[1] == self.ctype or
-                        line[0] == 'end' + self.ctype):
-                    print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
-                    break
-                else:
-                    # Should never happen?
-                    print('X: {}{} '.format(' ' * self.depth, ' '.join(line)))
+            elif self.end_statement(line):
+                print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
+                break
             else:
                 # Unhandled
                 print('c: {}{} '.format(' ' * self.depth, ' '.join(line)))
