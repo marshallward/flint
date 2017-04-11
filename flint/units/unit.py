@@ -1,54 +1,62 @@
 from flint.construct import Construct
 
+
 class Unit(object):
+    # TODO: Will probably move all this to a Types class...
     intrinsic_types = [
-            'integer',      # R405
-            'real',         # R404
-            'double',       # R404 (DOUBLE PRECISION)
-            'complex',      # R404
-            'character',    # R404
-            'logical',      # R404
+        'integer',      # R405
+        'real',         # R404
+        'double',       # R404 (DOUBLE PRECISION)
+        'complex',      # R404
+        'character',    # R404
+        'logical',      # R404
     ]
 
     attribute_specs = [
-            'codimension',
-            'contiguous',
-            'dimension',
-            'external',
-            'intent',
-            'namelist',
-            'optional',
-            'pointer',
-            'protected',
-            'save',
-            'target',
-            'volatile',
-            'value',
-            'common',       # Deprecated
-            'equivalence',  # Deprecated
+        'codimension',
+        'contiguous',
+        'dimension',
+        'external',
+        'intent',
+        'namelist',
+        'optional',
+        'pointer',
+        'protected',
+        'save',
+        'target',
+        'volatile',
+        'value',
+        'common',       # Deprecated
+        'equivalence',  # Deprecated
     ]
 
     declaration_types = intrinsic_types + attribute_specs + [
-            'type',         # R426, R403
-            'enum',         # R459 ("ENUM, BIND(C)")
-            'generic',      # R1210
-            'interface',    # R1201
-            'parameter',    # R551
-            'procedure',    # R1213: Procedure declaration statement
-            'data',         # R537
-            'format',       # R1001
-            'entry',        # R1242 (obsolete)
+        'type',         # R426, R403
+        'enum',         # R459 ("ENUM, BIND(C)")
+        'generic',      # R1210
+        'interface',    # R1201
+        'parameter',    # R551
+        'procedure',    # R1213: Procedure declaration statement
+        'data',         # R537
+        'format',       # R1001
+        'entry',        # R1242 (obsolete)
     ]
 
     def __init__(self):
         self.name = None
+        self.utype = None
 
-        # Implicit state
-        self.implicit = {}
+    def end_statement(self, line):
+        assert self.utype
 
-        self.modules = []
-        self.functions = []
-        self.variables = []
+        # TODO: Very similar to construct... can I merge somehow?
+        if line[0].startswith('end'):
+            if len(line) == 1 and line[0] in ('end', 'end' + self.utype):
+                return True
+            elif len(line) == 2 and (line[0], line[1]) == ('end', self.utype):
+                return True
+            else:
+                return False
 
     def parse(self, lines):
         """Parse the lines of a program unit.
@@ -64,7 +72,12 @@ class Unit(object):
         Each program unit has a different header format, so this method must be
         overridden by each subclass.
         """
-        raise NotImplementedError
+        self.utype = line[0]
+
+        if len(line) == 2:
+            self.name = line[1]
+        else:
+            self.name = None
 
     # Specification
 
@@ -120,6 +133,7 @@ class Unit(object):
             cons = Construct()
             cons.parse(lines)
         else:
+            # Unhandled
             print('E: {}'.format(' '.join(line)))
 
         # Now iterate over the rest of the lines
@@ -129,17 +143,7 @@ class Unit(object):
                 print('C: {} '.format(' '.join(line)))
                 cons = Construct()
                 cons.parse(lines)
-
-            # Termination
-            elif line[0].startswith('end'):
-                if (line[0] == 'end' and line[1] == 'program' or
-                        line[0] == 'endprogram'):
-                    print('P: {} '.format(' '.join(line)))
-                    break
-                else:
-                    # Should never happen?
-                    print('XXX: {}'.format(' '.join(line)))
-            elif line[0] == 'contains':
+            elif self.end_statement(line) or line[0] == 'contains':
                 break
             else:
                 # Unhandled
@@ -151,4 +155,3 @@ class Unit(object):
 
         for line in lines:
             print('X: {}'.format(' '.join(line)))
-

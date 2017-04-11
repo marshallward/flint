@@ -3,24 +3,6 @@ from flint.units.unit import Unit
 
 class Program(Unit):
 
-    def __init__(self):
-        self.name = None
-
-        self.modules = []
-        self.functions = []
-        self.variables = []
-
-    def parse_name(self, line):
-        assert(len(line) <= 2)
-        assert(line[0] == 'program')
-
-        if len(line) == 2:
-            name = line[1]
-        else:
-            name = None
-
-        self.name = name
-
     def parse(self, lines):
         """Parse the lines of a program unit.
 
