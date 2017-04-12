@@ -1,7 +1,15 @@
 from flint.construct import Construct
 
-
 class Unit(object):
+    unit_types = [
+        'program',
+        'function',
+        'subroutine',
+        'module',
+        'submodule',
+        'block',
+    ]
+
     # TODO: Will probably move all this to a Types class...
     intrinsic_types = [
         'integer',      # R405
@@ -53,7 +61,7 @@ class Unit(object):
         if line[0].startswith('end'):
             if len(line) == 1 and line[0] in ('end', 'end' + self.utype):
                 return True
-            elif len(line) == 2 and (line[0], line[1]) == ('end', self.utype):
+            elif len(line) >= 2 and (line[0], line[1]) == ('end', self.utype):
                 return True
             else:
                 return False
@@ -64,7 +72,10 @@ class Unit(object):
         Program units are generally very similar, but we leave it undefined
         here due to some slight differences.
         """
-        raise NotImplementedError
+        self.parse_name(lines.current_line)
+        self.parse_specification(lines)
+        self.parse_execution(lines)
+        self.parse_subprogram(lines)
 
     def parse_name(self, line):
         """Parse the name of the program unit, if present.
@@ -74,10 +85,12 @@ class Unit(object):
         """
         self.utype = line[0]
 
-        if len(line) == 2:
+        if len(line) >= 2:
             self.name = line[1]
         else:
             self.name = None
+
+        print('{}: {} '.format(self.utype[0].upper(), ' '.join(line)))
 
     # Specification
 
@@ -118,7 +131,6 @@ class Unit(object):
         print('D: {}'.format(' '.join(line)))
 
     # Execution
-    # XXX: This is a mess...
 
     def parse_execution(self, lines):
         # First parse the line which terminated specification
@@ -127,11 +139,11 @@ class Unit(object):
         line = lines.current_line
 
         # TODO: need to include label support here
-        # TODO: probably need to check for end statement too
         if Construct.statement(line):
-            print('C: {} '.format(' '.join(line)))
             cons = Construct()
             cons.parse(lines)
+        elif self.end_statement(line) or line[0] == 'contains':
+            return
         else:
             # Unhandled
             print('E: {}'.format(' '.join(line)))
@@ -140,10 +152,10 @@ class Unit(object):
         for line in lines:
             # Execution constructs
             if Construct.statement(line):
-                print('C: {} '.format(' '.join(line)))
                 cons = Construct()
                 cons.parse(lines)
             elif self.end_statement(line) or line[0] == 'contains':
+                # TODO: Use return?
                 break
             else:
                 # Unhandled
@@ -151,7 +163,22 @@ class Unit(object):
 
     def parse_subprogram(self, lines):
         line = lines.current_line
-        print('X: {}'.format(' '.join(line)))
+
+        if line[0] in Unit.unit_types:
+            subprog = Unit()
+            subprog.parse(lines)
+        elif self.end_statement(line):
+            return
+        else:
+            print('{}: {}'.format(self.utype[0].upper(), ' '.join(line)))
 
         for line in lines:
-            print('X: {}'.format(' '.join(line)))
+            if line[0] in Unit.unit_types:
+                subprog = Unit()
+                subprog.parse(lines)
+            elif self.end_statement(line):
+                # TODO: Use return?
+                break
+            else:
+                # Unresolved line
+                print('X: {}'.format(' '.join(line)))

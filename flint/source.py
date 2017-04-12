@@ -2,9 +2,7 @@ import os
 import shlex
 
 from flint.fortlines import FortLines
-from flint.units.module import Module
-from flint.units.program import Program
-from flint.units.subroutine import Subroutine
+from flint.unit import Unit
 
 
 logical_kw = ['not', 'and', 'or', 'eqv', 'neqv']
@@ -13,16 +11,6 @@ logical_value = ['true', 'false']
 
 
 class Source(object):
-    # R202
-    program_units = {
-        'program': Program,         # R1101
-        'function': None,           # R1229 (R203)
-        'subroutine': Subroutine,   # R1235 (R203)
-        'module': Module,           # R1104
-        'submodule': None,          # R1116
-        'block': None,              # R1120
-    }
-
     def __init__(self):
         self.project = None     # Link to parent
 
@@ -124,17 +112,12 @@ class Source(object):
         flines = FortLines(src_lines)
 
         for line in flines:
-            if line[0] in Source.program_units:
-                # Testing
-                print('{}: {}'.format(line[0][0].upper(), ' '.join(line)))
-
-                utype = line[0]
-                unit = Source.program_units[utype]()
+            if line[0] in Unit.unit_types:
+                unit = Unit()
                 unit.parse(flines)
 
                 # How to select container?
                 self.units.append(unit)
-
             else:
                 # Unresolved line
                 print('X: {}'.format(' '.join(line)))
@@ -151,6 +134,8 @@ def retokenize_line(line):
 
     Similarly, the .and. operator is tokenzed into the following:
     >>> ['.', 'and', '.']
+
+    This functions re-groups those tokens into a single token.
 
     This is a first attempt to resolve such tokens, although it is still a
     work in progress.
