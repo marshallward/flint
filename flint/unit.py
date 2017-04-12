@@ -78,6 +78,10 @@ class Unit(object):
         self.parse_execution(lines)
         self.parse_subprogram(lines)
 
+        # Finalisation
+        print('{}: {}'.format(self.utype[0].upper(),
+                              ' '.join(lines.current_line)))
+
     def parse_name(self, line):
         """Parse the name of the program unit, if present.
 
@@ -112,7 +116,8 @@ class Unit(object):
                 self.parse_use_stmt(line)
             elif line[0] == 'import':
                 self.parse_import_stmt(line)
-            elif line[0] == 'implicit':
+            elif line[0] in 'implicit':
+                # TODO: PARAMETER, FORMAT, ENTRY
                 self.parse_implicit_stmt(line)
             elif line[0] in Unit.declaration_types:
                 self.parse_declaration_construct(line)
@@ -120,6 +125,7 @@ class Unit(object):
                 break
 
     def parse_use_stmt(self, line):
+        """Parse the use statement (R1109) within a specification (R204)."""
         print('U: {}'.format(' '.join(line)))
 
     def parse_import_stmt(self, line):
@@ -139,7 +145,6 @@ class Unit(object):
 
         line = lines.current_line
 
-        # TODO: need to include label support here
         if Construct.statement(line):
             cons = Construct()
             cons.parse(lines)

@@ -115,8 +115,6 @@ class Source(object):
             if line[0] in Unit.unit_types:
                 unit = Unit()
                 unit.parse(flines)
-
-                # How to select container?
                 self.units.append(unit)
             else:
                 # Unresolved line
