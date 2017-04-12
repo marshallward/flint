@@ -74,6 +74,7 @@ class Construct(object):
         print('C: {}{} '.format(' ' * (self.depth - 1), ' '.join(line)))
 
         for line in lines:
+            #print(self.ctype, line)
             if Construct.statement(line):
                 cons = Construct(depth=self.depth + 1)
                 cons.parse(lines)

@@ -82,6 +82,12 @@ class Source(object):
             if '!' in line:
                 line = line[:line.index('!')]
 
+            # Skip preprocessed line
+            # TODO: How to handle these?
+            if line and line[0] == '#':
+                print('SKIP: {}'.format(''.join(line)))
+                line = []
+
             # Merge unhandled tokens
             line = retokenize_line(line)
 
@@ -89,6 +95,7 @@ class Source(object):
             # TODO: Move first whitespace to `self.indent`?
             line_ws = []
             ws_count = 0
+            print(line)
             for tok in line:
                 if tok == ' ':
                     ws_count += 1
@@ -111,6 +118,7 @@ class Source(object):
 
         flines = FortLines(src_lines)
 
+        print(self.path)
         for line in flines:
             if line[0] in Unit.unit_types:
                 unit = Unit()
@@ -165,8 +173,11 @@ def retokenize_line(line):
         elif tok == '.':
             value = tok
             tok = next(tokens)
-            assert tok.lower() in (logical_kw + relational_kw
-                                   + logical_value)
+            if not (tok.lower() in (logical_kw + relational_kw
+                    + logical_value)):
+                print('SKIP: {}'.format(''.join(line)))
+                return line
+
             value += tok
             tok = next(tokens)
             assert tok == '.'
