@@ -1,5 +1,6 @@
 from flint.construct import Construct
 
+
 class Unit(object):
     unit_types = [
         'program',
