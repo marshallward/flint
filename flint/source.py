@@ -1,13 +1,8 @@
 import os
-import shlex
 
 from flint.fortlines import FortLines
 from flint.unit import Unit
-
-
-logical_kw = ['not', 'and', 'or', 'eqv', 'neqv']
-relational_kw = ['lt', 'le', 'gt', 'ge', 'eq', 'ne']
-logical_value = ['true', 'false']
+from flint.tokenize import tokenize
 
 
 class Source(object):
@@ -46,29 +41,12 @@ class Source(object):
             else:
                 self.abspath = os.path.abspath(path)
 
-        # Create tokenizer
-        with open(self.path) as srcfile:
-            f90lex = shlex.shlex(srcfile, punctuation_chars='*/=<>:')
-            f90lex.commenters = ''
-            f90lex.whitespace = ''
-
-            # When punctuation_chars is set, certain tokens are added to
-            # wordchars.  Here we undo this change and remove them.
-            wcmap = f90lex.wordchars.maketrans(dict.fromkeys('~-.?'))
-            f90lex.wordchars = f90lex.wordchars.translate(wcmap)
-
-            tokens = list(f90lex)
-
-        # Tokenized lines
         raw_lines = []
-        start = end = 0
-        while True:
-            try:
-                end = start + tokens[start:].index('\n')
-                raw_lines.append(tokens[start:end])
-                start = end + 1
-            except ValueError:
-                break
+        delim = None
+        with open(self.path) as srcfile:
+            for line in srcfile:
+                tokens, delim = tokenize(line, delim)
+                raw_lines.append(tokens)
 
         # Line cleanup
         src_lines = []
@@ -146,6 +124,7 @@ def retokenize_line(line):
     This is a first attempt to resolve such tokens, although it is still a
     work in progress.
     """
+    # XXX: Move all this to the `tokenize` function!
     newline = []
     tokens = iter(line)
     for tok in tokens:
@@ -169,22 +148,6 @@ def retokenize_line(line):
             newline.append(value)
             if tok is not None:
                 newline.append(tok)
-
-        elif tok == '.':
-            value = tok
-            tok = next(tokens)
-            if not (tok.lower() in (logical_kw + relational_kw
-                    + logical_value)):
-                print('SKIP: {}'.format(''.join(line)))
-                return line
-
-            value += tok
-            tok = next(tokens)
-            assert tok == '.'
-            value += tok
-            # TODO: logical values support kind (_) params!
-
-            newline.append(value)
         else:
             newline.append(tok)
 

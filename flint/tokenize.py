@@ -1,0 +1,107 @@
+# I don't use these two
+special_chars = ' =+-*/\\()[]{},.:;!"%&~<>?\'`|$#@'     # Table 3.1
+lexical_tokens = '=+-*/()[],.:;%&<>'                    # Meaningful?
+
+# I only use this one
+punctuation = '=+-*/\\()[]{},:;%&~<>?`|$#@'    # Unhandled Table 3.1 tokens
+
+# These are the strict keywords, but I believe any name is possible?
+logical_kw = ['not', 'and', 'or', 'eqv', 'neqv']
+relational_kw = ['lt', 'le', 'gt', 'ge', 'eq', 'ne']
+logical_value = ['true', 'false']
+
+
+def tokenize(line, prior_delim=None):
+    """Tokenize a line of Fortran source."""
+    # Testing (TODO: Remove this)
+    if line[-1] != '\n':
+        line += '\n'
+
+    tokens = []
+
+    word = ''
+    characters = iter(line)
+    char = next(characters)
+
+    next_delim = None
+
+    while char != '\n':
+        if char in ' \t':
+            while char in ' \t':
+                word += char
+                char = next(characters)
+
+            tokens.append(word)
+            word = ''
+
+        elif char in '"\'' or prior_delim:
+            if prior_delim:
+                delim = prior_delim
+                prior_delim = None
+            else:
+                delim = char
+                word += char
+                char = next(characters)
+
+            # TODO: Line continuation is hard!
+            while char not in (delim, '&'):
+                word += char
+                char = next(characters)
+
+            # Final token
+            if char == delim:
+                word += char
+            else:
+                next_delim = delim
+                tokens.append(word)
+                word = char
+
+            tokens.append(word)
+            char = next(characters)
+            word = ''
+
+        elif char.isalnum():
+            # TODO: Detect and construct floating point values here?
+            while char.isalnum() or char == '_':
+                word += char
+                char = next(characters)
+
+            tokens.append(word)
+            word = ''
+
+        elif char == '!':
+            while char != '\n':
+                word += char
+                char = next(characters)
+            tokens.append(word)
+            word = ''
+
+        elif char == '.':
+            word += char
+            char = next(characters)
+            while char.isalpha():
+                word += char
+                char = next(characters)
+
+            # Finalise operator
+            if char == '.':
+                word += char
+                char = next(characters)
+
+            tokens.append(word)
+            word = ''
+
+        elif char in punctuation:
+            # Naive bundling of special character tokens
+            # TODO: Check for valid two-character tokens
+            while char in punctuation:
+                word += char
+                char = next(characters)
+            tokens.append(word)
+            word = ''
+
+        else:
+            # This should never happen
+            raise ValueError
+
+    return tokens, next_delim
