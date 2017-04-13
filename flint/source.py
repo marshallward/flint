@@ -57,8 +57,7 @@ class Source(object):
             self.linewidths.append(width)
 
             # Strip comments
-            if '!' in line:
-                line = line[:line.index('!')]
+            line = [w for w in line if w[0] != '!']
 
             # Skip preprocessed line
             # TODO: How to handle these?
@@ -69,20 +68,21 @@ class Source(object):
             # Merge unhandled tokens
             line = retokenize_line(line)
 
-            # Track whitespace between tokens
-            # TODO: Move first whitespace to `self.indent`?
-            line_ws = []
-            ws_count = 0
-            print(line)
-            for tok in line:
-                if tok == ' ':
-                    ws_count += 1
-                else:
-                    line_ws.append(ws_count)
-                    ws_count = 0
+            # XXX: This thing needs to be fixed anyway...
+            ## Track whitespace between tokens
+            ## TODO: Move first whitespace to `self.indent`?
+            #line_ws = []
+            #ws_count = 0
+            ##print(line)
+            #for tok in line:
+            #    if tok == ' ':
+            #        ws_count += 1
+            #    else:
+            #        line_ws.append(ws_count)
+            #        ws_count = 0
 
-            line_ws.append(ws_count)
-            self.whitespace.append(line_ws)
+            #line_ws.append(ws_count)
+            #self.whitespace.append(line_ws)
 
             # TODO: Check token case consistency
             #       For now just convert to lowercase
@@ -90,7 +90,9 @@ class Source(object):
                     for tok in line]
 
             # Remove whitespace
-            tokenized_line = [tok for tok in line if not tok == ' ']
+            #tokenized_line = [tok for tok in line if not tok == ' ']
+            tokenized_line = [tok for tok in line
+                              if not all(c == ' ' for c in tok)]
             if tokenized_line:
                 src_lines.append(tokenized_line)
 
