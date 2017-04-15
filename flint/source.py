@@ -1,4 +1,5 @@
 import os
+import sys
 
 from flint.fortlines import FortLines
 from flint.unit import Unit
@@ -45,7 +46,12 @@ class Source(object):
         delim = None
         with open(self.path) as srcfile:
             for line in srcfile:
-                tokens, delim = tokenize(line, delim)
+                try:
+                    tokens, delim = tokenize(line, delim)
+                except ValueError:
+                    print('error', srcfile)
+                    print(line)
+                    sys.exit()
                 raw_lines.append(tokens)
 
         # Line cleanup

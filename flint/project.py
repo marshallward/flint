@@ -25,5 +25,4 @@ class Project(object):
                 self.parse(fpath)
 
             else:
-                print('oops, unsupported file.')
-                sys.exit(-1)
+                print('SKIP file: {}'.format(fpath))

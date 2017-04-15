@@ -36,7 +36,6 @@ class Construct(object):
                 return True
 
     def end_statement(self, line):
-        # TODO: Try to streamline this
         if line[0].startswith('end'):
             if len(line) == 1 and line[0] in ('end', 'end' + self.ctype):
                 return True
@@ -44,7 +43,8 @@ class Construct(object):
                 return True
             else:
                 return False
-        elif self.ctype == 'do' and line[1] == 'continue':
+
+        elif self.ctype == 'do' and len(line) > 1 and line[1] == 'continue':
             # TODO: Will line[0] always be a label?
             # TODO: Check if label is inside the 'do' construct?
             return True
@@ -74,7 +74,6 @@ class Construct(object):
         print('C: {}{} '.format(' ' * (self.depth - 1), ' '.join(line)))
 
         for line in lines:
-            #print(self.ctype, line)
             if Construct.statement(line):
                 cons = Construct(depth=self.depth + 1)
                 cons.parse(lines)

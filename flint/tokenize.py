@@ -24,7 +24,6 @@ def tokenize(line, prior_delim=None):
     char = next(characters)
 
     next_delim = None
-
     while char != '\n':
         if char in ' \t':
             while char in ' \t':
@@ -44,9 +43,17 @@ def tokenize(line, prior_delim=None):
                 char = next(characters)
 
             # TODO: Line continuation is hard!
-            while char not in (delim, '&'):
-                word += char
-                char = next(characters)
+            while char != delim:
+                if char == '&':
+                    char = next(characters)
+                    if char == '\n':
+                        #char = '&'
+                        break
+                    else:
+                        word += '&'
+                else:
+                    word += char
+                    char = next(characters)
 
             # Final token
             if char == delim:
@@ -57,19 +64,24 @@ def tokenize(line, prior_delim=None):
                 word = char
 
             tokens.append(word)
-            char = next(characters)
+            if char != '\n':
+                char = next(characters)
             word = ''
 
         elif char.isalnum():
-            # TODO: Detect and construct floating point values here?
-            while char.isalnum() or char == '_':
-                word += char
-                char = next(characters)
+            if char.isdigit():
+                while char.isdigit() or char in ('.eE+-'):
+                    word += char
+                    char = next(characters)
+            else:
+                while char.isalnum() or char == '_':
+                    word += char
+                    char = next(characters)
 
             tokens.append(word)
             word = ''
 
-        elif char == '!':
+        elif char in ('!', '#'):
             while char != '\n':
                 word += char
                 char = next(characters)
