@@ -63,16 +63,12 @@ class Source(object):
             width = len(''.join(line))
             self.linewidths.append(width)
 
-            # Strip comments
+            # Strip comments and preprocessed lines
+            # TODO: Handle preprocessed lines better
             line = [w for w in line if w[0] not in '!#']
 
-            # Skip preprocessed line
-            # TODO: How to handle these?
-            if line and line[0] == '#':
-                print('SKIP: {}'.format(''.join(line)))
-                line = []
-
             # Merge unhandled tokens
+            # (Soon to be deprecated function)
             line = retokenize_line(line)
 
             # XXX: This thing needs to be fixed anyway...
@@ -106,7 +102,8 @@ class Source(object):
         flines = FortLines(src_lines)
 
         for line in flines:
-            if line[0] in Unit.unit_types:
+            #if line[0] in Unit.unit_types:
+            if Unit.statement(line):
                 unit = Unit()
                 unit.parse(flines)
                 self.units.append(unit)

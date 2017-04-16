@@ -51,9 +51,47 @@ class Unit(object):
         'entry',        # R1242 (obsolete)
     ]
 
+    unit_prefix = intrinsic_types + [
+        'elemental',
+        'impure',
+        'non_recursive',
+        'pure',
+        'recursive',
+    ]
+
     def __init__(self):
         self.name = None
         self.utype = None
+
+    @staticmethod
+    def statement(line):
+        # TODO: If this ends up being a full type-statement parser, then it
+        # needs to be moved into its own class
+        idx = next((i for i, w in enumerate(line) if w in Unit.unit_types), -1)
+
+        # No prefix (surely can be rolled in by ending with `return True`
+        if idx == 0:
+            return True
+        elif idx > 0:
+            #words = iter(line[:idx])
+            #tokens = []
+            #for word in words:
+            #    if word in Unit.intrinsic_type:
+            #        try:
+            #            kind = next(word)
+            #        except StopIteration:
+            #            return True
+
+            #    elif word not in Unit.unit_prefix:
+            #        return False
+            #    #else: continue
+
+            ## TODO (broken test below)
+            return all(w in Unit.unit_prefix for w in line[:idx])
+        else:
+            return False
+
+        #return (idx >= 0 and all(w in Unit.unit_prefix for w in line[:idx]))
 
     def end_statement(self, line):
         assert self.utype
@@ -88,7 +126,7 @@ class Unit(object):
         Each program unit has a different header format, so this method must be
         overridden by each subclass.
         """
-        self.utype = line[0]
+        self.utype = next(w for w in line if w in Unit.unit_types)
 
         if len(line) >= 2:
             self.name = line[1]
@@ -168,9 +206,12 @@ class Unit(object):
                 print('E: {}'.format(' '.join(line)))
 
     def parse_subprogram(self, lines):
+        # TODO: I think the first line of subprogram is always CONTAINS, so
+        # this check may be pointless.
+
         line = lines.current_line
 
-        if line[0] in Unit.unit_types:
+        if Unit.statement(line):
             subprog = Unit()
             subprog.parse(lines)
         elif self.end_statement(line):
@@ -179,12 +220,11 @@ class Unit(object):
             print('{}: {}'.format(self.utype[0].upper(), ' '.join(line)))
 
         for line in lines:
-            if line[0] in Unit.unit_types:
+            if Unit.statement(line):
                 subprog = Unit()
                 subprog.parse(lines)
             elif self.end_statement(line):
                 # TODO: Use return?
                 break
             else:
-                # Unresolved line
                 print('X: {}'.format(' '.join(line)))

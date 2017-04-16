@@ -53,7 +53,6 @@ def tokenize(line, prior_delim=None):
                     word += char
                     char = next(characters)
 
-            # Final token
             if char == delim:
                 word += char
             else:
@@ -66,15 +65,17 @@ def tokenize(line, prior_delim=None):
                 char = next(characters)
             word = ''
 
-        # Fortran variables cannot start with numbers or _, but preprocessors
-        # can cause havoc here.
         elif char.isalnum() or char == '_':
             if char.isdigit():
                 #while char.isdigit() or char in ('.eE+-'):
-                while char.isdigit():
+                frac = False
+                while char.isdigit() or (char == '.' and not frac):
+                    if char == '.':
+                        frac = True
                     word += char
                     char = next(characters)
             else:
+                # TODO: Variables cannot start with underscore
                 while char.isalnum() or char == '_':
                     word += char
                     char = next(characters)
@@ -96,7 +97,6 @@ def tokenize(line, prior_delim=None):
                 word += char
                 char = next(characters)
 
-            # Finalise operator
             if char == '.':
                 word += char
                 char = next(characters)
