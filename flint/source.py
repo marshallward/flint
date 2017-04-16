@@ -44,6 +44,7 @@ class Source(object):
 
         raw_lines = []
         delim = None
+        print(self.path)
         with open(self.path) as srcfile:
             for line in srcfile:
                 try:
@@ -63,7 +64,7 @@ class Source(object):
             self.linewidths.append(width)
 
             # Strip comments
-            line = [w for w in line if w[0] != '!']
+            line = [w for w in line if w[0] not in '!#']
 
             # Skip preprocessed line
             # TODO: How to handle these?
@@ -104,7 +105,6 @@ class Source(object):
 
         flines = FortLines(src_lines)
 
-        print(self.path)
         for line in flines:
             if line[0] in Unit.unit_types:
                 unit = Unit()

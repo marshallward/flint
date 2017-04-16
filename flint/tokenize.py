@@ -42,12 +42,10 @@ def tokenize(line, prior_delim=None):
                 word += char
                 char = next(characters)
 
-            # TODO: Line continuation is hard!
             while char != delim:
                 if char == '&':
                     char = next(characters)
                     if char == '\n':
-                        #char = '&'
                         break
                     else:
                         word += '&'
@@ -68,9 +66,12 @@ def tokenize(line, prior_delim=None):
                 char = next(characters)
             word = ''
 
-        elif char.isalnum():
+        # Fortran variables cannot start with numbers or _, but preprocessors
+        # can cause havoc here.
+        elif char.isalnum() or char == '_':
             if char.isdigit():
-                while char.isdigit() or char in ('.eE+-'):
+                #while char.isdigit() or char in ('.eE+-'):
+                while char.isdigit():
                     word += char
                     char = next(characters)
             else:
