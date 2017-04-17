@@ -69,22 +69,29 @@ class Unit(object):
         # needs to be moved into its own class
         idx = next((i for i, w in enumerate(line) if w in Unit.unit_types), -1)
 
-        # No prefix (surely can be rolled in by ending with `return True`
         if idx == 0:
             return True
         elif idx > 0:
-            #words = iter(line[:idx])
-            #tokens = []
-            #for word in words:
-            #    if word in Unit.intrinsic_type:
-            #        try:
-            #            kind = next(word)
-            #        except StopIteration:
-            #            return True
+            words = iter(line[:idx])
 
-            #    elif word not in Unit.unit_prefix:
-            #        return False
-            #    #else: continue
+            try:
+                word = next(words)
+                while True:
+                    if word in Unit.intrinsic_types:
+                        word = next(words)
+                        if word == '(':
+                            # TODO: Parse this more formally
+                            while word != ')':
+                                word = next(words)
+                    elif word not in Unit.unit_prefix:
+                        return False
+
+                    word = next(words)
+            except StopIteration:
+                # TODO: Assume for now that early termination is OK
+                return True
+
+            return True
 
             ## TODO (broken test below)
             return all(w in Unit.unit_prefix for w in line[:idx])
