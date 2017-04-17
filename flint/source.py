@@ -67,10 +67,6 @@ class Source(object):
             # TODO: Handle preprocessed lines better
             line = [w for w in line if w[0] not in '!#']
 
-            # Merge unhandled tokens
-            # (Soon to be deprecated function)
-            line = retokenize_line(line)
-
             # XXX: This thing needs to be fixed anyway...
             ## Track whitespace between tokens
             ## TODO: Move first whitespace to `self.indent`?
@@ -110,50 +106,3 @@ class Source(object):
             else:
                 # Unresolved line
                 print('X: {}'.format(' '.join(line)))
-
-
-def retokenize_line(line):
-    """Retokenize line to include literal numbers and operators.
-
-    The shlex tokenizer resolves most Fortran tokens, but fails to gather
-    tokens associated with numbers and dot-operators.
-
-    For example, the number -2.4e3 is tokenized into the following:
-    >>> ['1', '2', '.', '4', 'e', '3']
-
-    Similarly, the .and. operator is tokenzed into the following:
-    >>> ['.', 'and', '.']
-
-    This functions re-groups those tokens into a single token.
-
-    This is a first attempt to resolve such tokens, although it is still a
-    work in progress.
-    """
-    # XXX: Move all this to the `tokenize` function!
-    newline = []
-    tokens = iter(line)
-    for tok in tokens:
-        # Floating point re-tokenizer
-        if tok.isdigit():
-            # TODO leading sign (hard!)
-            # TODO E-notation
-            # TODO kind (e.g. 1_8)
-            value = tok
-            try:
-                tok = next(tokens)
-                if tok == '.':
-                    value += tok
-                    tok = next(tokens)
-                    if tok.isdigit():
-                        value += tok
-                        tok = next(tokens)
-            except StopIteration:
-                tok = None
-
-            newline.append(value)
-            if tok is not None:
-                newline.append(tok)
-        else:
-            newline.append(tok)
-
-    return newline
