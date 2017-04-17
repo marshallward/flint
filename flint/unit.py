@@ -89,16 +89,11 @@ class Unit(object):
                     word = next(words)
             except StopIteration:
                 # TODO: Assume for now that early termination is OK
-                return True
-
+                pass
             return True
 
-            ## TODO (broken test below)
-            return all(w in Unit.unit_prefix for w in line[:idx])
         else:
             return False
-
-        #return (idx >= 0 and all(w in Unit.unit_prefix for w in line[:idx]))
 
     def end_statement(self, line):
         assert self.utype
