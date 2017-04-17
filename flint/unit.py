@@ -74,9 +74,9 @@ class Unit(object):
         elif idx > 0:
             words = iter(line[:idx])
 
-            try:
-                word = next(words)
-                while True:
+            word = next(words)
+            while True:
+                try:
                     if word in Unit.intrinsic_types:
                         word = next(words)
                         if word == '(':
@@ -87,9 +87,8 @@ class Unit(object):
                         return False
 
                     word = next(words)
-            except StopIteration:
-                # TODO: Assume for now that early termination is OK
-                pass
+                except StopIteration:
+                    break
             return True
 
         else:
