@@ -17,23 +17,30 @@ class Test(unittest.TestCase):
         self.string_str = '\'abc def\'\n'
         self.string = ['\'abc def\'']
 
+        self.escape_delim_str = '\'abc \'\'def\' ghi\n'
+        self.escape_delim = ['\'abc \'\'def\'', 'ghi']
+
         self.comment_str = 'abc !def ghi\n'
         self.comment = ['abc', ' ', '!def ghi']
 
     def test_one_word(self):
-        test_toks = tokenize(self.one_word_str)
+        test_toks, _ = tokenize(self.one_word_str)
         self.assertEqual(test_toks, self.one_word)
 
     def test_two_word(self):
-        test_toks = tokenize(self.two_word_str)
+        test_toks, _ = tokenize(self.two_word_str)
         self.assertEqual(test_toks, self.two_word)
 
     def test_string(self):
-        test_toks = tokenize(self.string_str)
+        test_toks, _ = tokenize(self.string_str)
         self.assertEqual(test_toks, self.string)
 
+    def test_escape_delim(self):
+        test_toks, _ = tokenize(self.escape_delim_str)
+        self.assertEqual(test_toks, self.escape_delim)
+
     def test_comment(self):
-        test_toks = tokenize(self.comment_str)
+        test_toks, _ = tokenize(self.comment_str)
         self.assertEqual(test_toks, self.comment)
 
 

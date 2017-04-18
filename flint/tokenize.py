@@ -1,3 +1,6 @@
+# TODO: Rewrite as class, hold `prior_delim` as a static variable?
+# Would eliminate need to pass as variable... maybe?
+
 # I don't use these two
 special_chars = ' =+-*/\\()[]{},.:;!"%&~<>?\'`|$#@'     # Table 3.1
 lexical_tokens = '=+-*/()[],.:;%&<>'                    # Meaningful?
@@ -42,27 +45,31 @@ def tokenize(line, prior_delim=None):
                 word += char
                 char = next(characters)
 
-            while char != delim:
+            while True:
                 if char == '&':
                     char = next(characters)
                     if char == '\n':
+                        next_delim = delim
                         break
                     else:
                         word += '&'
+                elif char == delim:
+                    # Check for escaped delimiters
+                    char = next(characters)
+                    if char == delim:
+                        word += 2 * delim
+                        char = next(characters)
+                    else:
+                        word += delim
+                        break
                 else:
                     word += char
                     char = next(characters)
 
-            if char == delim:
-                word += char
-            else:
-                next_delim = delim
-                tokens.append(word)
-                word = char
-
-            tokens.append(word)
             if char != '\n':
                 char = next(characters)
+
+            tokens.append(word)
             word = ''
 
         elif char.isalnum() or char == '_':
