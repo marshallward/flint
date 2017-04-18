@@ -17,8 +17,11 @@ class Test(unittest.TestCase):
         self.string_str = '\'abc def\'\n'
         self.string = ['\'abc def\'']
 
+        self.string_tok_str = 'abc "def ghi" jkl\n'
+        self.string_tok = ['abc', ' ', '"def ghi"', ' ', 'jkl']
+
         self.escape_delim_str = '\'abc \'\'def\' ghi\n'
-        self.escape_delim = ['\'abc \'\'def\'', 'ghi']
+        self.escape_delim = ['\'abc \'\'def\'', ' ', 'ghi']
 
         self.comment_str = 'abc !def ghi\n'
         self.comment = ['abc', ' ', '!def ghi']
@@ -38,6 +41,9 @@ class Test(unittest.TestCase):
     def test_string(self):
         test_toks, _ = tokenize(self.string_str)
         self.assertEqual(test_toks, self.string)
+
+        test_toks, _ = tokenize(self.string_tok_str)
+        self.assertEqual(test_toks, self.string_tok)
 
     def test_escape_delim(self):
         test_toks, _ = tokenize(self.escape_delim_str)

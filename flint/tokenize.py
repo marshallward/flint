@@ -66,9 +66,6 @@ def tokenize(line, prior_delim=None):
                     word += char
                     char = next(characters)
 
-            if char != '\n':
-                char = next(characters)
-
             tokens.append(word)
             word = ''
 
