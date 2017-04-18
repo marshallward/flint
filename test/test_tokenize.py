@@ -4,9 +4,9 @@ import unittest
 sys.path.insert(1, '../')
 from flint.tokenize import tokenize
 
+
 class Test(unittest.TestCase):
 
-    # TODO
     def setUp(self):
         self.one_word_str = 'abc\n'
         self.one_word = ['abc']
@@ -22,6 +22,10 @@ class Test(unittest.TestCase):
 
         self.comment_str = 'abc !def ghi\n'
         self.comment = ['abc', ' ', '!def ghi']
+
+        # Need several examples here
+        self.float_str = 'x = 2.5e-2\n'
+        self.float = ['x', ' ', '=', ' ', '2.5e-2']
 
     def test_one_word(self):
         test_toks, _ = tokenize(self.one_word_str)
@@ -42,6 +46,10 @@ class Test(unittest.TestCase):
     def test_comment(self):
         test_toks, _ = tokenize(self.comment_str)
         self.assertEqual(test_toks, self.comment)
+
+    def test_float(self):
+        test_toks, _ = tokenize(self.float_str)
+        self.assertEqual(test_toks, self.float)
 
 
 if __name__ == '__main__':

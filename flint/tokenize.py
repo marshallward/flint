@@ -81,6 +81,16 @@ def tokenize(line, prior_delim=None):
                         frac = True
                     word += char
                     char = next(characters)
+                # Check for float exponent
+                if char in 'eEdD':
+                    word += char
+                    char = next(characters)
+                    if char in '+-':
+                        word += char
+                        char = next(characters)
+                    while char.isdigit():
+                        word += char
+                        char = next(characters)
             else:
                 # TODO: Variables cannot start with underscore
                 while char.isalnum() or char == '_':
