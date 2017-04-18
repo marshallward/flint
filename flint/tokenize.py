@@ -122,11 +122,9 @@ def tokenize(line, prior_delim=None):
             word = ''
 
         elif char in punctuation:
-            # Naive bundling of special character tokens
             # TODO: Check for valid two-character tokens
-            while char in punctuation:
-                word += char
-                char = next(characters)
+            word += char
+            char = next(characters)
             tokens.append(word)
             word = ''
 

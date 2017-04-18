@@ -9,6 +9,8 @@ class Unit(object):
         'module',
         'submodule',
         'block',
+        # Not really a program unit, but seems to work...
+        'interface',
     ]
 
     # TODO: Will probably move all this to a Types class...
@@ -159,7 +161,11 @@ class Unit(object):
                 # TODO: PARAMETER, FORMAT, ENTRY
                 self.parse_implicit_stmt(line)
             elif line[0] in Unit.declaration_types:
-                self.parse_declaration_construct(line)
+                if line[0] == 'interface':
+                    interface = Unit()
+                    interface.parse(lines)
+                else:
+                    self.parse_declaration_construct(line)
             else:
                 break
 

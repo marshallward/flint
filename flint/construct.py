@@ -32,6 +32,9 @@ class Construct(object):
         if line[0] in Construct.construct_types:
             if line[0] == 'if':
                 return (line[0], line[-1]) == ('if', 'then')
+            elif line[0] == 'where':
+                # XXX: Need to figure this out!
+                return
             else:
                 return True
 

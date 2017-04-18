@@ -45,7 +45,7 @@ class Source(object):
         raw_lines = []
         delim = None
         print(self.path)
-        with open(self.path) as srcfile:
+        with open(self.path, errors='replace') as srcfile:
             for line in srcfile:
                 try:
                     tokens, delim = tokenize(line, delim)
