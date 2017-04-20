@@ -28,6 +28,9 @@ class Test(unittest.TestCase):
         self.comment_str = 'abc !def ghi\n'
         self.comment = ['abc', ' ', '!def ghi']
 
+        self.defined_op_str = 'abc .and. def\n'
+        self.defined_op = ['abc', ' ', '.and.', ' ', 'def']
+
         # Need several examples here
         self.float_str = 'x = 2.5e-2\n'
         self.float = ['x', ' ', '=', ' ', '2.5e-2']
@@ -58,6 +61,10 @@ class Test(unittest.TestCase):
     def test_float(self):
         test_toks = self.tokenizer.parse(self.float_str)
         self.assertEqual(test_toks, self.float)
+
+    def test_defined_op(self):
+        test_toks = self.tokenizer.parse(self.defined_op_str)
+        self.assertEqual(test_toks, self.defined_op)
 
 
 if __name__ == '__main__':

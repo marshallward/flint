@@ -18,9 +18,6 @@ class Tokenizer(object):
 
     def parse(self, line):
         """Tokenize a line of Fortran source."""
-        # Testing (TODO: Remove this)
-        if line[-1] != '\n':
-            line += '\n'
 
         tokens = []
 
@@ -138,6 +135,14 @@ class Tokenizer(object):
                 word += char
                 char = next(characters)
 
-        # TODO kind (_) check
+        if char == '_':
+            word += char
+            char = next(characters)
+            label = False
+            while char.isalpha() or (char.isdigit() and not label):
+                if char.isalpha():
+                    digit = False
+                word += char
+                char = next(characters)
 
         return word, char
