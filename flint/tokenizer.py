@@ -37,31 +37,17 @@ class Tokenizer(object):
             elif char in '"\'' or self.prior_delim:
                 word, char = self.parse_string(characters, char)
 
-            elif char.isalnum() or char == '_':
-                if char.isdigit():
-                    frac = False
-                    while char.isdigit() or (char == '.' and not frac):
-                        # Only allow one decimal point
-                        if char == '.':
-                            frac = True
-                        word += char
-                        char = next(characters)
-                    # Check for float exponent
-                    if char in 'eEdD':
-                        word += char
-                        char = next(characters)
-                        if char in '+-':
-                            word += char
-                            char = next(characters)
-                        while char.isdigit():
-                            word += char
-                            char = next(characters)
-                else:
-                    # TODO: Variables cannot start with underscore
-                    #       Keep for now to accommodate preprocessed tags
-                    while char.isalnum() or char == '_':
-                        word += char
-                        char = next(characters)
+            elif char.isalpha() or char == '_':
+                # TODO: Variables cannot start with underscore
+                #       But keep for now to accommodate preprocessed tags
+                while char.isalnum() or char == '_':
+                    word += char
+                    char = next(characters)
+
+            # TODO: leading decimal (.123)
+            # TODO: Leading sign (-5e4)
+            elif char.isdigit():
+                word, char = self.parse_numeric(characters, char)
 
             elif char in ('!', '#'):
                 while char != '\n':
@@ -128,4 +114,30 @@ class Tokenizer(object):
                 char = next(characters)
 
         self.prior_delim = next_delim
+        return word, char
+
+    def parse_numeric(self, characters, char):
+        word = ''
+        frac = False
+
+        while char.isdigit() or (char == '.' and not frac):
+            # Only allow one decimal point
+            if char == '.':
+                frac = True
+            word += char
+            char = next(characters)
+
+        # Check for float exponent
+        if char in 'eEdD':
+            word += char
+            char = next(characters)
+            if char in '+-':
+                word += char
+                char = next(characters)
+            while char.isdigit():
+                word += char
+                char = next(characters)
+
+        # TODO kind (_) check
+
         return word, char
