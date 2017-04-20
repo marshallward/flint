@@ -28,7 +28,6 @@ class Tokenizer(object):
         characters = iter(line)
         char = next(characters)
 
-        next_delim = None
         while char != '\n':
             if char in ' \t':
                 while char in ' \t':
@@ -36,34 +35,7 @@ class Tokenizer(object):
                     char = next(characters)
 
             elif char in '"\'' or self.prior_delim:
-                if self.prior_delim:
-                    delim = self.prior_delim
-                    self.prior_delim = None
-                else:
-                    delim = char
-                    word += char
-                    char = next(characters)
-
-                while True:
-                    if char == '&':
-                        char = next(characters)
-                        if char == '\n':
-                            next_delim = delim
-                            break
-                        else:
-                            word += '&'
-                    elif char == delim:
-                        # Check for escaped delimiters
-                        char = next(characters)
-                        if char == delim:
-                            word += 2 * delim
-                            char = next(characters)
-                        else:
-                            word += delim
-                            break
-                    else:
-                        word += char
-                        char = next(characters)
+                word, char = self.parse_string(characters, char)
 
             elif char.isalnum() or char == '_':
                 if char.isdigit():
@@ -119,5 +91,41 @@ class Tokenizer(object):
             tokens.append(word)
             word = ''
 
-        self.prior_delim = next_delim
         return tokens
+
+    # TODO: Manage iteration better, rather than using char at in/out
+    def parse_string(self, characters, char):
+        word = ''
+
+        if self.prior_delim:
+            delim = self.prior_delim
+            self.prior_delim = None
+        else:
+            delim = char
+            word += char
+            char = next(characters)
+
+        next_delim = None
+        while True:
+            if char == '&':
+                char = next(characters)
+                if char == '\n':
+                    next_delim = delim
+                    break
+                else:
+                    word += '&'
+            elif char == delim:
+                # Check for escaped delimiters
+                char = next(characters)
+                if char == delim:
+                    word += 2 * delim
+                    char = next(characters)
+                else:
+                    word += delim
+                    break
+            else:
+                word += char
+                char = next(characters)
+
+        self.prior_delim = next_delim
+        return word, char
