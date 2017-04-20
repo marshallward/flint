@@ -2,12 +2,14 @@ import sys
 import unittest
 
 sys.path.insert(1, '../')
-from flint.tokenize import tokenize
+from flint.tokenizer import Tokenizer
 
 
 class Test(unittest.TestCase):
 
     def setUp(self):
+        self.tokenizer = Tokenizer()
+
         self.one_word_str = 'abc\n'
         self.one_word = ['abc']
 
@@ -31,30 +33,30 @@ class Test(unittest.TestCase):
         self.float = ['x', ' ', '=', ' ', '2.5e-2']
 
     def test_one_word(self):
-        test_toks, _ = tokenize(self.one_word_str)
+        test_toks = self.tokenizer.parse(self.one_word_str)
         self.assertEqual(test_toks, self.one_word)
 
     def test_two_word(self):
-        test_toks, _ = tokenize(self.two_word_str)
+        test_toks = self.tokenizer.parse(self.two_word_str)
         self.assertEqual(test_toks, self.two_word)
 
     def test_string(self):
-        test_toks, _ = tokenize(self.string_str)
+        test_toks = self.tokenizer.parse(self.string_str)
         self.assertEqual(test_toks, self.string)
 
-        test_toks, _ = tokenize(self.string_tok_str)
+        test_toks = self.tokenizer.parse(self.string_tok_str)
         self.assertEqual(test_toks, self.string_tok)
 
     def test_escape_delim(self):
-        test_toks, _ = tokenize(self.escape_delim_str)
+        test_toks = self.tokenizer.parse(self.escape_delim_str)
         self.assertEqual(test_toks, self.escape_delim)
 
     def test_comment(self):
-        test_toks, _ = tokenize(self.comment_str)
+        test_toks = self.tokenizer.parse(self.comment_str)
         self.assertEqual(test_toks, self.comment)
 
     def test_float(self):
-        test_toks, _ = tokenize(self.float_str)
+        test_toks = self.tokenizer.parse(self.float_str)
         self.assertEqual(test_toks, self.float)
 
 

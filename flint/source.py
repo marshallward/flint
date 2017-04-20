@@ -3,7 +3,7 @@ import sys
 
 from flint.fortlines import FortLines
 from flint.unit import Unit
-from flint.tokenize import tokenize
+from flint.tokenizer import Tokenizer
 
 
 class Source(object):
@@ -42,13 +42,14 @@ class Source(object):
             else:
                 self.abspath = os.path.abspath(path)
 
+        tokenizer = Tokenizer()
         raw_lines = []
-        delim = None
         print(self.path)
+
         with open(self.path, errors='replace') as srcfile:
             for line in srcfile:
                 try:
-                    tokens, delim = tokenize(line, delim)
+                    tokens = tokenizer.parse(line)
                 except ValueError:
                     print('error', srcfile)
                     print(line)
@@ -56,6 +57,11 @@ class Source(object):
                 raw_lines.append(tokens)
 
         # Line cleanup
+        # NOTE: Pre-calculating all these stats is a bit memory-intensive for
+        #       projects approaching ~100k to 1M lines.
+        # TODO: Make this a function, move inside flines loop
+        #       (May also require a more sophisticated FortLines)
+        # TODO: Or maybe create an iterator that optionally skips whitespace
         src_lines = []
         for line in raw_lines:
 
@@ -67,21 +73,17 @@ class Source(object):
             # TODO: Handle preprocessed lines better
             line = [w for w in line if w[0] not in '!#']
 
-            # XXX: This thing needs to be fixed anyway...
-            ## Track whitespace between tokens
-            ## TODO: Move first whitespace to `self.indent`?
-            #line_ws = []
-            #ws_count = 0
-            ##print(line)
-            #for tok in line:
-            #    if tok == ' ':
-            #        ws_count += 1
-            #    else:
-            #        line_ws.append(ws_count)
-            #        ws_count = 0
+            # Track whitespace between tokens
+            # TODO: Move first whitespace to `self.indent`?
+            line_ws = []
+            ws_count = 0
+            for word in line:
+                if all(c == ' ' for c in word):
+                    line_ws.append(len(word))
+                else:
+                    line_ws.append(0)
 
-            #line_ws.append(ws_count)
-            #self.whitespace.append(line_ws)
+            self.whitespace.append(line_ws)
 
             # TODO: Check token case consistency
             #       For now just convert to lowercase
@@ -89,7 +91,6 @@ class Source(object):
                     for tok in line]
 
             # Remove whitespace
-            #tokenized_line = [tok for tok in line if not tok == ' ']
             tokenized_line = [tok for tok in line
                               if not all(c == ' ' for c in tok)]
             if tokenized_line:
@@ -98,7 +99,6 @@ class Source(object):
         flines = FortLines(src_lines)
 
         for line in flines:
-            #if line[0] in Unit.unit_types:
             if Unit.statement(line):
                 unit = Unit()
                 unit.parse(flines)
