@@ -1,17 +1,17 @@
-# I don't use these two
-special_chars = ' =+-*/\\()[]{},.:;!"%&~<>?\'`|$#@'     # Table 3.1
-lexical_tokens = '=+-*/()[],.:;%&<>'                    # Meaningful?
-
-# I only use this one
-punctuation = '=+-*/\\()[]{},:;%&~<>?`|$#@'    # Unhandled Table 3.1 tokens
-
-# These are the strict keywords, but I believe any name is possible?
-logical_kw = ['not', 'and', 'or', 'eqv', 'neqv']
-relational_kw = ['lt', 'le', 'gt', 'ge', 'eq', 'ne']
-logical_value = ['true', 'false']
-
-
 class Tokenizer(object):
+
+    # I don't use these two
+    special_chars = ' =+-*/\\()[]{},.:;!"%&~<>?\'`|$#@'     # Table 3.1
+    lexical_tokens = '=+-*/()[],.:;%&<>'                    # Meaningful?
+
+    # I only use this one
+    punctuation = '=+-*/\\()[]{},:;%&~<>?`|$#@'    # Unhandled Table 3.1 tokens
+
+    # These are the strict keywords, but I believe any name is possible?
+    # Actually, I don't use these either...
+    logical_kw = ['not', 'and', 'or', 'eqv', 'neqv']
+    relational_kw = ['lt', 'le', 'gt', 'ge', 'eq', 'ne']
+    logical_value = ['true', 'false']
 
     def __init__(self):
         self.prior_delim = None
@@ -34,9 +34,6 @@ class Tokenizer(object):
                 while char in ' \t':
                     word += char
                     char = next(characters)
-
-                tokens.append(word)
-                word = ''
 
             elif char in '"\'' or self.prior_delim:
                 if self.prior_delim:
@@ -68,9 +65,6 @@ class Tokenizer(object):
                         word += char
                         char = next(characters)
 
-                tokens.append(word)
-                word = ''
-
             elif char.isalnum() or char == '_':
                 if char.isdigit():
                     frac = False
@@ -97,15 +91,10 @@ class Tokenizer(object):
                         word += char
                         char = next(characters)
 
-                tokens.append(word)
-                word = ''
-
             elif char in ('!', '#'):
                 while char != '\n':
                     word += char
                     char = next(characters)
-                tokens.append(word)
-                word = ''
 
             elif char == '.':
                 word += char
@@ -118,19 +107,17 @@ class Tokenizer(object):
                     word += char
                     char = next(characters)
 
-                tokens.append(word)
-                word = ''
-
-            elif char in punctuation:
+            elif char in Tokenizer.punctuation:
                 # TODO: Check for valid two-character tokens
                 word += char
                 char = next(characters)
-                tokens.append(word)
-                word = ''
 
             else:
                 # This should never happen
                 raise ValueError
+
+            tokens.append(word)
+            word = ''
 
         self.prior_delim = next_delim
         return tokens
