@@ -141,7 +141,7 @@ class Tokenizer(object):
             label = False
             while char.isalpha() or (char.isdigit() and not label):
                 if char.isalpha():
-                    digit = False
+                    label = False
                 word += char
                 char = next(characters)
 
