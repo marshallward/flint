@@ -76,7 +76,6 @@ class Source(object):
             # Track whitespace between tokens
             # TODO: Move first whitespace to `self.indent`?
             line_ws = []
-            ws_count = 0
             for word in line:
                 if all(c == ' ' for c in word):
                     line_ws.append(len(word))

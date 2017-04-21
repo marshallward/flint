@@ -33,6 +33,19 @@ class Construct(object):
             if line[0] == 'if':
                 return (line[0], line[-1]) == ('if', 'then')
             elif line[0] == 'where':
+                assert line[1] == '('
+                par_count = 1
+                for idx, tok in enumerate(line[2:], start=2):
+                    if tok == '(':
+                        par_count += 1
+                    elif tok == ')':
+                        par_count -= 1
+
+                    if par_count == 0:
+                        break
+
+                return idx == len(line) - 1
+
                 # XXX: Need to figure this out!
                 return
             else:
