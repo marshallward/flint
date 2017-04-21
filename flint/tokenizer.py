@@ -35,13 +35,12 @@ class Tokenizer(object):
                 word, char = self.parse_string(characters, char)
 
             elif char.isalpha() or char == '_':
-                # TODO: Variables cannot start with underscore
+                # NOTE: Variables cannot start with underscore
                 #       But keep for now to accommodate preprocessed tags
                 while char.isalnum() or char == '_':
                     word += char
                     char = next(characters)
 
-            # TODO: leading decimal (.123)
             # TODO: Leading sign (-5e4)
             elif char.isdigit():
                 word, char = self.parse_numeric(characters, char)
@@ -52,15 +51,17 @@ class Tokenizer(object):
                     char = next(characters)
 
             elif char == '.':
-                word += char
                 char = next(characters)
-                while char.isalpha():
-                    word += char
-                    char = next(characters)
-
-                if char == '.':
-                    word += char
-                    char = next(characters)
+                if char.isdigit():
+                    frac, char = self.parse_numeric(characters, char)
+                    word = '.' + frac
+                else:
+                    while char.isalpha():
+                        word += char
+                        char = next(characters)
+                    if char == '.':
+                        word += char
+                        char = next(characters)
 
             elif char in Tokenizer.punctuation:
                 # TODO: Check for valid two-character tokens
