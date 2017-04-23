@@ -117,7 +117,8 @@ class Tokenizer(object):
                 self.prior_char, self.char = self.char, next(self.characters)
                 if self.char == delim:
                     word += 2 * delim
-                    self.prior_char, self.char = self.char, next(self.characters)
+                    self.prior_char, self.char = (self.char,
+                                                  next(self.characters))
                 else:
                     word += delim
                     break
