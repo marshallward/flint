@@ -27,60 +27,54 @@ class Tokenizer(object):
 
         word = ''
         self.characters = iter(line)
-        char = next(self.characters)
+        self.char = next(self.characters)
 
-        while char != '\n':
-            if char in ' \t':
-                while char in ' \t':
-                    word += char
-                    char = next(self.characters)
+        while self.char != '\n':
+            if self.char in ' \t':
+                while self.char in ' \t':
+                    word += self.char
+                    self.char = next(self.characters)
 
-            elif char in '"\'' or self.prior_delim:
-                # Temporary
-                self.char = char
-
+            elif self.char in '"\'' or self.prior_delim:
                 word = self.parse_string()
                 if (self.prior_char, self.char) == ('&', '\n'):
                     tokens.append(word)
                     word = self.prior_char
 
-                # Temporary
-                char = self.char
-
-            elif char.isalpha() or char == '_':
+            elif self.char.isalpha() or self.char == '_':
                 # NOTE: Variables cannot start with underscore
                 #       But keep for now to accommodate preprocessed tags
-                while char.isalnum() or char == '_':
-                    word += char
-                    char = next(self.characters)
+                while self.char.isalnum() or self.char == '_':
+                    word += self.char
+                    self.char = next(self.characters)
 
             # TODO: Leading sign (-5e4)
-            elif char.isdigit():
-                word, char = self.parse_numeric(char)
+            elif self.char.isdigit():
+                word, self.char = self.parse_numeric(self.char)
 
-            elif char in ('!', '#'):
-                while char != '\n':
-                    word += char
-                    char = next(self.characters)
+            elif self.char in ('!', '#'):
+                while self.char != '\n':
+                    word += self.char
+                    self.char = next(self.characters)
 
-            elif char == '.':
-                char = next(self.characters)
-                if char.isdigit():
-                    frac, char = self.parse_numeric(char)
+            elif self.char == '.':
+                self.char = next(self.characters)
+                if self.char.isdigit():
+                    frac, self.char = self.parse_numeric(self.char)
                     word = '.' + frac
                 else:
                     word = '.'
-                    while char.isalpha():
-                        word += char
-                        char = next(self.characters)
-                    if char == '.':
-                        word += char
-                        char = next(self.characters)
+                    while self.char.isalpha():
+                        word += self.char
+                        self.char = next(self.characters)
+                    if self.char == '.':
+                        word += self.char
+                        self.char = next(self.characters)
 
-            elif char in Tokenizer.punctuation:
+            elif self.char in Tokenizer.punctuation:
                 # TODO: Check for valid two-character tokens
-                word += char
-                char = next(self.characters)
+                word += self.char
+                self.char = next(self.characters)
 
             else:
                 # This should never happen
