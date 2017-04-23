@@ -56,6 +56,7 @@ class Tokenizer(object):
                     frac, char = self.parse_numeric(characters, char)
                     word = '.' + frac
                 else:
+                    word = '.'
                     while char.isalpha():
                         word += char
                         char = next(characters)
