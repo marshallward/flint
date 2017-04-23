@@ -7,12 +7,6 @@ class Tokenizer(object):
     # I only use this one
     punctuation = '=+-*/\\()[]{},:;%&~<>?`|$#@'    # Unhandled Table 3.1 tokens
 
-    # These are the strict keywords, but I believe any name is possible?
-    # Actually, I don't use these either...
-    logical_kw = ['not', 'and', 'or', 'eqv', 'neqv']
-    relational_kw = ['lt', 'le', 'gt', 'ge', 'eq', 'ne']
-    logical_value = ['true', 'false']
-
     def __init__(self):
         self.characters = None
         self.prior_char = None
@@ -50,7 +44,7 @@ class Tokenizer(object):
 
             # TODO: Leading sign (-5e4)
             elif self.char.isdigit():
-                word, self.char = self.parse_numeric(self.char)
+                word = self.parse_numeric()
 
             elif self.char in ('!', '#'):
                 while self.char != '\n':
@@ -60,7 +54,7 @@ class Tokenizer(object):
             elif self.char == '.':
                 self.char = next(self.characters)
                 if self.char.isdigit():
-                    frac, self.char = self.parse_numeric(self.char)
+                    frac = self.parse_numeric()
                     word = '.' + frac
                 else:
                     word = '.'
@@ -85,7 +79,6 @@ class Tokenizer(object):
 
         return tokens
 
-    # TODO: Manage iteration better, rather than using char at in/out
     def parse_string(self):
         word = ''
 
@@ -124,36 +117,36 @@ class Tokenizer(object):
 
         return word
 
-    def parse_numeric(self, char):
+    def parse_numeric(self):
         word = ''
         frac = False
 
-        while char.isdigit() or (char == '.' and not frac):
+        while self.char.isdigit() or (self.char == '.' and not frac):
             # Only allow one decimal point
-            if char == '.':
+            if self.char == '.':
                 frac = True
-            word += char
-            char = next(self.characters)
+            word += self.char
+            self.char = next(self.characters)
 
         # Check for float exponent
-        if char in 'eEdD':
-            word += char
-            char = next(self.characters)
-            if char in '+-':
-                word += char
-                char = next(self.characters)
-            while char.isdigit():
-                word += char
-                char = next(self.characters)
+        if self.char in 'eEdD':
+            word += self.char
+            self.char = next(self.characters)
+            if self.char in '+-':
+                word += self.char
+                self.char = next(self.characters)
+            while self.char.isdigit():
+                word += self.char
+                self.char = next(self.characters)
 
-        if char == '_':
-            word += char
-            char = next(self.characters)
-            label = False
-            while char.isalpha() or (char.isdigit() and not label):
-                if char.isalpha():
-                    label = False
-                word += char
-                char = next(self.characters)
+        if self.char == '_':
+            word += self.char
+            self.char = next(self.characters)
+            named = self.char.isalpha()
 
-        return word, char
+            while (self.char.isdigit() or
+                   (self.char.isalpha() or self.char == '_' and named)):
+                word += self.char
+                self.char = next(self.characters)
+
+        return word
