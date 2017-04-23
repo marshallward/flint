@@ -16,6 +16,9 @@ class Tokenizer(object):
     def __init__(self):
         self.prior_delim = None
 
+        self.prior_char = None
+        self.char = None
+
     def parse(self, line):
         """Tokenize a line of Fortran source."""
 
@@ -32,7 +35,16 @@ class Tokenizer(object):
                     char = next(characters)
 
             elif char in '"\'' or self.prior_delim:
-                word, char = self.parse_string(characters, char)
+                # Temporary
+                self.char = char
+
+                word = self.parse_string(characters)
+                if (self.prior_char, self.char) == ('&', '\n'):
+                    tokens.append(word)
+                    word = self.prior_char
+
+                # Temporary
+                char = self.char
 
             elif char.isalpha() or char == '_':
                 # NOTE: Variables cannot start with underscore
@@ -79,41 +91,42 @@ class Tokenizer(object):
         return tokens
 
     # TODO: Manage iteration better, rather than using char at in/out
-    def parse_string(self, characters, char):
+    def parse_string(self, characters):
         word = ''
 
         if self.prior_delim:
             delim = self.prior_delim
             self.prior_delim = None
         else:
-            delim = char
-            word += char
-            char = next(characters)
+            delim = self.char
+            word += self.char
+            self.prior_char, self.char = self.char, next(characters)
 
         next_delim = None
         while True:
-            if char == '&':
-                char = next(characters)
-                if char == '\n':
+            if self.char == '&':
+                self.prior_char, self.char = self.char, next(characters)
+                if self.char == '\n':
                     next_delim = delim
                     break
                 else:
                     word += '&'
-            elif char == delim:
+            elif self.char == delim:
                 # Check for escaped delimiters
-                char = next(characters)
-                if char == delim:
+                self.prior_char, self.char = self.char, next(characters)
+                if self.char == delim:
                     word += 2 * delim
-                    char = next(characters)
+                    self.prior_char, self.char = self.char, next(characters)
                 else:
                     word += delim
                     break
             else:
-                word += char
-                char = next(characters)
+                word += self.char
+                self.prior_char, self.char = self.char, next(characters)
 
         self.prior_delim = next_delim
-        return word, char
+
+        return word
 
     def parse_numeric(self, characters, char):
         word = ''

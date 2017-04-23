@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
         ]
         self.str_continue = [
                 ['s', ' ', '=', ' ', "'This is a ", '&'],
-                ['    ', "single string.'"]
+                ['     ', "single string.'"]
         ]
 
     def test_one_word(self):
