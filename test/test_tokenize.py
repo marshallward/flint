@@ -31,9 +31,20 @@ class Test(unittest.TestCase):
         self.defined_op_str = 'abc .and. def\n'
         self.defined_op = ['abc', ' ', '.and.', ' ', 'def']
 
-        # Need several examples here
+        self.decimal_str = 'x = .25\n'
+        self.decimal = ['x', ' ', '=', ' ', '.25']
+
         self.float_str = 'x = 2.5e-2\n'
         self.float = ['x', ' ', '=', ' ', '2.5e-2']
+
+        self.str_continue_str = [
+                "s = 'This is a &\n",
+                "     single string.'\n"
+        ]
+        self.str_continue = [
+                ['s', ' ', '=', ' ', "'This is a ", '&'],
+                ['    ', "single string.'"]
+        ]
 
     def test_one_word(self):
         test_toks = self.tokenizer.parse(self.one_word_str)
@@ -58,14 +69,22 @@ class Test(unittest.TestCase):
         test_toks = self.tokenizer.parse(self.comment_str)
         self.assertEqual(test_toks, self.comment)
 
-    def test_float(self):
-        test_toks = self.tokenizer.parse(self.float_str)
-        self.assertEqual(test_toks, self.float)
-
     def test_defined_op(self):
         test_toks = self.tokenizer.parse(self.defined_op_str)
         self.assertEqual(test_toks, self.defined_op)
 
+    def test_decimal(self):
+        test_toks = self.tokenizer.parse(self.decimal_str)
+        self.assertEqual(test_toks, self.decimal)
+
+    def test_float(self):
+        test_toks = self.tokenizer.parse(self.float_str)
+        self.assertEqual(test_toks, self.float)
+
+    def test_string_continue(self):
+        for (line, toks) in zip(self.str_continue_str, self.str_continue):
+            test_toks = self.tokenizer.parse(line)
+            self.assertEqual(test_toks, toks)
 
 if __name__ == '__main__':
     unittest.main()
