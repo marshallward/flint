@@ -64,8 +64,7 @@ class Source(object):
                     print(line)
                     sys.exit()
 
-                if tokens:
-                    self.report.check_trailing_whitespace(tokens, line_cnt)
+                self.report.check_trailing_whitespace(tokens, line_cnt)
 
                 raw_lines.append(tokens)
 

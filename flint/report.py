@@ -16,5 +16,5 @@ class Report(object):
 
     def check_trailing_whitespace(self, tokens, line_number):
         code = 'C0102'
-        if all(c in string.whitespace for c in tokens[-1]):
+        if tokens and all(c in string.whitespace for c in tokens[-1]):
             self.errors[code].append(line_number)
