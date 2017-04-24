@@ -2,17 +2,18 @@ import os
 import sys
 
 from flint.fortlines import FortLines
+from flint.report import Report
 from flint.unit import Unit
 from flint.tokenizer import Tokenizer
 
 
 class Source(object):
-    def __init__(self):
-        self.project = None     # Link to parent
+    def __init__(self, project=None):
+        self.project = project
 
         # Filepath
         self.path = None
-        self.abspath = None     # TODO: Use a property to get root from project
+        self.abspath = None
 
         # Program units
         self.units = []
@@ -20,6 +21,8 @@ class Source(object):
         # Diagnostics
         self.linewidths = []
         self.whitespace = []
+
+        self.report = Report()
 
     def parse(self, path):
         # Resolve filepaths
@@ -43,17 +46,27 @@ class Source(object):
                 self.abspath = os.path.abspath(path)
 
         tokenizer = Tokenizer()
+        line_cnt = 0
         raw_lines = []
-        print(self.path)
+        print('{} ({})'.format(self.path, self.abspath))
 
+        # TODO: pycodestyle has a better way to deal with nonunicode files
         with open(self.path, errors='replace') as srcfile:
             for line in srcfile:
+                line_cnt += 1
+
+                self.report.check_linewidth(line, line_cnt)
+
                 try:
                     tokens = tokenizer.parse(line)
                 except ValueError:
                     print('error', srcfile)
                     print(line)
                     sys.exit()
+
+                if tokens:
+                    self.report.check_trailing_whitespace(tokens, line_cnt)
+
                 raw_lines.append(tokens)
 
         # Line cleanup
