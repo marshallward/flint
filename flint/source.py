@@ -19,7 +19,6 @@ class Source(object):
         self.units = []
 
         # Diagnostics
-        self.linewidths = []
         self.whitespace = []
 
         self.report = Report()
@@ -47,7 +46,7 @@ class Source(object):
 
         tokenizer = Tokenizer()
         line_cnt = 0
-        raw_lines = []
+        src_lines = []
         print('{} ({})'.format(self.path, self.abspath))
 
         # TODO: pycodestyle has a better way to deal with nonunicode files
@@ -66,40 +65,33 @@ class Source(object):
 
                 self.report.check_trailing_whitespace(tokens, line_cnt)
 
-                raw_lines.append(tokens)
+                # TODO: Check whitespace between tokens
 
-        src_lines = []
-        for line in raw_lines:
+                # Strip comments and preprocessed lines
+                # TODO: Handle preprocessed lines better
+                tokens = [w for w in tokens if w[0] not in '!#']
 
-            # Record line widths
-            width = len(''.join(line))
-            self.linewidths.append(width)
+                # Track whitespace between tokens
+                # TODO: Move first whitespace to `self.indent`?
+                line_ws = []
+                for word in tokens:
+                    if all(c == ' ' for c in word):
+                        line_ws.append(len(word))
+                    else:
+                        line_ws.append(0)
 
-            # Strip comments and preprocessed lines
-            # TODO: Handle preprocessed lines better
-            line = [w for w in line if w[0] not in '!#']
+                self.whitespace.append(line_ws)
 
-            # Track whitespace between tokens
-            # TODO: Move first whitespace to `self.indent`?
-            line_ws = []
-            for word in line:
-                if all(c == ' ' for c in word):
-                    line_ws.append(len(word))
-                else:
-                    line_ws.append(0)
+                # TODO: Check token case consistency
+                #       For now just convert to lowercase
+                tokens = [tok.lower() if tok[0] not in '\'"' else tok
+                        for tok in tokens]
 
-            self.whitespace.append(line_ws)
-
-            # TODO: Check token case consistency
-            #       For now just convert to lowercase
-            line = [tok.lower() if tok[0] not in '\'"' else tok
-                    for tok in line]
-
-            # Remove whitespace
-            tokenized_line = [tok for tok in line
-                              if not all(c == ' ' for c in tok)]
-            if tokenized_line:
-                src_lines.append(tokenized_line)
+                # Remove whitespace
+                tokenized_line = [tok for tok in tokens
+                                  if not all(c == ' ' for c in tok)]
+                if tokenized_line:
+                    src_lines.append(tokenized_line)
 
         flines = FortLines(src_lines)
 
