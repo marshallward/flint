@@ -22,6 +22,9 @@ class Test(unittest.TestCase):
         self.string_tok_str = 'abc "def ghi" jkl\n'
         self.string_tok = ['abc', ' ', '"def ghi"', ' ', 'jkl']
 
+        self.string_ampersand_str = 's = "Lennon & McCartney"\n'
+        self.string_ampersand = ['s', ' ', '=', ' ', '"Lennon & McCartney"']
+
         self.escape_delim_str = '\'abc \'\'def\' ghi\n'
         self.escape_delim = ['\'abc \'\'def\'', ' ', 'ghi']
 
@@ -60,6 +63,10 @@ class Test(unittest.TestCase):
 
         test_toks = self.tokenizer.parse(self.string_tok_str)
         self.assertEqual(test_toks, self.string_tok)
+
+    def test_string_ampersand(self):
+        test_toks = self.tokenizer.parse(self.string_ampersand_str)
+        self.assertEqual(test_toks, self.string_ampersand)
 
     def test_escape_delim(self):
         test_toks = self.tokenizer.parse(self.escape_delim_str)

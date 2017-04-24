@@ -42,7 +42,6 @@ class Tokenizer(object):
                     word += self.char
                     self.char = next(self.characters)
 
-            # TODO: Leading sign (-5e4)
             elif self.char.isdigit():
                 word = self.parse_numeric()
 
