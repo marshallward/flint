@@ -68,12 +68,6 @@ class Source(object):
 
                 raw_lines.append(tokens)
 
-        # Line cleanup
-        # NOTE: Pre-calculating all these stats is a bit memory-intensive for
-        #       projects approaching ~100k to 1M lines.
-        # TODO: Make this a function, move inside flines loop
-        #       (May also require a more sophisticated FortLines)
-        # TODO: Or maybe create an iterator that optionally skips whitespace
         src_lines = []
         for line in raw_lines:
 

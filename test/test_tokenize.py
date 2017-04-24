@@ -40,6 +40,9 @@ class Test(unittest.TestCase):
         self.float_str = 'x = 2.5e-2\n'
         self.float = ['x', ' ', '=', ' ', '2.5e-2']
 
+        self.numeric_kind_str = 'x = 1.0_r8\n'
+        self.numeric_kind = ['x', ' ', '=', ' ', '1.0_r8']
+
         self.str_continue_str = [
                 "s = 'This is a &\n",
                 "     single string.'\n"
@@ -87,6 +90,10 @@ class Test(unittest.TestCase):
     def test_float(self):
         test_toks = self.tokenizer.parse(self.float_str)
         self.assertEqual(test_toks, self.float)
+
+    def test_numeric_kind(self):
+        test_toks = self.tokenizer.parse(self.numeric_kind_str)
+        self.assertEqual(test_toks, self.numeric_kind)
 
     def test_string_continue(self):
         for (line, toks) in zip(self.str_continue_str, self.str_continue):
