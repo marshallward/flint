@@ -7,6 +7,10 @@ class Tokenizer(object):
     # I only use this one
     punctuation = '=+-*/\\()[]{},:;%&~<>?`|$#@'    # Unhandled Table 3.1 tokens
 
+    # Token pairs (syntax and operators)
+    # TODO: (/ and /) are currently removed, for reasons discussed below.
+    pairs = ('::', '=>', '**', '//', '==', '/=', '<=', '>=')
+
     def __init__(self):
         self.characters = None
         self.prior_char = None
@@ -19,15 +23,16 @@ class Tokenizer(object):
 
         tokens = []
 
-        word = ''
         self.characters = iter(line)
-        self.char = next(self.characters)
+        self.update_chars()
 
         while self.char != '\n':
+            word = ''
             if self.char in ' \t':
                 while self.char in ' \t':
                     word += self.char
-                    self.char = next(self.characters)
+                    self.update_chars()
+                    #self.char = next(self.characters)
 
             elif self.char in '"\'' or self.prior_delim:
                 word = self.parse_string()
@@ -40,7 +45,7 @@ class Tokenizer(object):
                 #       But keep for now to accommodate preprocessed tags
                 while self.char.isalnum() or self.char == '_':
                     word += self.char
-                    self.char = next(self.characters)
+                    self.update_chars()
 
             elif self.char.isdigit():
                 word = self.parse_numeric()
@@ -48,10 +53,10 @@ class Tokenizer(object):
             elif self.char in ('!', '#'):
                 while self.char != '\n':
                     word += self.char
-                    self.char = next(self.characters)
+                    self.update_chars()
 
             elif self.char == '.':
-                self.char = next(self.characters)
+                self.update_chars()
                 if self.char.isdigit():
                     frac = self.parse_numeric()
                     word = '.' + frac
@@ -59,22 +64,32 @@ class Tokenizer(object):
                     word = '.'
                     while self.char.isalpha():
                         word += self.char
-                        self.char = next(self.characters)
+                        self.update_chars()
                     if self.char == '.':
                         word += self.char
-                        self.char = next(self.characters)
+                        self.update_chars()
 
             elif self.char in Tokenizer.punctuation:
-                # TODO: Check for valid two-character tokens
-                word += self.char
-                self.char = next(self.characters)
+                word = self.char
+                self.update_chars()
+
+                # NOTE: The following check does not work for (/ and /) because
+                # it produces false tokens with `operator (/)` declarations.
+                # One potential solution is to check for the `operator` token
+                # inside of `tokens`, but it's a little more complicated...
+                # For now, I just omit (/ and /).
+
+                if self.prior_char + self.char in self.pairs:
+                    word = self.prior_char + self.char
+                    tokens.append(word)
+                    self.update_chars()
+                    continue
 
             else:
                 # This should never happen
                 raise ValueError
 
             tokens.append(word)
-            word = ''
 
         return tokens
 
@@ -149,3 +164,6 @@ class Tokenizer(object):
                 self.char = next(self.characters)
 
         return word
+
+    def update_chars(self):
+        self.prior_char, self.char = self.char, next(self.characters)
