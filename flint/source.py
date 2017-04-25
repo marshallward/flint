@@ -80,7 +80,7 @@ class Source(object):
                 # TODO: Check token case consistency
                 #       For now just convert to lowercase
                 tokens = [tok.lower() if tok[0] not in '\'"' else tok
-                        for tok in tokens]
+                          for tok in tokens]
 
                 # Remove whitespace
                 tokenized_line = [tok for tok in tokens

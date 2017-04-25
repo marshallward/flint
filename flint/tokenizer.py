@@ -32,7 +32,6 @@ class Tokenizer(object):
                 while self.char in ' \t':
                     word += self.char
                     self.update_chars()
-                    #self.char = next(self.characters)
 
             elif self.char in '"\'' or self.prior_delim:
                 word = self.parse_string()
@@ -74,7 +73,7 @@ class Tokenizer(object):
                 self.update_chars()
 
                 # NOTE: The following check does not work for (/ and /) because
-                # it produces false tokens with `operator (/)` declarations.
+                # it produces false tokens inside `operator (/)` declarations.
                 # One potential solution is to check for the `operator` token
                 # inside of `tokens`, but it's a little more complicated...
                 # For now, I just omit (/ and /).
