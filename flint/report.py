@@ -29,7 +29,7 @@ class Report(object):
                 if idx == len(tokens) - 2 and tokens[-1].startswith('!'):
                     continue
                 err = line_number, ''.join(tokens[idx-1:idx+2])
-                self.errors['C0103'].append(err)
+                self.errors[code].append(err)
 
     def check_mixed_tabs_spaces(self, tokens, line_number):
         raise NotImplementedError
