@@ -19,7 +19,7 @@ class Source(object):
         self.units = []
 
         # Diagnostics
-        self.whitespace = []
+        self.indent = []
 
         self.report = Report()
 
@@ -45,16 +45,16 @@ class Source(object):
                 self.abspath = os.path.abspath(path)
 
         tokenizer = Tokenizer()
-        line_cnt = 0
+        line_number = 0
         src_lines = []
         print('{} ({})'.format(self.path, self.abspath))
 
         # TODO: pycodestyle has a better way to deal with nonunicode files
         with open(self.path, errors='replace') as srcfile:
             for line in srcfile:
-                line_cnt += 1
+                line_number += 1
 
-                self.report.check_linewidth(line, line_cnt)
+                self.report.check_linewidth(line, line_number)
 
                 try:
                     tokens = tokenizer.parse(line)
@@ -63,24 +63,19 @@ class Source(object):
                     print(line)
                     sys.exit()
 
-                self.report.check_trailing_whitespace(tokens, line_cnt)
+                self.report.check_trailing_whitespace(tokens, line_number)
 
                 # TODO: Check whitespace between tokens
+                if tokens and all(c in ' \t' for c in tokens[0]):
+                    self.indent.append(len(tokens[0]))
+                else:
+                    self.indent.append(0)
+
+                self.report.check_token_spacing(tokens, line_number)
 
                 # Strip comments and preprocessed lines
                 # TODO: Handle preprocessed lines better
                 tokens = [w for w in tokens if w[0] not in '!#']
-
-                # Track whitespace between tokens
-                # TODO: Move first whitespace to `self.indent`?
-                line_ws = []
-                for word in tokens:
-                    if all(c == ' ' for c in word):
-                        line_ws.append(len(word))
-                    else:
-                        line_ws.append(0)
-
-                self.whitespace.append(line_ws)
 
                 # TODO: Check token case consistency
                 #       For now just convert to lowercase
@@ -93,6 +88,7 @@ class Source(object):
                 if tokenized_line:
                     src_lines.append(tokenized_line)
 
+        # NOTE: Would be great to integrate the prior loop into FortLines...
         flines = FortLines(src_lines)
 
         for line in flines:
