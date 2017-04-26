@@ -23,20 +23,31 @@ class Unit(object):
         'logical',      # R404
     ]
 
-    attribute_specs = [
+    # R507 access-spec
+    access_specs = [
+        'public',
+        'private',
+    ]
+
+    # R502 attr-spec
+    attribute_specs = access_specs + [
+        'allocatable',
+        'asynchronous',
         'codimension',
         'contiguous',
         'dimension',
         'external',
         'intent',
-        'namelist',
+        'intrinsic',
+        'namelist', # NOTE: Not an attribute...
+        # language-binding-spec
         'optional',
         'pointer',
         'protected',
         'save',
         'target',
-        'volatile',
         'value',
+        'volatile',
         'common',       # Deprecated
         'equivalence',  # Deprecated
     ]
@@ -64,6 +75,8 @@ class Unit(object):
     def __init__(self):
         self.name = None
         self.utype = None
+
+        self.variables = []
 
     @staticmethod
     def statement(line):
@@ -180,7 +193,27 @@ class Unit(object):
         print('I: {}'.format(' '.join(line)))
 
     def parse_declaration_construct(self, line):
+
+        if line[0] in self.intrinsic_types:
+            vtype = line[0]
+            start = 1
+
+        # TODO: Distinguish between type declaration and definition
+        # This only handles declarations
+        elif line[0] in ('type', 'class') and line[1] == '(':
+            assert (line[1], line[3]) == ('(', ')')
+            vtype = line[2]
+            start = 3
+
+        else:
+            print('X: {}'.format(' '.join(line)))
+            return
+
+        #for tok in line[start:]:
+        #    if
+
         print('D: {}'.format(' '.join(line)))
+
 
     # Execution
 
