@@ -10,6 +10,7 @@ class Report(object):
 
         # NOTE: Current codes used here are totally rubbish!
         self.errors = collections.defaultdict(list)
+        self.cases = collections.defaultdict(set)
 
     def check_linewidth(self, line, line_number):
         code = 'C0101'
@@ -33,3 +34,10 @@ class Report(object):
 
     def check_mixed_tabs_spaces(self, tokens, line_number):
         raise NotImplementedError
+
+    def check_keyword_case(self):
+        code = 'C0104'
+        for kw in self.cases:
+            kw_set = self.cases[kw]
+            if len(kw_set) > 1:
+                self.errors[code].append(kw_set)

@@ -73,6 +73,9 @@ class Source(object):
 
                 self.report.check_token_spacing(tokens, line_number)
 
+                for tok in tokens:
+                    self.report.cases[tok.lower()].add(tok)
+
                 # Strip comments and preprocessed lines
                 # TODO: Handle preprocessed lines better
                 tokens = [w for w in tokens if w[0] not in '!#']
@@ -87,6 +90,8 @@ class Source(object):
                                   if not all(c == ' ' for c in tok)]
                 if tokenized_line:
                     src_lines.append(tokenized_line)
+
+        self.report.check_keyword_case()
 
         # NOTE: Would be great to integrate the prior loop into FortLines...
         flines = FortLines(src_lines)
