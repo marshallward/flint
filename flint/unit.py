@@ -216,12 +216,49 @@ class Unit(object):
                     assert next(tokens) == ')'
                 else:
                     # Unhandled
-                    print('d: {}'.format(' '.join(line)))
+                    print('X: {}'.format(' '.join(line)))
                     return
 
+                # Character length parsing
+                if vtype == 'character':
+                    tok = next(tokens)
+                    if tok == '*':
+                        tok = next(tokens)
+
+                    assert tok.isdigit() or tok == '('
+
+                    if tok == '(':
+                        assert tok == '('
+                        while tok != ')':
+                            tok = next(tokens)
+
                 tok = next(tokens)
+
+                # Attributes
+                while tok == ',':
+                    tok = next(tokens)
+                    attr = tok
+                    if attr in ('dimension', 'intent'):
+                        tok = next(tokens)
+                        assert tok == '('
+                        #while tok != ')':
+                        #    tok = next(tokens)
+                        par_count = 1
+                        while par_count > 0:
+                            tok = next(tokens)
+                            if tok == '(':
+                                par_count += 1
+                            elif tok == ')':
+                                par_count -= 1
+                    tok = next(tokens)
+
+                if tok == '::':
+                    tok = next(tokens)
+
+                vname = tok
                 break
 
+            print('var: {} {}'.format(vtype, vname))
             print('D: {}'.format(' '.join(line)))
 
     # Execution
