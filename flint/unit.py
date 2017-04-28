@@ -219,18 +219,22 @@ class Unit(object):
                     print('X: {}'.format(' '.join(line)))
                     return
 
+                # XXX: I think this is a bit broken due to character lookahead.
+                # e.g.,
+                #       character :: ng
+                # is probably skipping the '::' which is not what I want.
+                # I'm sure this will come back to haunt me.
+
                 # Character length parsing
                 if vtype == 'character':
                     tok = next(tokens)
                     if tok == '*':
                         tok = next(tokens)
 
-                    assert tok.isdigit() or tok == '('
-
-                    if tok == '(':
-                        assert tok == '('
-                        while tok != ')':
-                            tok = next(tokens)
+                # Kind (or len) statement
+                if tok == '(':
+                    while tok != ')':
+                        tok = next(tokens)
 
                 tok = next(tokens)
 
