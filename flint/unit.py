@@ -11,6 +11,8 @@ class Unit(object):
         'block',
         # Not really a program unit, but seems to work...
         'interface',
+        'type',
+        'enum',
     ]
 
     # TODO: Will probably move all this to a Types class...
@@ -39,7 +41,7 @@ class Unit(object):
         'external',
         'intent',
         'intrinsic',
-        'namelist', # NOTE: Not an attribute...
+        'namelist',     # NOTE: Not an attribute...
         # language-binding-spec
         'optional',
         'pointer',
@@ -142,7 +144,11 @@ class Unit(object):
         Each program unit has a different header format, so this method must be
         overridden by each subclass.
         """
-        self.utype = next(w for w in line if w in Unit.unit_types)
+        try:
+            self.utype = next(w for w in line if w in Unit.unit_types)
+        except StopIteration:
+            print(line)
+            raise
 
         if len(line) >= 2:
             self.name = line[1]
@@ -174,11 +180,7 @@ class Unit(object):
                 # TODO: PARAMETER, FORMAT, ENTRY
                 self.parse_implicit_stmt(line)
             elif line[0] in Unit.declaration_types:
-                if line[0] == 'interface':
-                    interface = Unit()
-                    interface.parse(lines)
-                else:
-                    self.parse_declaration_construct(line)
+                self.parse_declaration_construct(lines, line)
             else:
                 break
 
@@ -192,28 +194,35 @@ class Unit(object):
     def parse_implicit_stmt(self, line):
         print('I: {}'.format(' '.join(line)))
 
-    def parse_declaration_construct(self, line):
+    def parse_declaration_construct(self, lines, line):
 
-        if line[0] in self.intrinsic_types:
-            vtype = line[0]
-            start = 1
+        if (line[0] in ('enum', 'interface')
+                or (line[0] == 'type' and line[1] != '(')):
+            block = Unit()
+            block.parse(lines)
 
-        # TODO: Distinguish between type declaration and definition
-        # This only handles declarations
-        elif line[0] in ('type', 'class') and line[1] == '(':
-            assert (line[1], line[3]) == ('(', ')')
-            vtype = line[2]
-            start = 3
+        elif line[0] in Unit.access_specs:
+            print('d: {}'.format(' '.join(line)))
 
         else:
-            print('X: {}'.format(' '.join(line)))
-            return
+            tokens = iter(line)
 
-        #for tok in line[start:]:
-        #    if
+            for tok in tokens:
+                if tok in Unit.intrinsic_types:
+                    vtype = tok
+                elif tok in ('type', 'class'):
+                    assert next(tokens) == '('
+                    vtype = next(tokens)
+                    assert next(tokens) == ')'
+                else:
+                    # Unhandled
+                    print('d: {}'.format(' '.join(line)))
+                    return
 
-        print('D: {}'.format(' '.join(line)))
+                tok = next(tokens)
+                break
 
+            print('D: {}'.format(' '.join(line)))
 
     # Execution
 
