@@ -207,62 +207,66 @@ class Unit(object):
         else:
             tokens = iter(line)
 
-            for tok in tokens:
-                if tok in Unit.intrinsic_types:
-                    vtype = tok
-                elif tok in ('type', 'class'):
-                    assert next(tokens) == '('
-                    vtype = next(tokens)
-                    assert next(tokens) == ')'
-                else:
-                    # Unhandled
-                    print('X: {}'.format(' '.join(line)))
-                    return
+            tok = next(tokens)
+            if tok in Unit.intrinsic_types:
+                vtype = tok
+            elif tok in ('type', 'class'):
+                assert next(tokens) == '('
+                vtype = next(tokens)
+                assert next(tokens) == ')'
+            else:
+                # Unhandled
+                print('X: {}'.format(' '.join(line)))
+                return
 
-                # XXX: I think this is a bit broken due to character lookahead.
-                # e.g.,
-                #       character :: ng
-                # is probably skipping the '::' which is not what I want.
-                # I'm sure this will come back to haunt me.
-
-                # Character length parsing
-                if vtype == 'character':
+            # Character length parsing
+            tok = next(tokens)
+            if vtype == 'character':
+                if tok == '*':
                     tok = next(tokens)
-                    if tok == '*':
-                        tok = next(tokens)
 
-                # Kind (or len) statement
+            # Kind (or len) statement
+            if tok == '(':
+                while tok != ')':
+                    tok = next(tokens)
+                tok = next(tokens)
+
+            # Attributes
+            while tok == ',':
+                tok = next(tokens)
+                attr = tok
+                if attr in ('dimension', 'intent'):
+                    tok = next(tokens)
+                    assert tok == '('
+                    par_count = 1
+                    while par_count > 0:
+                        tok = next(tokens)
+                        if tok == '(':
+                            par_count += 1
+                        elif tok == ')':
+                            par_count -= 1
+                tok = next(tokens)
+
+            if tok == '::':
+                tok = next(tokens)
+
+            vnames = []
+            vnames.append(tok)
+
+            for tok in tokens:
                 if tok == '(':
                     while tok != ')':
                         tok = next(tokens)
-
-                tok = next(tokens)
-
-                # Attributes
-                while tok == ',':
+                if tok == ',':
                     tok = next(tokens)
-                    attr = tok
-                    if attr in ('dimension', 'intent'):
-                        tok = next(tokens)
-                        assert tok == '('
-                        #while tok != ')':
-                        #    tok = next(tokens)
-                        par_count = 1
-                        while par_count > 0:
-                            tok = next(tokens)
-                            if tok == '(':
-                                par_count += 1
-                            elif tok == ')':
-                                par_count -= 1
-                    tok = next(tokens)
+                    vnames.append(tok)
 
-                if tok == '::':
-                    tok = next(tokens)
+            for vname in vnames:
+                # TODO: Create a variable class
+                var = (vname, vtype)
+                self.variables.append(var)
 
-                vname = tok
-                break
-
-            print('var: {} {}'.format(vtype, vname))
+            #print('var: {} {}'.format(vtype, ' '.join(vnames)))
             print('D: {}'.format(' '.join(line)))
 
     # Execution
