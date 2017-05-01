@@ -41,3 +41,12 @@ class Report(object):
             kw_set = self.cases[kw]
             if len(kw_set) > 1:
                 self.errors[code].append(kw_set)
+
+    def error_endcomma(self, line_number=None):
+        code = 'E0101'
+
+        # TODO: Get line number somehow
+        if line_number is None:
+            line_number = -1
+
+        self.errors[code].append(line_number)

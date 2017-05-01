@@ -1,4 +1,5 @@
 from flint.construct import Construct
+from flint.report import Report
 
 
 class Unit(object):
@@ -74,11 +75,12 @@ class Unit(object):
         'recursive',
     ]
 
-    def __init__(self):
+    def __init__(self, report=None):
         self.name = None
         self.utype = None
 
         self.variables = []
+        self.report = report if report else Report()
 
     @staticmethod
     def statement(line):
@@ -258,7 +260,10 @@ class Unit(object):
                     while tok != ')':
                         tok = next(tokens)
                 if tok == ',':
-                    tok = next(tokens)
+                    try:
+                        tok = next(tokens)
+                    except StopIteration:
+                        self.report.error_endcomma()
                     vnames.append(tok)
 
             for vname in vnames:
