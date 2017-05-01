@@ -15,6 +15,7 @@ class Tokenizer(object):
         self.characters = None
         self.prior_char = None
         self.char = None
+        self.idx = None
 
         self.prior_delim = None
 
@@ -23,6 +24,7 @@ class Tokenizer(object):
 
         tokens = []
 
+        self.idx = -1   # Bogus value to ensure idx = 0 after first iteration
         self.characters = iter(line)
         self.update_chars()
 
@@ -50,9 +52,9 @@ class Tokenizer(object):
                 word = self.parse_numeric()
 
             elif self.char in ('!', '#'):
-                while self.char != '\n':
-                    word += self.char
-                    self.update_chars()
+                # Abort the iteration and build the comment token
+                word = line[self.idx:-1]
+                self.char = '\n'
 
             elif self.char == '.':
                 self.update_chars()
@@ -166,3 +168,4 @@ class Tokenizer(object):
 
     def update_chars(self):
         self.prior_char, self.char = self.char, next(self.characters)
+        self.idx += 1
