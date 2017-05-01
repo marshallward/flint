@@ -1,5 +1,6 @@
 from flint.construct import Construct
 from flint.report import Report
+from flint.variable import Variable
 
 
 class Unit(object):
@@ -14,16 +15,6 @@ class Unit(object):
         'interface',
         'type',
         'enum',
-    ]
-
-    # TODO: Will probably move all this to a Types class...
-    intrinsic_types = [
-        'integer',      # R405
-        'real',         # R404
-        'double',       # R404 (DOUBLE PRECISION)
-        'complex',      # R404
-        'character',    # R404
-        'logical',      # R404
     ]
 
     # R507 access-spec
@@ -55,7 +46,7 @@ class Unit(object):
         'equivalence',  # Deprecated
     ]
 
-    declaration_types = intrinsic_types + attribute_specs + [
+    declaration_types = Variable.intrinsic_types + attribute_specs + [
         'type',         # R426, R403
         'enum',         # R459 ("ENUM, BIND(C)")
         'generic',      # R1210
@@ -67,7 +58,7 @@ class Unit(object):
         'entry',        # R1242 (obsolete)
     ]
 
-    unit_prefix = intrinsic_types + [
+    unit_prefix = Variable.intrinsic_types + [
         'elemental',
         'impure',
         'non_recursive',
@@ -96,7 +87,7 @@ class Unit(object):
             word = next(words)
             while True:
                 try:
-                    if word in Unit.intrinsic_types:
+                    if word in Variable.intrinsic_types:
                         word = next(words)
                         if word == '(':
                             # TODO: Parse this more formally
@@ -210,7 +201,7 @@ class Unit(object):
             tokens = iter(line)
 
             tok = next(tokens)
-            if tok in Unit.intrinsic_types:
+            if tok in Variable.intrinsic_types:
                 vtype = tok
             elif tok in ('type', 'class'):
                 assert next(tokens) == '('
@@ -267,8 +258,7 @@ class Unit(object):
                     vnames.append(tok)
 
             for vname in vnames:
-                # TODO: Create a variable class
-                var = (vname, vtype)
+                var = Variable(vname, vtype)
                 self.variables.append(var)
 
             #print('var: {} {}'.format(vtype, ' '.join(vnames)))

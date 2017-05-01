@@ -103,12 +103,12 @@ class Tokenizer(object):
         else:
             delim = self.char
             word += self.char
-            self.prior_char, self.char = self.char, next(self.characters)
+            self.update_chars()
 
         next_delim = None
         while True:
             if self.char == '&':
-                self.prior_char, self.char = self.char, next(self.characters)
+                self.update_chars()
                 if self.char == '\n':
                     next_delim = delim
                     break
@@ -116,17 +116,16 @@ class Tokenizer(object):
                     word += '&'
             elif self.char == delim:
                 # Check for escaped delimiters
-                self.prior_char, self.char = self.char, next(self.characters)
+                self.update_chars()
                 if self.char == delim:
                     word += 2 * delim
-                    self.prior_char, self.char = (self.char,
-                                                  next(self.characters))
+                    self.update_chars()
                 else:
                     word += delim
                     break
             else:
                 word += self.char
-                self.prior_char, self.char = self.char, next(self.characters)
+                self.update_chars()
 
         self.prior_delim = next_delim
 
@@ -141,28 +140,28 @@ class Tokenizer(object):
             if self.char == '.':
                 frac = True
             word += self.char
-            self.char = next(self.characters)
+            self.update_chars()
 
         # Check for float exponent
         if self.char in 'eEdD':
             word += self.char
-            self.char = next(self.characters)
+            self.update_chars()
             if self.char in '+-':
                 word += self.char
-                self.char = next(self.characters)
+                self.update_chars()
             while self.char.isdigit():
                 word += self.char
-                self.char = next(self.characters)
+                self.update_chars()
 
         if self.char == '_':
             word += self.char
-            self.char = next(self.characters)
+            self.update_chars()
             named = self.char.isalpha()
 
             while (self.char.isdigit() or
                    (self.char.isalpha() or self.char == '_' and named)):
                 word += self.char
-                self.char = next(self.characters)
+                self.update_chars()
 
         return word
 
