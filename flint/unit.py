@@ -209,8 +209,13 @@ class Unit(object):
                 vtype = next(tokens)
                 assert next(tokens) == ')'
             elif tok == 'namelist':
-                # Parse me!
-                self.namelists[line[2]] = [v for v in line[4:] if v != ","]
+                # TODO: Move to a separate function
+                # TODO: A line can have multiple groups
+                assert next(tokens) == '/'
+                nml_group = next(tokens)
+                assert next(tokens) == '/'
+                self.namelists[nml_group] = [v for v in line[4:] if v != ","]
+                print('N: {}'.format(' '.join(line)))
                 return
             else:
                 # Unhandled
