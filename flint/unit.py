@@ -71,6 +71,7 @@ class Unit(object):
         self.utype = None
 
         self.variables = []
+        self.namelists = {}
         self.report = report if report else Report()
 
     @staticmethod
@@ -207,6 +208,10 @@ class Unit(object):
                 assert next(tokens) == '('
                 vtype = next(tokens)
                 assert next(tokens) == ')'
+            elif tok == 'namelist':
+                # Parse me!
+                self.namelists[line[2]] = [v for v in line[4:] if v != ","]
+                return
             else:
                 # Unhandled
                 print('X: {}'.format(' '.join(line)))
