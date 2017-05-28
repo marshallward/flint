@@ -209,13 +209,7 @@ class Unit(object):
                 vtype = next(tokens)
                 assert next(tokens) == ')'
             elif tok == 'namelist':
-                # TODO: Move to a separate function
-                # TODO: A line can have multiple groups
-                assert next(tokens) == '/'
-                nml_group = next(tokens)
-                assert next(tokens) == '/'
-                self.namelists[nml_group] = [v for v in line[4:] if v != ","]
-                print('N: {}'.format(' '.join(line)))
+                self.parse_namelist(line)
                 return
             else:
                 # Unhandled
@@ -273,6 +267,29 @@ class Unit(object):
 
             #print('var: {} {}'.format(vtype, ' '.join(vnames)))
             print('D: {}'.format(' '.join(line)))
+
+    def parse_namelist(self, line):
+
+        assert(line[0] == 'namelist')
+        tokens = iter(line[1:])
+        for tok in tokens:
+            assert tok == '/'
+            # TODO: Validate group name
+            nml_group = next(tokens)
+            self.namelists[nml_group] = []
+            assert next(tokens) == '/'
+
+            tok = next(tokens)
+            while tok and tok != '/':
+                # TODO: Validate object name
+                self.namelists[nml_group].append(tok)
+                tok = next(tokens, None)
+                assert tok in (',', '/', None)
+                if tok == ',':
+                    tok = next(tokens)
+
+        self.namelists[nml_group] = [v for v in line[4:] if v != ","]
+        print('N: {}'.format(' '.join(line)))
 
     # Execution
 
