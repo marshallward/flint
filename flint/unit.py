@@ -269,7 +269,6 @@ class Unit(object):
             print('D: {}'.format(' '.join(line)))
 
     def parse_namelist(self, line):
-
         assert(line[0] == 'namelist')
         tokens = iter(line[1:])
 

@@ -87,7 +87,7 @@ class Source(object):
 
                 # Remove whitespace
                 tokenized_line = [tok for tok in tokens
-                                  if not all(c == ' ' for c in tok)]
+                                  if not all(c in ' \t' for c in tok)]
                 if tokenized_line:
                     src_lines.append(tokenized_line)
 
