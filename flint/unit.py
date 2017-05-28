@@ -272,7 +272,9 @@ class Unit(object):
 
         assert(line[0] == 'namelist')
         tokens = iter(line[1:])
-        for tok in tokens:
+
+        tok = next(tokens)
+        while tok:
             assert tok == '/'
             # TODO: Validate group name
             nml_group = next(tokens)
@@ -288,7 +290,6 @@ class Unit(object):
                 if tok == ',':
                     tok = next(tokens)
 
-        self.namelists[nml_group] = [v for v in line[4:] if v != ","]
         print('N: {}'.format(' '.join(line)))
 
     # Execution
