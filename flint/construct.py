@@ -67,9 +67,10 @@ class Construct(object):
         else:
             return False
 
-    def __init__(self, depth=1):
+    def __init__(self, depth=1, verbose=False):
         self.ctype = None
         self.name = None
+        self.verbose = verbose
 
         # Testing
         self.depth = depth
@@ -87,15 +88,15 @@ class Construct(object):
         else:
             self.ctype = line[0]
 
-        print('C: {}{} '.format(' ' * (self.depth - 1), ' '.join(line)))
+        if self.verbose: print('C: {}{} '.format(' ' * (self.depth - 1), ' '.join(line)))
 
         for line in lines:
             if Construct.statement(line):
-                cons = Construct(depth=self.depth + 1)
+                cons = Construct(depth=self.depth + 1,verbose=self.verbose)
                 cons.parse(lines)
             elif self.end_statement(line):
-                print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
+                if self.verbose: print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
                 break
             else:
                 # Unhandled
-                print('e: {}{} '.format(' ' * self.depth, ' '.join(line)))
+                if self.verbose: print('e: {}{} '.format(' ' * self.depth, ' '.join(line)))

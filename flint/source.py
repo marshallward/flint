@@ -8,8 +8,9 @@ from flint.tokenizer import Tokenizer
 
 
 class Source(object):
-    def __init__(self, project=None):
+    def __init__(self, project=None, verbose=False):
         self.project = project
+        self.verbose = verbose
 
         # Filepath
         self.path = None
@@ -98,7 +99,7 @@ class Source(object):
 
         for line in flines:
             if Unit.statement(line):
-                unit = Unit()
+                unit = Unit(verbose=self.verbose)
                 unit.parse(flines)
                 self.units.append(unit)
             else:
