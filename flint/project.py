@@ -6,8 +6,9 @@ from flint.source import Source
 
 class Project(object):
 
-    def __init__(self):
+    def __init__(self,verbose=False):
         self.files = []
+        self.verbose = verbose
 
     def parse(self, root_path):
         assert os.path.isdir(root_path)
@@ -20,7 +21,7 @@ class Project(object):
             if os.path.isfile(fpath):
 
                 if os.path.splitext(fpath)[1] in ('.f90', '.F90'):
-                    f90file = Source()
+                    f90file = Source(verbose=self.verbose)
                     f90file.parse(fpath)
 
                     self.files.append(f90file)
