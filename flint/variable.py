@@ -7,6 +7,9 @@ class Variable(object):
         'complex',      # R404
         'character',    # R404
         'logical',      # R404
+        # XXX
+        'realtype',     # Garbage type to accommodate GOTM until #define is
+                        # handled properly
     ]
 
     def __init__(self, name, vtype):

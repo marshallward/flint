@@ -299,6 +299,10 @@ class Unit(object):
 
         line = lines.current_line
 
+        # Exit for interfaces
+        if self.utype == 'interface':
+            return
+
         if Construct.statement(line):
             cons = Construct()
             cons.parse(lines)
@@ -323,7 +327,7 @@ class Unit(object):
 
     def parse_subprogram(self, lines):
         # TODO: I think the first line of subprogram is always CONTAINS, so
-        # this check may be pointless.
+        # this check may be pointless. (No, not for interfaces)
 
         line = lines.current_line
 
