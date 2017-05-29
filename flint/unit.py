@@ -198,6 +198,10 @@ class Unit(object):
         elif line[0] in Unit.access_specs:
             print('d: {}'.format(' '.join(line)))
 
+        # R357
+        elif line[0] == 'data':
+            print('d: {}'.format(' '.join(line)))
+
         else:
             tokens = iter(line)
 
