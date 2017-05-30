@@ -201,11 +201,11 @@ class Unit(object):
 
         # R357 (placeholder)
         elif line[0] == 'data':
-            print('d: {}'.format(' '.join(line)))
+            if self.verbose: print('d: {}'.format(' '.join(line)))
 
         # R551 (placeholder)
         elif line[0] == 'parameter':
-            print('p: {}'.format(' '.join(line)))
+            if self.verbose: print('p: {}'.format(' '.join(line)))
 
         else:
             tokens = iter(line)
@@ -298,7 +298,7 @@ class Unit(object):
                 if tok == ',':
                     tok = next(tokens)
 
-        print('N: {}'.format(' '.join(line)))
+        if self.verbose: print('N: {}'.format(' '.join(line)))
 
     # Execution
 
