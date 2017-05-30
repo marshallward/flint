@@ -66,9 +66,10 @@ class Unit(object):
         'recursive',
     ]
 
-    def __init__(self, report=None):
+    def __init__(self, report=None, verbose=False):
         self.name = None
         self.utype = None
+        self.verbose = verbose
 
         self.variables = []
         self.namelists = {}
@@ -129,7 +130,7 @@ class Unit(object):
         self.parse_subprogram(lines)
 
         # Finalisation
-        print('{}: {}'.format(self.utype[0].upper(),
+        if self.verbose: print('{}: {}'.format(self.utype[0].upper(),
                               ' '.join(lines.current_line)))
 
     def parse_name(self, line):
@@ -149,7 +150,7 @@ class Unit(object):
         else:
             self.name = None
 
-        print('{}: {} '.format(self.utype[0].upper(), ' '.join(line)))
+        if self.verbose: print('{}: {} '.format(self.utype[0].upper(), ' '.join(line)))
 
     # Specification
 
@@ -180,23 +181,23 @@ class Unit(object):
 
     def parse_use_stmt(self, line):
         """Parse the use statement (R1109) within a specification (R204)."""
-        print('U: {}'.format(' '.join(line)))
+        if self.verbose: print('U: {}'.format(' '.join(line)))
 
     def parse_import_stmt(self, line):
-        print('i: {}'.format(' '.join(line)))
+        if self.verbose: print('i: {}'.format(' '.join(line)))
 
     def parse_implicit_stmt(self, line):
-        print('I: {}'.format(' '.join(line)))
+        if self.verbose: print('I: {}'.format(' '.join(line)))
 
     def parse_declaration_construct(self, lines, line):
 
         if (line[0] in ('enum', 'interface')
                 or (line[0] == 'type' and line[1] != '(')):
-            block = Unit()
+            block = Unit(verbose=self.verbose)
             block.parse(lines)
 
         elif line[0] in Unit.access_specs:
-            print('d: {}'.format(' '.join(line)))
+            if self.verbose: print('d: {}'.format(' '.join(line)))
 
         # R357 (placeholder)
         elif line[0] == 'data':
@@ -221,7 +222,7 @@ class Unit(object):
                 return
             else:
                 # Unhandled
-                print('X: {}'.format(' '.join(line)))
+                if self.verbose: print('X: {}'.format(' '.join(line)))
                 return
 
             # Character length parsing
@@ -274,7 +275,7 @@ class Unit(object):
                 self.variables.append(var)
 
             #print('var: {} {}'.format(vtype, ' '.join(vnames)))
-            print('D: {}'.format(' '.join(line)))
+            if self.verbose: print('D: {}'.format(' '.join(line)))
 
     def parse_namelist(self, line):
         assert(line[0] == 'namelist')
@@ -312,26 +313,26 @@ class Unit(object):
             return
 
         if Construct.statement(line):
-            cons = Construct()
+            cons = Construct(verbose=self.verbose)
             cons.parse(lines)
         elif self.end_statement(line) or line[0] == 'contains':
             return
         else:
             # Unhandled
-            print('E: {}'.format(' '.join(line)))
+            if self.verbose: print('E: {}'.format(' '.join(line)))
 
         # Now iterate over the rest of the lines
         for line in lines:
             # Execution constructs
             if Construct.statement(line):
-                cons = Construct()
+                cons = Construct(verbose=self.verbose)
                 cons.parse(lines)
             elif self.end_statement(line) or line[0] == 'contains':
                 # TODO: Use return?
                 break
             else:
                 # Unhandled
-                print('E: {}'.format(' '.join(line)))
+                if self.verbose: print('E: {}'.format(' '.join(line)))
 
     def parse_subprogram(self, lines):
         # TODO: I think the first line of subprogram is always CONTAINS, so
@@ -340,19 +341,19 @@ class Unit(object):
         line = lines.current_line
 
         if Unit.statement(line):
-            subprog = Unit()
+            subprog = Unit(verbose=self.verbose)
             subprog.parse(lines)
         elif self.end_statement(line):
             return
         else:
-            print('{}: {}'.format(self.utype[0].upper(), ' '.join(line)))
+            if self.verbose: print('{}: {}'.format(self.utype[0].upper(), ' '.join(line)))
 
         for line in lines:
             if Unit.statement(line):
-                subprog = Unit()
+                subprog = Unit(verbose=self.verbose)
                 subprog.parse(lines)
             elif self.end_statement(line):
                 # TODO: Use return?
                 break
             else:
-                print('X: {}'.format(' '.join(line)))
+                if self.verbose: print('X: {}'.format(' '.join(line)))
