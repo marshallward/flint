@@ -6,7 +6,7 @@ from flint.source import Source
 
 class Project(object):
 
-    def __init__(self,verbose=False):
+    def __init__(self, verbose=False):
         self.files = []
         self.verbose = verbose
 

@@ -88,15 +88,18 @@ class Construct(object):
         else:
             self.ctype = line[0]
 
-        if self.verbose: print('C: {}{} '.format(' ' * (self.depth - 1), ' '.join(line)))
+        if self.verbose:
+            print('C: {}{} '.format(' ' * (self.depth - 1), ' '.join(line)))
 
         for line in lines:
             if Construct.statement(line):
-                cons = Construct(depth=self.depth + 1,verbose=self.verbose)
+                cons = Construct(depth=self.depth + 1, verbose=self.verbose)
                 cons.parse(lines)
             elif self.end_statement(line):
-                if self.verbose: print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
+                if self.verbose:
+                    print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
                 break
             else:
                 # Unhandled
-                if self.verbose: print('e: {}{} '.format(' ' * self.depth, ' '.join(line)))
+                if self.verbose:
+                    print('e: {}{} '.format(' ' * self.depth, ' '.join(line)))
