@@ -126,9 +126,7 @@ class Source(object):
                       'set.'.format(identifier))
 
         elif directive == 'include':
-            # TODO: Need some sort of recursion here...
-
-            # TODO: Explcit strip of "" or <>
+            assert words[1], words[-1] in (('"', '"'), ('<', '>'))
             inc_fname = words[1][1:-1]
 
             # First check current directory
