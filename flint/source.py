@@ -114,7 +114,6 @@ class Source(object):
                 print('X: {}'.format(' '.join(line)))
 
     def preprocess(self, line):
-        print('XXX:', self.project)
         words = line.strip().split()
         directive = words[0][1:]
         if directive == 'define':

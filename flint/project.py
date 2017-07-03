@@ -12,11 +12,13 @@ class Project(object):
 
         self.path = None
 
-    def parse(self, root_path):
-        assert os.path.isdir(root_path)
+    def parse(self, path):
+        assert os.path.isdir(path)
 
-        for fname in os.listdir(root_path):
-            fpath = os.path.join(root_path, fname)
+        self.path = path
+
+        for fname in os.listdir(self.path):
+            fpath = os.path.join(self.path, fname)
 
             # TODO: Validate file
             # For now use extensions
