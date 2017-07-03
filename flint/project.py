@@ -10,6 +10,8 @@ class Project(object):
         self.files = []
         self.verbose = verbose
 
+        self.path = None
+
     def parse(self, root_path):
         assert os.path.isdir(root_path)
 
@@ -21,7 +23,7 @@ class Project(object):
             if os.path.isfile(fpath):
 
                 if os.path.splitext(fpath)[1] in ('.f90', '.F90'):
-                    f90file = Source(verbose=self.verbose)
+                    f90file = Source(project=self, verbose=self.verbose)
                     f90file.parse(fpath)
 
                     self.files.append(f90file)

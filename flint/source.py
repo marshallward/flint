@@ -61,45 +61,7 @@ class Source(object):
                 self.report.check_linewidth(line, line_number)
 
                 if line.lstrip().startswith('#'):
-                    words = line.strip().split()
-                    directive = words[0][1:]
-                    if directive == 'define':
-                        # TODO: macro functions
-                        self.defines[words[1]] = words[2:]
-
-                    elif directive == 'undef':
-                        identifier = words[1]
-                        try:
-                            self.defines.pop(identifier)
-                        except KeyError:
-                            print('flint: warning: identifier {} was never '
-                                  'set.'.format(identifier))
-
-                    elif directive == 'include':
-                        # TODO: Need some sort of recursion here...
-
-                        # TODO: Explcit strip of "" or <>
-                        inc_fname = words[1][1:-1]
-
-                        # First check current directory
-                        curdir = os.path.dirname(self.path)
-                        test_fpath = os.path.join(curdir, inc_fname)
-                        if os.path.isfile(test_fpath):
-                            inc_fpath = test_fpath
-                        else:
-                            # Need to scan the project files
-                            inc_fpath = 'i dunno'
-                            pass
-
-                        print('Include path: ' + inc_fpath)
-
-                    else:
-                        #print('flint: unsupported preprocess directive: {}'
-                        #      ''.format(directive))
-                        pass
-
-                    # Skip tokenization
-                    continue
+                    self.preprocess(line)
 
                 try:
                     tokens = tokenizer.parse(line)
@@ -108,6 +70,7 @@ class Source(object):
                     print(line)
                     sys.exit()
 
+                # TODO: Don't do this with tokens
                 self.report.check_trailing_whitespace(tokens, line_number)
 
                 # TODO: Check whitespace between tokens
@@ -149,3 +112,43 @@ class Source(object):
             else:
                 # Unresolved line
                 print('X: {}'.format(' '.join(line)))
+
+    def preprocess(self, line):
+        print('XXX:', self.project)
+        words = line.strip().split()
+        directive = words[0][1:]
+        if directive == 'define':
+            # TODO: macro functions
+            self.defines[words[1]] = words[2:]
+
+        elif directive == 'undef':
+            identifier = words[1]
+            try:
+                self.defines.pop(identifier)
+            except KeyError:
+                print('flint: warning: identifier {} was never '
+                      'set.'.format(identifier))
+
+        elif directive == 'include':
+            # TODO: Need some sort of recursion here...
+
+            # TODO: Explcit strip of "" or <>
+            inc_fname = words[1][1:-1]
+
+            # First check current directory
+            curdir = os.path.dirname(self.path)
+            test_fpath = os.path.join(curdir, inc_fname)
+            if os.path.isfile(test_fpath):
+                inc_fpath = test_fpath
+                print('Include path: ' + inc_fpath)
+            elif self.project:
+                # Search project for file
+                print('Include path: TODO')
+            else:
+                print('flint: Include file {} not found; skipping.'
+                      ''.format(inc_fname))
+
+        else:
+            #print('flint: unsupported preprocess directive: {}'
+            #      ''.format(directive))
+            pass
