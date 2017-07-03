@@ -24,6 +24,9 @@ class Source(object):
 
         self.report = Report()
 
+        # Preprocessor substitution
+        self.defines = {}
+
     def parse(self, path):
         # Resolve filepaths
         if os.path.isabs(path):
@@ -56,6 +59,47 @@ class Source(object):
                 line_number += 1
 
                 self.report.check_linewidth(line, line_number)
+
+                if line.lstrip().startswith('#'):
+                    words = line.strip().split()
+                    directive = words[0][1:]
+                    if directive == 'define':
+                        # TODO: macro functions
+                        self.defines[words[1]] = words[2:]
+
+                    elif directive == 'undef':
+                        identifier = words[1]
+                        try:
+                            self.defines.pop(identifier)
+                        except KeyError:
+                            print('flint: warning: identifier {} was never '
+                                  'set.'.format(identifier))
+
+                    elif directive == 'include':
+                        # TODO: Need some sort of recursion here...
+
+                        # TODO: Explcit strip of "" or <>
+                        inc_fname = words[1][1:-1]
+
+                        # First check current directory
+                        curdir = os.path.dirname(self.path)
+                        test_fpath = os.path.join(curdir, inc_fname)
+                        if os.path.isfile(test_fpath):
+                            inc_fpath = test_fpath
+                        else:
+                            # Need to scan the project files
+                            inc_fpath = 'i dunno'
+                            pass
+
+                        print('Include path: ' + inc_fpath)
+
+                    else:
+                        #print('flint: unsupported preprocess directive: {}'
+                        #      ''.format(directive))
+                        pass
+
+                    # Skip tokenization
+                    continue
 
                 try:
                     tokens = tokenizer.parse(line)
