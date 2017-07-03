@@ -11,8 +11,6 @@ class Source(object):
     def __init__(self, project=None, verbose=False):
         self.project = project
         self.verbose = verbose
-
-        # Filepath
         self.path = None
         self.abspath = None
 
@@ -21,7 +19,6 @@ class Source(object):
 
         # Diagnostics
         self.indent = []
-
         self.report = Report()
 
         # Preprocessor substitution
