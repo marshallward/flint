@@ -20,11 +20,17 @@ class Source(object):
         # Diagnostics
         self.indent = []
         self.report = Report()
+        self.inc_reports = {}
 
         # Preprocessor substitution
         self.defines = {}
 
+        # Internal
+        self._src_lines = []
+
     def parse(self, path):
+        # NOTE: Tracking both path and abspath is probably pointless...
+
         # Resolve filepaths
         if os.path.isabs(path):
             self.abspath = path
@@ -45,17 +51,36 @@ class Source(object):
             else:
                 self.abspath = os.path.abspath(path)
 
+        self.tokenize()
+
+        # NOTE: Would be great to integrate this with self.tokenize()
+        flines = FortLines(self._src_lines)
+
+        for line in flines:
+            if Unit.statement(line):
+                unit = Unit(verbose=self.verbose)
+                unit.parse(flines)
+                self.units.append(unit)
+            else:
+                # Unresolved line
+                print('X: {}'.format(' '.join(line)))
+
+    def tokenize(self, path=None, report=None):
+        if not path:
+            path = self.path
+        if not report:
+            report = self.report
+
         tokenizer = Tokenizer()
         line_number = 0
-        src_lines = []
         print('{} ({})'.format(self.path, self.abspath))
 
         # TODO: pycodestyle has a better way to deal with nonunicode files
-        with open(self.path, errors='replace') as srcfile:
+        with open(path, errors='replace') as srcfile:
             for line in srcfile:
                 line_number += 1
 
-                self.report.check_linewidth(line, line_number)
+                report.check_linewidth(line, line_number)
 
                 if line.lstrip().startswith('#'):
                     self.preprocess(line)
@@ -68,7 +93,7 @@ class Source(object):
                     sys.exit()
 
                 # TODO: Don't do this with tokens
-                self.report.check_trailing_whitespace(tokens, line_number)
+                report.check_trailing_whitespace(tokens, line_number)
 
                 # TODO: Check whitespace between tokens
                 if tokens and all(c in ' \t' for c in tokens[0]):
@@ -76,10 +101,10 @@ class Source(object):
                 else:
                     self.indent.append(0)
 
-                self.report.check_token_spacing(tokens, line_number)
+                report.check_token_spacing(tokens, line_number)
 
                 for tok in tokens:
-                    self.report.cases[tok.lower()].add(tok)
+                    report.cases[tok.lower()].add(tok)
 
                 # Strip comments and preprocessed lines
                 # TODO: Handle preprocessed lines better
@@ -94,21 +119,9 @@ class Source(object):
                 tokenized_line = [tok for tok in tokens
                                   if not all(c in ' \t' for c in tok)]
                 if tokenized_line:
-                    src_lines.append(tokenized_line)
+                    self._src_lines.append(tokenized_line)
 
-        self.report.check_keyword_case()
-
-        # NOTE: Would be great to integrate the prior loop into FortLines...
-        flines = FortLines(src_lines)
-
-        for line in flines:
-            if Unit.statement(line):
-                unit = Unit(verbose=self.verbose)
-                unit.parse(flines)
-                self.units.append(unit)
-            else:
-                # Unresolved line
-                print('X: {}'.format(' '.join(line)))
+        report.check_keyword_case()
 
     def preprocess(self, line):
         words = line.strip().split()
@@ -126,18 +139,28 @@ class Source(object):
                       'set.'.format(identifier))
 
         elif directive == 'include':
-            assert words[1], words[-1] in (('"', '"'), ('<', '>'))
+            assert (words[1][0], words[1][-1]) in (('"', '"'), ('<', '>'))
             inc_fname = words[1][1:-1]
 
             # First check current directory
             curdir = os.path.dirname(self.path)
             test_fpath = os.path.join(curdir, inc_fname)
+
+            inc_path = None
             if os.path.isfile(test_fpath):
-                inc_fpath = test_fpath
-                print('Include path: ' + inc_fpath)
+                inc_path = test_fpath
             elif self.project:
-                # Search project for file
-                print('Include path: TODO')
+                # Scan the project directories for the file
+                for idir in self.project.directories:
+                    test_fpath = os.path.join(idir, inc_fname)
+                    if os.path.isfile(test_fpath):
+                        inc_path = test_fpath
+            # else: do not bother looking
+
+            if inc_path:
+                inc_report = Report()
+                self.tokenize(path=inc_path, report=inc_report)
+                self.inc_reports[inc_path] = inc_report
             else:
                 print('flint: Include file {} not found; skipping.'
                       ''.format(inc_fname))

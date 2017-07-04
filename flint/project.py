@@ -11,6 +11,8 @@ class Project(object):
         self.verbose = verbose
         self.path = None
 
+        self.directories = []
+
     def parse(self, path):
         assert os.path.isdir(path)
         self.path = path
@@ -18,9 +20,11 @@ class Project(object):
         filepaths = []
 
         for root, dirs, files in os.walk(self.path):
+            self.directories.append(root)
+
             for fname in files:
+                fpath = os.path.join(root, fname)
                 if os.path.splitext(fname)[1] in ('.f90', '.F90'):
-                    fpath = os.path.join(root, fname)
                     filepaths.append(fpath)
                 else:
                     print('SKIP file: {}'.format(fpath))
