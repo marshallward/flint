@@ -92,7 +92,13 @@ class Source(object):
                     print(line)
                     sys.exit()
 
-                # TODO: Don't do this with tokens
+                # Substitute any preprocessor tokens
+                for i, tok in enumerate(tokens):
+                    if tok in self.defines:
+                        replacement = self.defines[tok] + '\n'
+                        tokens[i:i+1] = tokenizer.parse(replacement)
+
+                # TODO: Shouldn't this be done with `lines`?
                 report.check_trailing_whitespace(tokens, line_number)
 
                 # TODO: Check whitespace between tokens
@@ -124,21 +130,29 @@ class Source(object):
         report.check_keyword_case()
 
     def preprocess(self, line):
-        words = line.strip().split()
+        words = line.strip().split(maxsplit=2)
         directive = words[0][1:]
         if directive == 'define':
             # TODO: macro functions
-            self.defines[words[1]] = words[2:]
+            replacement = words[2] if len(words) == 3 else None
+            self.defines[words[1]] = replacement
 
         elif directive == 'undef':
             identifier = words[1]
             try:
                 self.defines.pop(identifier)
             except KeyError:
-                print('flint: warning: identifier {} was never '
-                      'set.'.format(identifier))
+                print('flint: warning: unset identifier {} was never '
+                      'defined.'.format(identifier))
 
-        elif directive == 'include':
+        elif directive.startswith('include'):
+            # NOTE: #include does not require a space between the directive
+            #       and the file, so we split them here.
+            if directive != 'include':
+                idx = len('#include')
+                words.append(words[0][idx:])
+                words[0] = words[0][:idx]
+
             assert (words[1][0], words[1][-1]) in (('"', '"'), ('<', '>'))
             inc_fname = words[1][1:-1]
 
