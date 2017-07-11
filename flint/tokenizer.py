@@ -1,3 +1,5 @@
+import itertools
+
 class Tokenizer(object):
 
     # I don't use these two
@@ -42,11 +44,7 @@ class Tokenizer(object):
                     word = self.prior_char
 
             elif self.char.isalpha() or self.char == '_':
-                # NOTE: Variables cannot start with underscore
-                #       But keep for now to accommodate preprocessed tags
-                while self.char.isalnum() or self.char == '_':
-                    word += self.char
-                    self.update_chars()
+                word = self.parse_name(line)
 
             elif self.char.isdigit():
                 word = self.parse_numeric()
@@ -99,6 +97,23 @@ class Tokenizer(object):
             tokens.append(word)
 
         return tokens
+
+    def parse_name(self, line):
+        end = self.idx
+        for char in line[self.idx:]:
+            if not char.isalnum() and char is not '_':
+                break
+            end += 1
+
+        word = line[self.idx:end]
+
+        self.idx = end - 1
+        # Update iterator, minus first character which was already read
+        self.characters = itertools.islice(self.characters, len(word) - 1,
+                                           None)
+        self.update_chars()
+
+        return word
 
     def parse_string(self):
         word = ''
