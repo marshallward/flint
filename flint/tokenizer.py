@@ -37,11 +37,8 @@ class Tokenizer(object):
                     word += self.char
                     self.update_chars()
 
-            elif self.char in '"\'' or self.prior_delim:
+            elif self.char in '"\'' or (self.prior_delim and self.char != '&'):
                 word = self.parse_string()
-                if (self.prior_char, self.char) == ('&', '\n'):
-                    tokens.append(word)
-                    word = self.prior_char
 
             elif self.char.isalpha() or self.char == '_':
                 word = self.parse_name(line)
@@ -129,14 +126,29 @@ class Tokenizer(object):
         next_delim = None
         while True:
             if self.char == '&':
-                self.update_chars()
-                if self.char == '\n':
+                self.characters, lookahead = itertools.tee(self.characters)
+                c = next(lookahead)
+
+                # Track any whitespace after '&'
+                ws = ''
+                while c in ' \t':
+                    ws += c
+                    c = next(lookahead)
+
+                # If end line, then this is a line continuation.
+                # Otherwise, it is part of the string (or a syntax error)
+                if c == '\n':
                     next_delim = delim
                     break
                 else:
-                    word += '&'
+                    word += '&' + ws
+                    self.characters = lookahead
+
+                self.update_chars()
+
             elif self.char == delim:
                 # Check for escaped delimiters
+                # TODO: Use a lookahead
                 self.update_chars()
                 if self.char == delim:
                     word += 2 * delim
