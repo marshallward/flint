@@ -33,8 +33,20 @@ class FortLines(object):
 
         # Join extended lines
         # TODO: 255-limit line check
+        string_append = False
         while line[-1] == '&':
-            line = line[:-1] + next(self.lines)
+            next_line = next(self.lines)
+
+            if line[-2][0] in '"\'' or string_append:
+                idx = next_line.index('&')
+
+                new_string = line[-2] + next_line[idx + 1]
+                line = line[:-2] + [new_string] + next_line[idx + 2:]
+
+                # True if string continues to next line
+                string_append = (next_line[idx + 1][-1] not in '"\'')
+            else:
+                line = line[:-1] + next_line
 
         self.current_line = line
         return line
