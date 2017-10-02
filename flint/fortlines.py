@@ -45,13 +45,23 @@ class FortLines(object):
             if ((len(line) > 1 and (line[-2][0] in '"\''
                                     and line[-2][-1] not in '"\''))
                     or string_append):
-                idx = next_line.index('&')
+                if '&' in next_line:
+                    idx = next_line.index('&') + 1
+                else:
+                    # Search for the first non-whitespace token
+                    idx = 0
+                    for word in next_line:
+                        if all(w in ' \t' for w in word):
+                            idx += 1
 
-                new_string = line[-2] + next_line[idx + 1]
-                line = line[:-2] + [new_string] + next_line[idx + 2:]
+                    # TODO: With no matching &, some care is needed to align
+                    # the whitespace correctly.  A job for another day!
+
+                new_string = line[-2] + next_line[idx]
+                line = line[:-2] + [new_string] + next_line[idx + 1:]
 
                 # True if string continues to next line
-                string_append = (next_line[idx + 1][-1] not in '"\'')
+                string_append = (next_line[idx][-1] not in '"\'')
             else:
                 idx = 1 if next_line[0] == '&' else 0
                 line = line[:-1] + next_line[idx:]
