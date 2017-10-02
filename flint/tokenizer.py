@@ -98,7 +98,7 @@ class Tokenizer(object):
     def parse_name(self, line):
         end = self.idx
         for char in line[self.idx:]:
-            if not char.isalnum() and char is not '_':
+            if not char.isalnum() and char != '_':
                 break
             end += 1
 
