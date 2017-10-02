@@ -31,13 +31,22 @@ class FortLines(object):
             if self.buffered_line == []:
                 self.buffered_line = None
 
+        # Toss aside empty lines
+        # TODO: Track and report these
+        if line == []:
+            line = next(self.lines)
+
         # Join extended lines
         # TODO: 255-limit line check
+        print(line)
         string_append = False
         while line[-1] == '&':
             next_line = next(self.lines)
+            print(next_line)
 
-            if line[-2][0] in '"\'' or string_append:
+            if ((len(line) > 1 and (line[-2][0] in '"\''
+                                    and line[-2][-1] not in '"\''))
+                    or string_append):
                 idx = next_line.index('&')
 
                 new_string = line[-2] + next_line[idx + 1]
@@ -46,7 +55,8 @@ class FortLines(object):
                 # True if string continues to next line
                 string_append = (next_line[idx + 1][-1] not in '"\'')
             else:
-                line = line[:-1] + next_line
+                idx = 1 if next_line[0] == '&' else 0
+                line = line[:-1] + next_line[idx:]
 
         self.current_line = line
         return line

@@ -95,7 +95,12 @@ class Source(object):
                 # Substitute any preprocessor tokens
                 for i, tok in enumerate(tokens):
                     if tok in self.defines:
-                        replacement = self.defines[tok] + '\n'
+                        # Substitute unknown values with empty strings
+                        # TODO: Better way to do this?
+                        val = self.defines[tok]
+                        if val is None:
+                            val = ''
+                        replacement = val + '\n'
                         tokens[i:i+1] = tokenizer.parse(replacement)
 
                 # TODO: Shouldn't this be done with `lines`?
