@@ -127,22 +127,20 @@ class Tokenizer(object):
         while True:
             if self.char == '&':
                 self.characters, lookahead = itertools.tee(self.characters)
-                c = next(lookahead)
 
-                # Track any whitespace after '&'
-                ws = ''
+                # Skip any whitespace after '&'
+                # TODO: probably a better way here...
+                c = next(lookahead)
                 while c in ' \t':
-                    ws += c
                     c = next(lookahead)
 
-                # If end line, then this is a line continuation.
+                # If end of line, then this is a line continuation.
                 # Otherwise, it is part of the string (or a syntax error)
                 if c == '\n':
                     next_delim = delim
                     break
                 else:
-                    word += '&' + ws
-                    self.characters = lookahead
+                    word += '&'
 
                 self.update_chars()
 
