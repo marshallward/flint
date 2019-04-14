@@ -25,7 +25,39 @@ code, and it will print an annotated version of the source.
 
 .. code:: python
 
+   from flint.project import Project
 
+   proj = Project(verbose=True)
+   proj.parse('path/to/source')
+
+This will stream each tokenized line of source code, preceded by a code
+denoting the type of statement (e.g. M for module, D for declaration, etc).
+This is mainly for development, but could, for example, be parsed to identify
+particular functions or variables.
+
+There is some basic reporting, although no simple or obvious way to present it.
+But an example codeblock which can be used to check for trailing whitespace
+(denoted as code 'C0102') is shown below.
+
+.. code:: python
+
+   from flint.project import Project
+
+   proj = Project()
+   proj.parse('mom6')
+
+   for src in proj.files:
+       ws_lines = src.report.errors['C0102']
+       if ws_lines:
+           print(
+               '{fname}: {lineno}'.format(
+                   fname=src.path,
+                   lineno=', '.join(str(n) for n in ws_lines),
+               )
+           )
+
+Very few tests exist at the moment, but there is a great deal of opportunity
+for improvement here.
 
 
 Status

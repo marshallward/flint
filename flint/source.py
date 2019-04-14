@@ -95,11 +95,13 @@ class Source(object):
                 # Substitute any preprocessor tokens
                 for i, tok in enumerate(tokens):
                     if tok in self.defines:
+                        val = self.defines[tok]
+
                         # Substitute unknown values with empty strings
                         # TODO: Better way to do this?
-                        val = self.defines[tok]
                         if val is None:
                             val = ''
+
                         replacement = val + '\n'
                         tokens[i:i+1] = tokenizer.parse(replacement)
 
@@ -114,15 +116,19 @@ class Source(object):
 
                 report.check_token_spacing(tokens, line_number)
 
+                # Track the case consistency of tokens
+                # NOTE: This is at the source level, but should possibly be
+                #       handled at the block level (module, function, etc)
                 for tok in tokens:
-                    report.cases[tok.lower()].add(tok)
+                    # Exclude comments and strings
+                    if tok[0] not in ('!', '"', '\'') :
+                        report.cases[tok.lower()].add(tok)
 
                 # Strip comments and preprocessed lines
                 # TODO: Handle preprocessed lines better
                 tokens = [w for w in tokens if w[0] not in '!#']
 
-                # TODO: Check token case consistency
-                #       For now just convert to lowercase
+                # XXX: Is this changing the case of comment tokens?
                 tokens = [tok.lower() if tok[0] not in '\'"' else tok
                           for tok in tokens]
 
