@@ -1,6 +1,12 @@
 import os
 import sys
 
+# Use Python 3 compatible open()
+try:
+    from io import open     # Python 2
+except ImportError:
+    pass                    # Python 3
+
 from flint.fortlines import FortLines
 from flint.report import Report
 from flint.unit import Unit
@@ -141,7 +147,7 @@ class Source(object):
         report.check_keyword_case()
 
     def preprocess(self, line):
-        words = line.strip().split(maxsplit=2)
+        words = line.strip().split(None, 2)
         directive = words[0][1:]
         if directive == 'define':
             # TODO: macro functions
