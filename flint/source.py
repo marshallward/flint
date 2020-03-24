@@ -9,7 +9,7 @@ except ImportError:
 
 from flint.fortlines import FortLines
 from flint.report import Report
-from flint.unit import Unit
+from flint.units.unit import Unit
 from flint.tokenizer import Tokenizer
 
 
@@ -110,7 +110,9 @@ class Source(object):
 
                         replacement = val + '\n'
                         tokens[i:i+1] = tokenizer.parse(replacement)
-                        print('replacing {} with {}'.format(repr(tok), repr(val)))
+                        if (self.verbose):
+                            print('replacing {} with {}'
+                                  ''.format(repr(tok), repr(val)))
 
                 # TODO: Shouldn't this be done with `lines`?
                 report.check_trailing_whitespace(tokens, line_number)
@@ -155,7 +157,9 @@ class Source(object):
             # TODO: macro functions
             replacement = words[2] if len(words) == 3 else None
             self.defines[words[1]] = replacement
-            print('#define: {} as {}'.format(repr(words[1]), repr(replacement)))
+            if (self.verbose):
+                print('#define: {} as {}'
+                      ''.format(repr(words[1]), repr(replacement)))
 
         elif directive == 'undef':
             identifier = words[1]

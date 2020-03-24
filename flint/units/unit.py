@@ -165,7 +165,6 @@ class Unit(object):
 
         if self.verbose:
             print('{}: {} '.format(self.utype[0].upper(), ' '.join(line)))
-            print('     name: {}'.format(self.name))
 
     # Specification
 
