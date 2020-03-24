@@ -89,7 +89,7 @@ class Source(object):
                 report.check_linewidth(line, line_number)
 
                 if line.lstrip().startswith('#'):
-                    self.preprocess(line)
+                    self.preprocess(line[1:])
 
                 try:
                     tokens = tokenizer.parse(line)
@@ -110,6 +110,7 @@ class Source(object):
 
                         replacement = val + '\n'
                         tokens[i:i+1] = tokenizer.parse(replacement)
+                        print('replacing {} with {}'.format(repr(tok), repr(val)))
 
                 # TODO: Shouldn't this be done with `lines`?
                 report.check_trailing_whitespace(tokens, line_number)
@@ -148,11 +149,13 @@ class Source(object):
 
     def preprocess(self, line):
         words = line.strip().split(None, 2)
-        directive = words[0][1:]
+        directive = words[0]
+
         if directive == 'define':
             # TODO: macro functions
             replacement = words[2] if len(words) == 3 else None
             self.defines[words[1]] = replacement
+            print('#define: {} as {}'.format(repr(words[1]), repr(replacement)))
 
         elif directive == 'undef':
             identifier = words[1]
@@ -163,13 +166,6 @@ class Source(object):
                       'defined.'.format(identifier))
 
         elif directive.startswith('include'):
-            # NOTE: #include does not require a space between the directive
-            #       and the file, so we split them here.
-            if directive != 'include':
-                idx = len('#include')
-                words.append(words[0][idx:])
-                words[0] = words[0][:idx]
-
             assert (words[1][0], words[1][-1]) in (('"', '"'), ('<', '>'))
             inc_fname = words[1][1:-1]
 
@@ -197,6 +193,5 @@ class Source(object):
                       ''.format(inc_fname))
 
         else:
-            #print('flint: unsupported preprocess directive: {}'
-            #      ''.format(directive))
-            pass
+            print('flint: unsupported preprocess directive: {}'
+                  ''.format(directive))
