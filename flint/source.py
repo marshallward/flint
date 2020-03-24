@@ -165,7 +165,7 @@ class Source(object):
                 print('flint: warning: unset identifier {} was never '
                       'defined.'.format(identifier))
 
-        elif directive.startswith('include'):
+        elif directive == 'include':
             assert (words[1][0], words[1][-1]) in (('"', '"'), ('<', '>'))
             inc_fname = words[1][1:-1]
 
