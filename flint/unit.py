@@ -71,9 +71,13 @@ class Unit(object):
         self.utype = None
         self.verbose = verbose
 
+        self.subprograms = []
         self.variables = []
         self.namelists = {}
         self.report = report if report else Report()
+
+        # TODO: someday...
+        self.docstring = ""
 
     @staticmethod
     def statement(line):
@@ -146,13 +150,22 @@ class Unit(object):
             print(line)
             raise
 
+        # TODO: A safer approach may be to formally parse the first non-unit
+        # type as a variable type.  A temporary step is to split the
+        # declaration into its (potential) output type and the rest.
+        # But for now we just grab the name and ignore the rest.
+        # TODO: Could also be that `function` is the only one that is not
+        # the first character...
+        utype_idx = line.index(self.utype)
+
         if len(line) >= 2:
-            self.name = line[1]
+            self.name = line[utype_idx + 1]
         else:
             self.name = None
 
         if self.verbose:
             print('{}: {} '.format(self.utype[0].upper(), ' '.join(line)))
+            print('     name: {}'.format(self.name))
 
     # Specification
 
@@ -355,6 +368,7 @@ class Unit(object):
         if Unit.statement(line):
             subprog = Unit(verbose=self.verbose)
             subprog.parse(lines)
+            self.subprograms.append(subprog)
         elif self.end_statement(line):
             return
         else:
@@ -365,6 +379,7 @@ class Unit(object):
             if Unit.statement(line):
                 subprog = Unit(verbose=self.verbose)
                 subprog.parse(lines)
+                self.subprograms.append(subprog)
             elif self.end_statement(line):
                 # TODO: Use return?
                 break
