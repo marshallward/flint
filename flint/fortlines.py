@@ -1,13 +1,19 @@
+from flint.docstring import is_docstring
+
 class FortLines(object):
     """Fortran source line iterator."""
 
     def __init__(self, lines):
         self.lines = iter(lines)
-
         self.current_line = None
 
         # Split lines
         self.buffered_line = None
+
+        # Docstring buffer
+        # Saved as a list to track multiple docstrings of split lines
+        # XXX: Still debating whether to leave these as tokens or not
+        self.docstrings = []
 
     def __iter__(self):
         return self
@@ -22,6 +28,9 @@ class FortLines(object):
         else:
             line = next(self.lines)
 
+        if line and is_docstring(line[-1]):
+            self.docstrings.append(line.pop())
+
         if ';' in line:
             idx = line.index(';')
             line, self.buffered_line = line[:idx], line[1 + idx:]
@@ -31,16 +40,22 @@ class FortLines(object):
             if self.buffered_line == []:
                 self.buffered_line = None
 
-        # Toss aside empty lines
-        # TODO: Track and report these
-        if line == []:
+        # Skip empty lines, after storing any docstrings
+        # TODO: Track and report these?
+        while (line == []):
             line = next(self.lines)
+            if line and is_docstring(line[-1]):
+                self.docstrings.append(line.pop())
 
         # Join extended lines
         # TODO: 255-limit line check
         string_append = False
         while line[-1] == '&':
             next_line = next(self.lines)
+            if next_line and is_docstring(next_line[-1]):
+                self.docstrings.append(next_line.pop())
+                if not next_line:
+                    continue
 
             if ((len(line) > 1 and (line[-2][0] in '"\''
                                     and line[-2][-1] not in '"\''))

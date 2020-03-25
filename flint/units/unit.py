@@ -1,6 +1,7 @@
 from flint.construct import Construct
 from flint.report import Report
 from flint.variable import Variable
+from flint.docstring import is_docstring
 
 
 class Unit(object):

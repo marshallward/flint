@@ -11,7 +11,7 @@ from flint.fortlines import FortLines
 from flint.report import Report
 from flint.units.unit import Unit
 from flint.tokenizer import Tokenizer
-
+from flint.docstring import is_docstring
 
 class Source(object):
     def __init__(self, project=None, verbose=False):
@@ -54,17 +54,21 @@ class Source(object):
             else:
                 self.abspath = os.path.abspath(path)
 
-        src_lines, doc_lines = self.tokenize()
-        # TODO: doc_lines is unhandled after this point, needs to be integrated
-        # with the analysis part below.
+        src_lines = self.tokenize()
 
         # NOTE: Would be great to integrate this with self.tokenize()
         flines = FortLines(src_lines)
 
         for line in flines:
             if Unit.statement(line):
+                # Unit docstrings precede the declaration
+                docstrings = flines.docstrings
+                flines.docstrings = []
+
                 unit = Unit(verbose=self.verbose)
                 unit.parse(flines)
+
+                unit.docstring = '\n'.join(docstrings)
                 self.units.append(unit)
             else:
                 # Unresolved line
@@ -79,7 +83,6 @@ class Source(object):
         tokenizer = Tokenizer()
         line_number = 0
         src_lines = []
-        doc_lines = []
         print('{} ({})'.format(self.path, self.abspath))
 
         # TODO: pycodestyle has a better way to deal with nonunicode files
@@ -134,33 +137,29 @@ class Source(object):
                     if tok[0] not in ('!', '"', '\'') :
                         report.cases[tok.lower()].add(tok)
 
-                # Gather any docstrings in this line
-                docstring_markers = ('!<', '!>', '!!')
-                if (tokens and any(tokens[-1].startswith(m)
-                        for m in docstring_markers)
-                ):
-                    docstring = tokens[-1]
-                else:
-                    docstring = ''
-
-                # Strip comments and preprocessed lines
+                # Strip comments and preprocessed lines, but keep docstrings
                 # TODO: Handle preprocessed lines better
-                tokens = [w for w in tokens if w[0] not in '!#']
+                tokens = [tok for tok in tokens
+                          if tok[0] not in '!#'
+                          or is_docstring(tok)]
 
                 # XXX: Is this changing the case of comment tokens?
-                tokens = [tok.lower() if tok[0] not in '\'"' else tok
-                          for tok in tokens]
+                tokens = [
+                    tok.lower()
+                    if tok[0] not in '\'"' or not is_docstring(tok)
+                    else tok
+                    for tok in tokens
+                ]
 
                 # Remove whitespace
                 tokenized_line = [tok for tok in tokens
                                   if not all(c in ' \t' for c in tok)]
                 if tokenized_line:
                     src_lines.append(tokenized_line)
-                    doc_lines.append(docstring)
 
         report.check_keyword_case()
 
-        return src_lines, doc_lines
+        return src_lines
 
     def preprocess(self, line):
         words = line.strip().split(None, 2)
