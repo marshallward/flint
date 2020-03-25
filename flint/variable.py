@@ -14,3 +14,5 @@ class Variable(object):
         self.type = vtype
         self.attributes = []
         self.refs = 0
+
+        self.docstring = ''

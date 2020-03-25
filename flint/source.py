@@ -31,9 +31,6 @@ class Source(object):
         # Preprocessor substitution
         self.defines = {}
 
-        # Internal
-        self._src_lines = []
-
     def parse(self, path):
         # NOTE: Tracking both path and abspath is probably pointless...
 
@@ -57,10 +54,12 @@ class Source(object):
             else:
                 self.abspath = os.path.abspath(path)
 
-        self.tokenize()
+        src_lines, doc_lines = self.tokenize()
+        # TODO: doc_lines is unhandled after this point, needs to be integrated
+        # with the analysis part below.
 
         # NOTE: Would be great to integrate this with self.tokenize()
-        flines = FortLines(self._src_lines)
+        flines = FortLines(src_lines)
 
         for line in flines:
             if Unit.statement(line):
@@ -79,6 +78,8 @@ class Source(object):
 
         tokenizer = Tokenizer()
         line_number = 0
+        src_lines = []
+        doc_lines = []
         print('{} ({})'.format(self.path, self.abspath))
 
         # TODO: pycodestyle has a better way to deal with nonunicode files
@@ -133,6 +134,15 @@ class Source(object):
                     if tok[0] not in ('!', '"', '\'') :
                         report.cases[tok.lower()].add(tok)
 
+                # Gather any docstrings in this line
+                docstring_markers = ('!<', '!>', '!!')
+                if (tokens and any(tokens[-1].startswith(m)
+                        for m in docstring_markers)
+                ):
+                    docstring = tokens[-1]
+                else:
+                    docstring = ''
+
                 # Strip comments and preprocessed lines
                 # TODO: Handle preprocessed lines better
                 tokens = [w for w in tokens if w[0] not in '!#']
@@ -145,9 +155,12 @@ class Source(object):
                 tokenized_line = [tok for tok in tokens
                                   if not all(c in ' \t' for c in tok)]
                 if tokenized_line:
-                    self._src_lines.append(tokenized_line)
+                    src_lines.append(tokenized_line)
+                    doc_lines.append(docstring)
 
         report.check_keyword_case()
+
+        return src_lines, doc_lines
 
     def preprocess(self, line):
         words = line.strip().split(None, 2)
