@@ -78,7 +78,7 @@ class Unit(object):
         self.report = report if report else Report()
 
         # TODO: someday...
-        self.docstring = ""
+        self.docstring = ''
 
     @staticmethod
     def statement(line):
@@ -294,6 +294,10 @@ class Unit(object):
 
             for vname in vnames:
                 var = Variable(vname, vtype)
+
+                var.docstring = '\n'.join(lines.docstrings)
+                lines.docstrings = []
+
                 self.variables.append(var)
 
             if self.verbose:

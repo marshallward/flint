@@ -146,7 +146,7 @@ class Source(object):
                 # XXX: Is this changing the case of comment tokens?
                 tokens = [
                     tok.lower()
-                    if tok[0] not in '\'"' or not is_docstring(tok)
+                    if tok[0] not in '\'"' and not is_docstring(tok)
                     else tok
                     for tok in tokens
                 ]
