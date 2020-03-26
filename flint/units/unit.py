@@ -129,6 +129,11 @@ class Unit(object):
         Program units are generally very similar, but we leave it undefined
         here due to some slight differences.
         """
+        # NOTE: Unit docstrings precede the declaration
+        docstrings = lines.docstrings
+        self.docstring = '\n'.join(docstrings)
+        lines.docstrings = []
+
         self.parse_name(lines.current_line)
         self.parse_specification(lines)
         self.parse_execution(lines)

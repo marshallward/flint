@@ -62,13 +62,13 @@ class Source(object):
         for line in flines:
             if Unit.statement(line):
                 # Unit docstrings precede the declaration
-                docstrings = flines.docstrings
-                flines.docstrings = []
+                #docstrings = flines.docstrings
+                #flines.docstrings = []
 
                 unit = Unit(verbose=self.verbose)
                 unit.parse(flines)
 
-                unit.docstring = '\n'.join(docstrings)
+                #unit.docstring = '\n'.join(docstrings)
                 self.units.append(unit)
             else:
                 # Unresolved line
@@ -134,14 +134,13 @@ class Source(object):
                 #       handled at the block level (module, function, etc)
                 for tok in tokens:
                     # Exclude comments and strings
-                    if tok[0] not in ('!', '"', '\'') :
+                    if tok[0] not in ('!', '"', '\''):
                         report.cases[tok.lower()].add(tok)
 
                 # Strip comments and preprocessed lines, but keep docstrings
                 # TODO: Handle preprocessed lines better
                 tokens = [tok for tok in tokens
-                          if tok[0] not in '!#'
-                          or is_docstring(tok)]
+                          if tok[0] not in '!#' or is_docstring(tok)]
 
                 # XXX: Is this changing the case of comment tokens?
                 tokens = [

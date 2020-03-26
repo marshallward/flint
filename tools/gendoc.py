@@ -16,6 +16,7 @@ def main():
         with open(doc_fpath, 'w') as doc:
             # TODO: Use docutils to produce formatted output?  Is this a thing?
             # TODO: Prepare a list, then use doc.writelines()
+            doc.write('=' * len(src.path) + '\n')
             doc.write(src.path + '\n')
             doc.write('=' * len(src.path) + '\n')
             doc.write('\n')
@@ -28,6 +29,15 @@ def main():
 def print_unit(doc, unit, depth):
     indent = depth * ' '
     doc.write(indent + unit.name + '\n')
+    doc.write(indent + len(unit.name) * '-' + '\n')
+    if unit.docstring:
+        doc.write(indent + unit.docstring + '\n\n')
+
+    for var in unit.variables:
+        doc.write(indent + '- ' + var.name + '\n')
+        if var.docstring:
+            doc.write(indent + '  ' + var.docstring + '\n\n')
+
     for subprog in unit.subprograms:
         print_unit(doc, subprog, depth + 2)
 
