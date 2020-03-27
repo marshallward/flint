@@ -1,3 +1,6 @@
+from flint.document import Document
+
+
 class Variable(object):
 
     intrinsic_types = [
@@ -15,4 +18,4 @@ class Variable(object):
         self.attributes = []
         self.refs = 0
 
-        self.docstring = ''
+        self.doc = Document()

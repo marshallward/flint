@@ -1,4 +1,4 @@
-from flint.docstring import is_docstring
+from flint.document import is_docstring
 
 class FortLines(object):
     """Fortran source line iterator."""
@@ -14,6 +14,12 @@ class FortLines(object):
         # Saved as a list to track multiple docstrings of split lines
         # XXX: Still debating whether to leave these as tokens or not
         self.docstrings = []
+
+        # Track the previous variable, to append any docstrings after current
+        # variable
+        # TODO: What about the final read?  This really needs to be some sort
+        # of general event.
+        self.prior_var = None
 
     def __iter__(self):
         return self

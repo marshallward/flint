@@ -1,7 +1,7 @@
 from flint.construct import Construct
 from flint.report import Report
 from flint.variable import Variable
-from flint.docstring import is_docstring
+from flint.document import is_docstring, Document
 
 
 class Unit(object):
@@ -77,8 +77,7 @@ class Unit(object):
         self.namelists = {}
         self.report = report if report else Report()
 
-        # TODO: someday...
-        self.docstring = ''
+        self.doc = Document()
 
     @staticmethod
     def statement(line):
@@ -129,22 +128,29 @@ class Unit(object):
         Program units are generally very similar, but we leave it undefined
         here due to some slight differences.
         """
-        # NOTE: Unit docstrings precede the declaration
+        # NOTE: Unit docstrings precede the header.
         docstrings = lines.docstrings
-        self.docstring = '\n'.join(docstrings)
+        self.doc.docstring = '\n'.join(docstrings)
         lines.docstrings = []
 
-        self.parse_name(lines.current_line)
+        self.doc.header = ' '.join(lines.current_line)
+
+        self.parse_header(lines.current_line)
         self.parse_specification(lines)
         self.parse_execution(lines)
         self.parse_subprogram(lines)
+
+        # Gather any trailing docstrings
+        if lines.docstrings:
+            self.doc.footer = '\n'.join(lines.docstrings)
+            lines.docstrings = []
 
         # Finalisation
         if self.verbose:
             print('{}: {}'.format(
                   self.utype[0].upper(), ' '.join(lines.current_line)))
 
-    def parse_name(self, line):
+    def parse_header(self, line):
         """Parse the name of the program unit, if present.
 
         Each program unit has a different header format, so this method must be
@@ -300,8 +306,19 @@ class Unit(object):
             for vname in vnames:
                 var = Variable(vname, vtype)
 
-                var.docstring = '\n'.join(lines.docstrings)
+                # TODO: Move all this docstring stuff to a support function
+                if lines.docstrings:
+                    prior_docs, doc = lines.docstrings[:-1], lines.docstrings[-1]
+                else:
+                    prior_docs = []
+                    doc = ''
+
+                if lines.prior_var:
+                    lines.prior_var.doc.docstring += '\n'.join(prior_docs)
+
+                var.doc.docstring = doc
                 lines.docstrings = []
+                lines.prior_var = var
 
                 self.variables.append(var)
 

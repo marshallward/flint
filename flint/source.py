@@ -11,7 +11,7 @@ from flint.fortlines import FortLines
 from flint.report import Report
 from flint.units.unit import Unit
 from flint.tokenizer import Tokenizer
-from flint.docstring import is_docstring
+from flint.document import is_docstring
 
 class Source(object):
     def __init__(self, project=None, verbose=False):
@@ -61,14 +61,8 @@ class Source(object):
 
         for line in flines:
             if Unit.statement(line):
-                # Unit docstrings precede the declaration
-                #docstrings = flines.docstrings
-                #flines.docstrings = []
-
                 unit = Unit(verbose=self.verbose)
                 unit.parse(flines)
-
-                #unit.docstring = '\n'.join(docstrings)
                 self.units.append(unit)
             else:
                 # Unresolved line
