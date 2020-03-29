@@ -47,7 +47,7 @@ def is_function(line):
     # TODO: Split args from result and binding
     # TODO: Also do this for subroutine btw...
 
-    if not is_declaration_type(return_type):
+    if return_type and not is_declaration_type(return_type):
         return False
 
     if not is_prefix(attrs):
@@ -64,8 +64,4 @@ def is_declaration_type(decl):
     if decl[0] not in decl_types:
         return False
 
-def is_args(args):
-    # TODO: Pop out and parse ther RESULT ( ) argument
-    # NOTE: If RESULT is set then result-name cannot be function-name
-
-    return is_args(args)
+    return True

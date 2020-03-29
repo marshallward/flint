@@ -13,6 +13,8 @@ from flint.units.unit import Unit
 from flint.tokenizer import Tokenizer
 from flint.document import is_docstring
 
+from flint.units import get_program_unit_type
+
 class Source(object):
     def __init__(self, project=None, verbose=False):
         self.project = project
@@ -60,13 +62,23 @@ class Source(object):
         flines = FortLines(src_lines)
 
         for line in flines:
-            if Unit.statement(line):
-                unit = Unit(verbose=self.verbose)
+            try:
+                unit_type = get_program_unit_type(line)
+                unit = unit_type()
+                unit.verbose = self.verbose
                 unit.parse(flines)
                 self.units.append(unit)
-            else:
+            except ValueError:
                 # Unresolved line
                 print('X: {}'.format(' '.join(line)))
+
+            #if Unit.statement(line):
+            #    unit = Unit(verbose=self.verbose)
+            #    unit.parse(flines)
+            #    self.units.append(unit)
+            #else:
+            #    # Unresolved line
+            #    print('X: {}'.format(' '.join(line)))
 
     def tokenize(self, path=None, report=None):
         if not path:
