@@ -74,6 +74,7 @@ class Unit(object):
 
         self.subprograms = []
         self.variables = []
+        self.blocks = []
         self.namelists = {}
         self.report = report if report else Report()
 
@@ -224,6 +225,10 @@ class Unit(object):
                 or (line[0] == 'type' and line[1] != '(')):
             block = Unit(verbose=self.verbose)
             block.parse(lines)
+
+            # TODO: parse name
+            block.name = ' '.join(line)
+            self.blocks.append(block)
 
         elif line[0] in Unit.access_specs:
             if self.verbose:

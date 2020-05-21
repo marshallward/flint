@@ -32,6 +32,7 @@ class Source(object):
 
         # Preprocessor substitution
         self.defines = {}
+        self.stop_parsing = False
 
     def parse(self, path):
         # NOTE: Tracking both path and abspath is probably pointless...
@@ -91,6 +92,9 @@ class Source(object):
         src_lines = []
         print('{} ({})'.format(self.path, self.abspath))
 
+        # TODO: Settle on name, move to __init__
+        self.stop_parsing = False
+
         # TODO: pycodestyle has a better way to deal with nonunicode files
         with open(path, errors='replace') as srcfile:
             for line in srcfile:
@@ -100,6 +104,9 @@ class Source(object):
 
                 if line.lstrip().startswith('#'):
                     self.preprocess(line[1:])
+
+                if self.stop_parsing:
+                    continue
 
                 try:
                     tokens = tokenizer.parse(line)
@@ -186,6 +193,26 @@ class Source(object):
                 print('flint: warning: unset identifier {} was never '
                       'defined.'.format(identifier))
 
+        # TODO
+        #elif directive == 'if':
+        #    expr = line.strip().split(None, 1)[1]
+
+        elif directive == 'ifdef':
+            macro = line.split(None, 1)[1]
+            if not macro in self.defines:
+                self.stop_parsing = True
+
+        elif directive == 'ifndef':
+            macro = line.split(None, 1)[1]
+            if macro in self.defines:
+                self.stop_parsing = True
+
+        elif directive == 'else':
+            self.stop_parsing = not self.stop_parsing
+
+        elif directive == 'endif':
+            self.stop_parsing = False
+
         elif directive == 'include':
             assert (words[1][0], words[1][-1]) in (('"', '"'), ('<', '>'))
             inc_fname = words[1][1:-1]
@@ -215,4 +242,4 @@ class Source(object):
 
         else:
             print('flint: unsupported preprocess directive: {}'
-                  ''.format(directive))
+                  ''.format(line))
