@@ -214,7 +214,13 @@ class Source(object):
         elif directive == 'endif':
             self.stop_parsing = False
 
-        elif directive == 'include':
+        elif directive.startswith('include'):
+            # This directive uniquely does not require a whitespace delimiter.
+            if directive != 'include':
+                inc_fpath = directive.replace('include', '', 1)
+                words[0] = 'include'
+                words.insert(1, inc_fpath)
+
             assert (words[1][0], words[1][-1]) in (('"', '"'), ('<', '>'))
             inc_fname = words[1][1:-1]
 
