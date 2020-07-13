@@ -1,5 +1,6 @@
 from flint.document import is_docstring
 
+
 class FortLines(object):
     """Fortran source line iterator."""
 

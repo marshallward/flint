@@ -42,7 +42,7 @@ def is_function(line):
     # NOTE: This could fail if a type has the same name as an attribute.
     return_type, attrs = [], []
     for tok in prefix:
-        (attrs if tok in subprog_attrs else type_decl).append(tok)
+        (attrs if tok in subprog_attrs else return_type).append(tok)
 
     # TODO: Split args from result and binding
     # TODO: Also do this for subroutine btw...
@@ -57,6 +57,7 @@ def is_function(line):
         return False
 
     return True
+
 
 def is_declaration_type(decl):
     # TODO: only one type can exist

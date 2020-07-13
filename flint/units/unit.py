@@ -313,7 +313,9 @@ class Unit(object):
 
                 # TODO: Move all this docstring stuff to a support function
                 if lines.docstrings:
-                    prior_docs, doc = lines.docstrings[:-1], lines.docstrings[-1]
+                    prior_docs, doc = (
+                        lines.docstrings[:-1], lines.docstrings[-1]
+                    )
                 else:
                     prior_docs = []
                     doc = ''

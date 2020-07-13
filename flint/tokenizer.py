@@ -1,5 +1,6 @@
 import itertools
 
+
 class Tokenizer(object):
 
     # I don't use these two
@@ -23,7 +24,6 @@ class Tokenizer(object):
 
     def parse(self, line, macros={}):
         """Tokenize a line of Fortran source."""
-
         tokens = []
 
         self.idx = -1   # Bogus value to ensure idx = 0 after first iteration

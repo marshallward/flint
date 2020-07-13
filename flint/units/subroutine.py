@@ -20,7 +20,7 @@ class Subroutine(Unit):
 def is_subroutine(line):
     """Return True if the line is a valid subroutine statement."""
     try:
-        idx = line.index('subroutine') 
+        idx = line.index('subroutine')
     except ValueError:
         return False
 
@@ -38,7 +38,7 @@ def is_subroutine(line):
 def is_prefix(prefix):
     """Return True if `prefix` is a valid subroutine prefix."""
     for spec in prefix:
-        if not spec in subprog_attrs:
+        if spec not in subprog_attrs:
             return False
         if prefix.count(spec) > 1:
             return False
@@ -72,7 +72,6 @@ def is_args(args):
     #dummy_arg_list = args[(i_l + 1):i_r:2]
 
     bind = args[(i_r+1):]
-    print(bind)
     if bind:
         if tuple(bind[0:3]) != ('bind', '(', 'c') or bind[-1] != ')':
             return False

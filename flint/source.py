@@ -15,6 +15,7 @@ from flint.document import is_docstring
 
 from flint.units import get_program_unit_type
 
+
 class Source(object):
     def __init__(self, project=None, verbose=False):
         self.project = project
@@ -199,7 +200,7 @@ class Source(object):
 
         elif directive == 'ifdef':
             macro = line.split(None, 1)[1]
-            if not macro in self.defines:
+            if macro not in self.defines:
                 self.stop_parsing = True
 
         elif directive == 'ifndef':
@@ -233,6 +234,8 @@ class Source(object):
             # else: do not bother looking
 
             if inc_path:
+                # TODO: Using the Source tokenize seems dumb here but I
+                #  don't have a better solution at the moment.
                 inc_report = Report()
                 self.tokenize(path=inc_path, report=inc_report)
                 self.inc_reports[inc_path] = inc_report
