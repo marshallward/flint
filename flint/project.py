@@ -37,6 +37,8 @@ class Project(object):
                 matched_unit = self.search_units(unit, utype, name)
                 if matched_unit:
                     break
+            if matched_unit:
+                break
         return matched_unit
 
     # TODO: *paths is generally a bad idea for a public API.  I am only using
@@ -80,7 +82,7 @@ class Project(object):
             self.files.append(f90file)
 
         if len(skipped_items) > 0:
-            print("WARNING: Item(s) were skipped")
             if self.verbose:
+                print("WARNING: Item(s) were skipped")
                 for item in skipped_items:
                     print(">",item)

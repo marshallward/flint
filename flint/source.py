@@ -93,7 +93,8 @@ class Source(object):
         tokenizer = Tokenizer()
         line_number = 0
         src_lines = []
-        print('{} ({})'.format(self.path, self.abspath))
+        if self.verbose:
+            print('{} ({})'.format(self.path, self.abspath))
 
         # TODO: Settle on name, move to __init__
         self.stop_parsing = False
@@ -193,8 +194,9 @@ class Source(object):
             try:
                 self.defines.pop(identifier)
             except KeyError:
-                print('flint: warning: unset identifier {} was never '
-                      'defined.'.format(identifier))
+                if self.verbose:
+                    print('flint: warning: unset identifier {} was never '
+                          'defined.'.format(identifier))
 
         # TODO
         #elif directive == 'if':
@@ -248,9 +250,10 @@ class Source(object):
                 self.tokenize(path=inc_path, report=inc_report)
                 self.inc_reports[inc_path] = inc_report
             else:
-                print('flint: Include file {} not found; skipping.'
-                      ''.format(inc_fname))
-
+                if self.verbose:
+                    print('flint: Include file {} not found; skipping.'
+                          ''.format(inc_fname))
         else:
-            print('flint: unsupported preprocess directive: {}'
-                  ''.format(line))
+            if self.verbose:
+                print('flint: unsupported preprocess directive: {}'
+                      ''.format(line))
