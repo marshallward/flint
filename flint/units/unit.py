@@ -276,12 +276,15 @@ class Unit(object):
                 tok = next(tokens)
 
             # Attributes
+            var_attributes = []
             while tok == ',':
                 tok = next(tokens)
                 attr = tok
+                var_attributes.append(attr)
                 if attr in ('dimension', 'intent'):
                     tok = next(tokens)
                     assert tok == '('
+                    var_attributes.append(tok)
                     par_count = 1
                     while par_count > 0:
                         tok = next(tokens)
@@ -289,6 +292,7 @@ class Unit(object):
                             par_count += 1
                         elif tok == ')':
                             par_count -= 1
+                        var_attributes.append(tok)
                 tok = next(tokens)
 
             if tok == '::':
@@ -324,6 +328,8 @@ class Unit(object):
                     lines.prior_var.doc.docstring += '\n'.join(prior_docs)
 
                 var.doc.docstring = doc
+                if var_attributes:
+                    var.attributes = var_attributes
                 lines.docstrings = []
                 lines.prior_var = var
 

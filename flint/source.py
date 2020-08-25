@@ -41,6 +41,7 @@ class Source(object):
         # Resolve filepaths
         if os.path.isabs(path):
             self.abspath = path
+            self.path = path
 
             if self.project:
                 root_path = self.project.path
@@ -58,10 +59,11 @@ class Source(object):
             else:
                 self.abspath = os.path.abspath(path)
 
-        src_lines = self.tokenize()
+        (src_lines, flines) = self.tokenize()
 
         # NOTE: Would be great to integrate this with self.tokenize()
-        flines = FortLines(src_lines)
+        # Kinda moved into tokenize
+        #flines = FortLines(src_lines)
 
         for line in flines:
             try:
@@ -172,7 +174,7 @@ class Source(object):
 
         report.check_keyword_case()
 
-        return src_lines
+        return (src_lines, FortLines(src_lines))
 
     def preprocess(self, line):
         words = line.strip().split(None, 2)
