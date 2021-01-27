@@ -7,6 +7,7 @@ class FortLines(object):
     def __init__(self, lines):
         self.lines = iter(lines)
         self.current_line = None
+        self.current_doc = ''
 
         # Split lines
         self.buffered_line = None
@@ -35,8 +36,10 @@ class FortLines(object):
         else:
             line = next(self.lines)
 
+        # Extract any docstrings
+        doc = ''
         if line and is_docstring(line[-1]):
-            self.docstrings.append(line.pop())
+            doc = line.pop()
 
         if ';' in line:
             idx = line.index(';')
@@ -47,12 +50,23 @@ class FortLines(object):
             if self.buffered_line == []:
                 self.buffered_line = None
 
-        # Skip empty lines, after storing any docstrings
+        # Skip empty lines
         # TODO: Track and report these?
         while (line == []):
+            self.current_doc = '\n'.join([self.current_doc, doc])
+            doc = ''
+
+            # XXX: What about null lines in semicolons? e.g. "; <stmt> ; ;"?
+            #   We need to deplete buffered_lines before going back to lines!
             line = next(self.lines)
+
+            # Append any lone docstrings to the prior docstring
             if line and is_docstring(line[-1]):
-                self.docstrings.append(line.pop())
+                doc = line.pop()
+
+        # We are now on a new non-blank line, so flush the docstring
+        self.docstrings.append(self.current_doc)
+        self.current_doc = doc
 
         # Join extended lines
         # TODO: 255-limit line check
@@ -60,7 +74,7 @@ class FortLines(object):
         while line[-1] == '&':
             next_line = next(self.lines)
             if next_line and is_docstring(next_line[-1]):
-                self.docstrings.append(next_line.pop())
+                self.current_doc = '\n'.join([self.current_doc, next_line.pop()])
                 if not next_line:
                     continue
 
