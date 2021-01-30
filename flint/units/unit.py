@@ -129,22 +129,21 @@ class Unit(object):
         Program units are generally very similar, but we leave it undefined
         here due to some slight differences.
         """
-        # NOTE: Unit docstrings precede the header.
-        docstrings = lines.docstrings
-        self.doc.docstring = '\n'.join(docstrings)
-        lines.docstrings = []
+        # Gather docstring information
+        self.doc.statement = lines.current_line
+        self.doc.header = lines.prior_doc
+        self.doc.docstring = lines.current_doc
 
-        self.doc.header = ' '.join(lines.current_line)
-
+        # Parse program unit statements
         self.parse_header(lines.current_line)
         self.parse_specification(lines)
         self.parse_execution(lines)
         self.parse_subprogram(lines)
 
-        # Gather any trailing docstrings
-        if lines.docstrings:
-            self.doc.footer = '\n'.join(lines.docstrings)
-            lines.docstrings = []
+        # Gather a final "footer" docstring near the `end` statement.
+        # TODO: Which do we want here?  Both?
+        #self.doc.footer = lines.current_doc
+        self.doc.footer = lines.prior_doc
 
         # Finalisation
         if self.verbose:
@@ -311,21 +310,10 @@ class Unit(object):
             for vname in vnames:
                 var = Variable(vname, vtype)
 
-                # TODO: Move all this docstring stuff to a support function
-                if lines.docstrings:
-                    prior_docs, doc = (
-                        lines.docstrings[:-1], lines.docstrings[-1]
-                    )
-                else:
-                    prior_docs = []
-                    doc = ''
-
-                if lines.prior_var:
-                    lines.prior_var.doc.docstring += '\n'.join(prior_docs)
-
-                var.doc.docstring = doc
-                lines.docstrings = []
-                lines.prior_var = var
+                # Gather docstrings
+                var.doc.statement = lines.current_line
+                var.doc.header = lines.prior_doc
+                var.doc.docstring = lines.current_doc
 
                 self.variables.append(var)
 

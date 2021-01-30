@@ -11,6 +11,10 @@ class Document(object):
     """The document object of the program element."""
 
     def __init__(self):
-        self.header = ''        # The header in source code
-        self.docstring = ''     # The principal docstring
-        self.footer = ''        # Additional content outside of the docstring
+        self.statement = '' # Some relevant source code
+                            # (Currently not well-defined, should probably point
+                            # to a relevant Statement().)
+
+        self.header = ''    # Docstring preceding a definition (usually `source`)
+        self.docstring = '' # Principal docstring, following a definition.
+        self.footer = ''    # Docstring following an element (usually `end`)
