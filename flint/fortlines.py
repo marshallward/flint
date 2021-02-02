@@ -104,24 +104,28 @@ class FortLines(object):
                 idx = 1 if next_line[0] == '&' else 0
                 line = line[:-1] + next_line[idx:]
 
-
         self.current_line = line
 
-        # Append any subsequent docstrings to the current line
-        self.lines, lookahead = itertools.tee(self.lines)
+        if not self.buffered_line:
+            # Append any subsequent docstrings to the current line
+            self.lines, lookahead = itertools.tee(self.lines)
 
-        for toks in lookahead:
-            doc_ext = ''
-            if len(toks) > 1:
-                break
-            elif toks and is_docstring(toks[0]):
-                # NOTE: Also removes the docstring from lines in self.lines!
-                doc_ext = toks.pop()
-                doc = '\n'.join([doc, doc_ext])
-            # else: line is blank; continue
+            for toks in lookahead:
+                doc_ext = ''
+                if toks:
+                    if is_docstring(toks[0]):
+                        # NOTE: Also removes the docstring from lines in self.lines!
+                        doc_ext = toks.pop()
+                        doc = '\n'.join([doc, doc_ext])
+                    else:
+                        break
+                # else: line is blank; continue
 
-        # Debugging
         self.prior_doc = self.current_doc
         self.current_doc = doc
+
+        #print("I:line:", line)
+        #print("I:prior_doc:", self.prior_doc)
+        #print("I:current_doc:", self.current_doc)
 
         return line

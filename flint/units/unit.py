@@ -1,7 +1,7 @@
 from flint.construct import Construct
 from flint.report import Report
 from flint.variable import Variable
-from flint.document import is_docstring, Document
+from flint.document import is_docstring, docstrip, Document
 
 
 class Unit(object):
@@ -79,6 +79,7 @@ class Unit(object):
         self.report = report if report else Report()
 
         self.doc = Document()
+        self.group_docstr = None
 
     @staticmethod
     def statement(line):
@@ -131,8 +132,10 @@ class Unit(object):
         """
         # Gather docstring information
         self.doc.statement = lines.current_line
-        self.doc.header = lines.prior_doc
-        self.doc.docstring = lines.current_doc
+
+        # TODO: Validate Doxygen token syntax
+        self.doc.header = docstrip(lines.prior_doc)
+        self.doc.docstring = docstrip(lines.current_doc)
 
         # Parse program unit statements
         self.parse_header(lines.current_line)
@@ -143,7 +146,7 @@ class Unit(object):
         # Gather a final "footer" docstring near the `end` statement.
         # TODO: Which do we want here?  Both?
         #self.doc.footer = lines.current_doc
-        self.doc.footer = lines.prior_doc
+        self.doc.footer = docstrip(lines.prior_doc)
 
         # Finalisation
         if self.verbose:
@@ -307,15 +310,40 @@ class Unit(object):
                         self.report.error_endcomma()
                     vnames.append(tok)
 
-            for vname in vnames:
+            # Grouped Doxygen strings
+            if lines.prior_doc:
+                grpstr = lines.prior_doc.strip().split('\n')[-1]
+                if grpstr.startswith('!>@{'):
+                    self.group_docstr = grpstr.replace('!>@{','')
+
+            # TODO: Currently group_doc overrides an inline doc, but maybe that
+            # is dumb...
+            # TODO: Supporting !< and !> may be better with re.split()
+            if self.group_docstr:
+                vardocs = len(vnames) * [self.group_docstr]
+            elif lines.current_doc:
+                vardocs = [
+                    docstrip(line)
+                    for line in lines.current_doc.strip().replace('!> ','!< ').split('!< ')[1:]
+                ]
+            else:
+                vardocs = len(vnames) * ['']
+
+            for i, vname in enumerate(vnames):
                 var = Variable(vname, vtype)
 
-                # Gather docstrings
                 var.doc.statement = lines.current_line
-                var.doc.header = lines.prior_doc
-                var.doc.docstring = lines.current_doc
+                try:
+                    var.doc.docstring = vardocs[i]
+                except IndexError:
+                    print('ERROR: no docstring found!')
+                    print('  vname:', vname)
+                    print('  vardocs:', vardocs)
 
                 self.variables.append(var)
+
+            if lines.current_doc.strip().startswith('!>@}'):
+                self.group_docstr = None
 
             if self.verbose:
                 print('D: {}'.format(' '.join(line)))
