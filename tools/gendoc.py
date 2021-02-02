@@ -12,13 +12,18 @@ import flint.units
 
 def main():
     proj = Project()
+    #proj = Project(verbose=True)
+
     proj.parse(
         'mom6/src',
         'mom6/config_src/solo_driver',
         'mom6/config_src/dynamic_symmetric'
     )
-
     doc_path = 'docs'
+
+    #proj.parse('core')
+    #doc_path = 'cdoc'
+
     os.makedirs(doc_path, exist_ok=True)
 
     # Gather modules
@@ -28,21 +33,6 @@ def main():
         for unit in src.units:
             if isinstance(unit, flint.units.Module):
                 modules.append(unit)
-
-    #for src in proj.files:
-    #    src_fname = os.path.basename(src.path)
-    #    doc_fname = os.path.splitext(src_fname)[0] + '.rst'
-    #    doc_fpath = os.path.join(doc_path, doc_fname)
-    #    with open(doc_fpath, 'w') as doc:
-    #        # TODO: Prepare a list, then use doc.writelines()
-    #        doc.write('=' * len(src.path) + '\n')
-    #        doc.write(src.path + '\n')
-    #        doc.write('=' * len(src.path) + '\n')
-    #        doc.write('\n')
-
-    #        depth = 0
-    #        for unit in src.units:
-    #            print_unit(doc, unit, depth)
 
     for mod in modules:
         doc_fname = mod.name + '.rst'
@@ -73,8 +63,9 @@ def main():
                 print_unit(doc, unit, depth)
 
             depth = 0
-            doc.write('Functions/Subroutines\n')
-            doc.write('=====================\n')
+            doc.write('Functions/Subroutine Documentation\n')
+            doc.write('==================================\n')
+            doc.write('\n')
             for sub in mod.subprograms:
                 print_unit(doc, sub, depth)
 
@@ -82,20 +73,18 @@ def main():
 def print_unit(doc, unit, depth):
     indent = depth * ' '
     doc.write(indent + ' '.join(unit.doc.statement) + '\n')
-    doc.write(indent + len(' '.join(unit.doc.statement)) * '=' + '\n')
-    doc.write(unit.doc.header + '\n')
+    for line in unit.doc.header.split('\n'):
+        doc.write(indent + '  ' + line + '\n')
     doc.write('\n')
 
-    #if unit.doc.docstring:
-    #    for line in unit.doc.docstring.split('\n'):
-    #        doc.write(indent + line + '\n')
-    #    doc.write('\n')
+    if unit.variables:
+        doc.write(indent + '  ' + 'Parameters\n')
 
     for var in unit.variables:
         if var.doc.docstring:
-            doc.write(indent + '- ' + var.name + '\n')
+            doc.write(indent + '    ' + '- **' + var.name + '** ::')
             for line in var.doc.docstring.split('\n'):
-                doc.write(indent + '  ' + line + '\n')
+                doc.write(indent + '      ' + line + '\n')
             doc.write('\n')
 
     for block in unit.blocks:
@@ -104,12 +93,13 @@ def print_unit(doc, unit, depth):
     for subprog in unit.subprograms:
         print_unit(doc, subprog, depth + 2)
 
-    if unit.doc.footer:
-        doc.write(indent + 'Detailed Description\n')
-        doc.write(indent + '--------------------\n')
-        for line in unit.doc.footer.split('\n'):
-            doc.write(indent + line + '\n')
-        doc.write('\n')
+    # Only modules have footers, I think...
+    #if unit.doc.footer:
+    #    doc.write(indent + 'Detailed Description\n')
+    #    doc.write(indent + '--------------------\n')
+    #    for line in unit.doc.footer.split('\n'):
+    #        doc.write(indent + line + '\n')
+    #    doc.write('\n')
 
 if __name__ == '__main__':
     main()

@@ -124,8 +124,4 @@ class FortLines(object):
         self.prior_doc = self.current_doc
         self.current_doc = doc
 
-        #print("I:line:", line)
-        #print("I:prior_doc:", self.prior_doc)
-        #print("I:current_doc:", self.current_doc)
-
         return line

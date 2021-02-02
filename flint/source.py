@@ -91,7 +91,9 @@ class Source(object):
         tokenizer = Tokenizer()
         line_number = 0
         src_lines = []
-        print('{} ({})'.format(self.path, self.abspath))
+
+        if self.verbose:
+            print('{} ({})'.format(self.path, self.abspath))
 
         # TODO: Settle on name, move to __init__
         self.stop_parsing = False
