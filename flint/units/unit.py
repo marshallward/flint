@@ -146,7 +146,7 @@ class Unit(object):
         # Gather a final "footer" docstring near the `end` statement.
         # TODO: Which do we want here?  Both?
         #self.doc.footer = lines.current_doc
-        self.doc.footer = docstrip(lines.prior_doc)
+        self.doc.footer = docstrip(lines.prior_doc, oneline=False)
 
         # Finalisation
         if self.verbose:
@@ -228,8 +228,9 @@ class Unit(object):
             block = Unit(verbose=self.verbose)
             block.parse(lines)
 
-            # TODO: parse name
-            block.name = ' '.join(line)
+            # TODO: I think this is OK, since these are never defined as
+            #   comma-separated lists, but need to check into this
+            block.name = line[-1]
             self.blocks.append(block)
 
         elif line[0] in Unit.access_specs:

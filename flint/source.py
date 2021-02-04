@@ -158,7 +158,7 @@ class Source(object):
                 tokens = [tok for tok in tokens
                           if tok[0] not in '!#' or is_docstring(tok)]
 
-                # XXX: Is this changing the case of comment tokens?
+                # XXX: Let's try doing this after docstring assignment
                 tokens = [
                     tok.lower()
                     if tok[0] not in '\'"' and not is_docstring(tok)

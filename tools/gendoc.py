@@ -45,8 +45,27 @@ def main():
             doc.write(mod.doc.header + '\n')
             doc.write('\n')
 
-            # TODO: List of data types
-            # TODO: List of function
+            if mod.blocks:
+                doc.write('Data Types\n')
+                doc.write('==========\n')
+
+                doc.write('.. list-table::\n\n')
+                for dtype in mod.blocks:
+                    doc.write('   * - |{0}|_\n'.format(dtype.name))
+                    doc.write('     - {0}\n'.format(dtype.doc.header))
+                    doc.write('\n')
+                    doc.write('\n')
+
+            if mod.subprograms:
+                doc.write('Functions/Subroutines\n')
+                doc.write('=====================\n')
+
+                doc.write('.. list-table::\n\n')
+                for prog in mod.subprograms:
+                    doc.write('   * - |' + prog.name + '|_\n')
+                    doc.write('     - ' + prog.doc.header + '\n')
+                    doc.write('\n')
+                    doc.write('\n')
 
             if mod.doc.footer:
                 doc.write('Detailed Description\n')
@@ -55,23 +74,42 @@ def main():
                     doc.write(line + '\n')
                 doc.write('\n')
 
-            depth = 0
-            doc.write('Data Types\n')
-            doc.write('==========\n')
-            # TODO: Why did I even call these blocks?
-            for unit in mod.blocks:
-                print_unit(doc, unit, depth)
+            if mod.blocks:
+                depth = 0
+                doc.write('Type Documentation\n')
+                doc.write('==================\n')
+                # TODO: Why did I even name these `blocks`?
+                for unit in mod.blocks:
+                    print_unit(doc, unit, depth)
 
-            depth = 0
-            doc.write('Functions/Subroutine Documentation\n')
-            doc.write('==================================\n')
-            doc.write('\n')
-            for sub in mod.subprograms:
-                print_unit(doc, sub, depth)
+            if mod.subprograms:
+                depth = 0
+                doc.write('Functions/Subroutine Documentation\n')
+                doc.write('==================================\n')
+                doc.write('\n')
+                for sub in mod.subprograms:
+                    print_unit(doc, sub, depth)
 
+            if mod.blocks:
+                doc.write('\n')
+                doc.write('.. Type/Interface labels\n')
+                doc.write('\n')
+                for block in mod.blocks:
+                    doc.write('.. |{0}| replace:: ``{0}``\n'.format(block.name))
+
+            if mod.subprograms:
+                doc.write('\n')
+                doc.write('.. Subprogram labels\n')
+                doc.write('\n')
+                for prog in mod.subprograms:
+                    doc.write('.. |{0}| replace:: ``{0}``\n'.format(prog.name))
 
 def print_unit(doc, unit, depth):
     indent = depth * ' '
+
+    doc.write(indent + '.. _' + unit.name + ':\n')
+    doc.write('\n')
+
     doc.write(indent + ' '.join(unit.doc.statement) + '\n')
     for line in unit.doc.header.split('\n'):
         doc.write(indent + '  ' + line + '\n')
@@ -82,9 +120,10 @@ def print_unit(doc, unit, depth):
 
     for var in unit.variables:
         if var.doc.docstring:
-            doc.write(indent + '    ' + '- **' + var.name + '** ::')
-            for line in var.doc.docstring.split('\n'):
-                doc.write(indent + '      ' + line + '\n')
+            doc.write(indent + '    ' + '- **' + var.name + '** :: ')
+            doc.write(var.doc.docstring + '\n')
+            #for line in var.doc.docstring.split('\n'):
+            #    doc.write(indent + '      ' + line + '\n')
             doc.write('\n')
 
     for block in unit.blocks:
