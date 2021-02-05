@@ -56,5 +56,5 @@ class Project(object):
                         if fn.name in caller_fn.callees:
                             cname = caller_fn.name
                             if (caller_mod != mod):
-                                cname = '{}::{}'.format(mod.name, cname)
+                                cname = '{}::{}'.format(caller_mod.name, cname)
                             fn.callers.add(cname)

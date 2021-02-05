@@ -300,10 +300,23 @@ class Unit(object):
                 tok = next(tokens)
 
             # Attributes
+
+            # Set defaults
+            var_intent = None
+
             while tok == ',':
                 tok = next(tokens)
                 attr = tok
-                if attr in ('dimension', 'intent'):
+
+                if attr == 'intent':
+                    tok = next(tokens)
+                    assert tok == '('
+                    var_intent = next(tokens)
+                    tok = next(tokens)
+                    assert tok == ')'
+
+                # TODO: We mostly skip over this information
+                elif attr == 'dimension':
                     tok = next(tokens)
                     assert tok == '('
                     par_count = 1
@@ -313,6 +326,7 @@ class Unit(object):
                             par_count += 1
                         elif tok == ')':
                             par_count -= 1
+
                 tok = next(tokens)
 
             if tok == '::':
@@ -353,6 +367,7 @@ class Unit(object):
 
             for i, vname in enumerate(vnames):
                 var = Variable(vname, vtype)
+                var.intent = var_intent
 
                 var.doc.statement = lines.current_line
                 try:

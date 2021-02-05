@@ -121,6 +121,8 @@ def print_unit(doc, unit, depth):
     for var in unit.variables:
         if var.doc.docstring:
             doc.write(indent + '    ' + '- **' + var.name + '** :: ')
+            if var.intent:
+                doc.write('[{0}] '.format(var.intent))
             doc.write(var.doc.docstring + '\n')
             doc.write('\n')
 

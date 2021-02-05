@@ -15,6 +15,8 @@ class Variable(object):
     def __init__(self, name, vtype):
         self.name = name
         self.type = vtype
+        self.intent = None
+
         self.attributes = []
         self.refs = 0
 
