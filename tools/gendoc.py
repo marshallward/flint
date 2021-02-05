@@ -130,6 +130,12 @@ def print_unit(doc, unit, depth):
         doc.write(indent + '  ' + ' '.join('|{0}|_'.format(callee) for callee in unit.callees) + '\n')
         doc.write('\n')
 
+    if unit.callers:
+        doc.write('\n')
+        doc.write(indent + 'Called by\n')
+        doc.write(indent + '  ' + ' '.join('|{0}|_'.format(caller) for caller in unit.callers) + '\n')
+        doc.write('\n')
+
     for block in unit.blocks:
         print_unit(doc, block, depth + 2)
 

@@ -46,3 +46,15 @@ class Project(object):
             for unit in src.units:
                 if isinstance(unit, Module):
                     self.modules.append(unit)
+
+        # Now gather the callers for each function
+        for mod in self.modules:
+            for fn in mod.subprograms:
+                # Check for fn() calls in the other modules
+                for caller_mod in self.modules:
+                    for caller_fn in caller_mod.subprograms:
+                        if fn.name in caller_fn.callees:
+                            cname = caller_fn.name
+                            if (caller_mod != mod):
+                                cname = '{}::{}'.format(mod.name, cname)
+                            fn.callers.add(cname)
