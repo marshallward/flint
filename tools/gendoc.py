@@ -27,14 +27,14 @@ def main():
     os.makedirs(doc_path, exist_ok=True)
 
     # Gather modules
-    # NOTE: parse() should probably add these to proj
-    modules = []
-    for src in proj.files:
-        for unit in src.units:
-            if isinstance(unit, flint.units.Module):
-                modules.append(unit)
+    ## NOTE: parse() should probably add these to proj
+    #modules = []
+    #for src in proj.files:
+    #    for unit in src.units:
+    #        if isinstance(unit, flint.units.Module):
+    #            modules.append(unit)
 
-    for mod in modules:
+    for mod in proj.modules:
         doc_fname = mod.name + '.rst'
         doc_fpath = os.path.join(doc_path, doc_fname)
         with open(doc_fpath, 'w') as doc:
@@ -122,9 +122,13 @@ def print_unit(doc, unit, depth):
         if var.doc.docstring:
             doc.write(indent + '    ' + '- **' + var.name + '** :: ')
             doc.write(var.doc.docstring + '\n')
-            #for line in var.doc.docstring.split('\n'):
-            #    doc.write(indent + '      ' + line + '\n')
             doc.write('\n')
+
+    if unit.callees:
+        doc.write('\n')
+        doc.write(indent + 'Calls into\n')
+        doc.write(indent + '  ' + ' '.join('|{0}|_'.format(callee) for callee in unit.callees) + '\n')
+        doc.write('\n')
 
     for block in unit.blocks:
         print_unit(doc, block, depth + 2)

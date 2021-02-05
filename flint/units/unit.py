@@ -1,7 +1,10 @@
+from flint.calls import get_callable_symbols
 from flint.construct import Construct
 from flint.report import Report
 from flint.variable import Variable
 from flint.document import is_docstring, docstrip, Document
+
+from flint.intrinsics import intrinsic_fns
 
 
 class Unit(object):
@@ -78,6 +81,11 @@ class Unit(object):
         self.namelists = {}
         self.report = report if report else Report()
 
+        # Call tree properties
+        self.used_modules = set()
+        self.callees = set()
+        self.callers = set()
+
         self.doc = Document()
         self.group_docstr = None
 
@@ -112,6 +120,8 @@ class Unit(object):
         else:
             return False
 
+    # Call graph construction
+
     def end_statement(self, line):
         assert self.utype
 
@@ -142,6 +152,9 @@ class Unit(object):
         self.parse_specification(lines)
         self.parse_execution(lines)
         self.parse_subprogram(lines)
+
+        # Remove intrinsic functions from the set of callables
+        self.callees = self.callees - set(intrinsic_fns)
 
         # Gather a final "footer" docstring near the `end` statement.
         # TODO: Which do we want here?  Both?
@@ -210,6 +223,14 @@ class Unit(object):
 
     def parse_use_stmt(self, line):
         """Parse the use statement (R1109) within a specification (R204)."""
+        idx = 1
+        if line[idx] == ',':
+            idx = idx + 2
+        if line[idx] == '::':
+            idx = idx + 1
+
+        self.used_modules.add(line[idx])
+
         if self.verbose:
             print('U: {}'.format(' '.join(line)))
 
@@ -376,8 +397,7 @@ class Unit(object):
     # Execution
 
     def parse_execution(self, lines):
-        # First parse the line which terminated specification
-        # TODO: How to merge with iteration below?
+        # TODO: The val = fn(...) test for self.callees is very speculative...
 
         line = lines.current_line
 
@@ -385,8 +405,14 @@ class Unit(object):
         if self.utype == 'interface':
             return
 
+        # Gather up any callable symbols
+        var_names = [v.name for v in self.variables]
+        self.callees.update(get_callable_symbols(line, var_names))
+
+        # First parse the line which terminated specification
+        # TODO: How to merge with iteration below? Lookahead in parse_spec()?
         if Construct.statement(line):
-            cons = Construct(verbose=self.verbose)
+            cons = Construct(self, verbose=self.verbose)
             cons.parse(lines)
         elif self.end_statement(line) or line[0] == 'contains':
             return
@@ -397,9 +423,11 @@ class Unit(object):
 
         # Now iterate over the rest of the lines
         for line in lines:
+            self.callees.update(get_callable_symbols(line, var_names))
+
             # Execution constructs
             if Construct.statement(line):
-                cons = Construct(verbose=self.verbose)
+                cons = Construct(self, verbose=self.verbose)
                 cons.parse(lines)
             elif self.end_statement(line) or line[0] == 'contains':
                 # TODO: Use return?

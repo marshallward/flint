@@ -1,3 +1,5 @@
+from flint.calls import get_callable_symbols
+
 class Construct(object):
 
     construct_types = [
@@ -67,10 +69,13 @@ class Construct(object):
         else:
             return False
 
-    def __init__(self, depth=1, verbose=False):
+    def __init__(self, unit, depth=1, verbose=False):
         self.ctype = None
         self.name = None
         self.verbose = verbose
+
+        # Program unit containing the construct
+        self.unit = unit
 
         # Testing
         self.depth = depth
@@ -91,9 +96,15 @@ class Construct(object):
         if self.verbose:
             print('C: {}{} '.format(' ' * (self.depth - 1), ' '.join(line)))
 
+        # Generate the list of variable names
+        var_names = [v.name for v in self.unit.variables]
+
+        # Parse the contents of the construct
         for line in lines:
+            self.unit.callees.update(get_callable_symbols(line, var_names))
+
             if Construct.statement(line):
-                cons = Construct(depth=self.depth + 1, verbose=self.verbose)
+                cons = Construct(self.unit, depth=self.depth + 1, verbose=self.verbose)
                 cons.parse(lines)
             elif self.end_statement(line):
                 if self.verbose:

@@ -2,16 +2,20 @@ import os
 import sys
 
 from flint.source import Source
-
+from flint.units import Module
 
 class Project(object):
 
     def __init__(self, verbose=False):
-        self.files = []
         self.verbose = verbose
-        self.path = None
 
+        # Source code
+        self.path = None
         self.directories = []
+        self.files = []
+
+        # Program structure
+        self.modules = []
 
     # TODO: *paths is generally a bad idea for a public API.  I am only using
     #   it here to get sensible output in my MOM6 tests.
@@ -36,3 +40,9 @@ class Project(object):
             f90file = Source(project=self, verbose=self.verbose)
             f90file.parse(fpath)
             self.files.append(f90file)
+
+        # Generate list of modules
+        for src in self.files:
+            for unit in src.units:
+                if isinstance(unit, Module):
+                    self.modules.append(unit)
