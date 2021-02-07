@@ -3,36 +3,12 @@ import os
 from flint.project import Project
 import flint.units
 
-# TODO: Use docutils to produce formatted output?  Is this a thing?
-#   - It seems possible but is very convoluted.
-#   - docutils has no Writer() for reST, but it can write XML if you give
-#     it some template file? (.xsd?)
-#   - This is all beyond my skillset.  But I doubt that it is worth pursuing.
 
-
-def main():
+def generate_docs(project_dirs, doc_path):
     proj = Project()
-    #proj = Project(verbose=True)
-
-    proj.parse(
-        'mom6/src',
-        'mom6/config_src/solo_driver',
-        'mom6/config_src/dynamic_symmetric'
-    )
-    doc_path = 'docs'
-
-    #proj.parse('core')
-    #doc_path = 'cdoc'
+    proj.parse(*project_dirs)
 
     os.makedirs(doc_path, exist_ok=True)
-
-    # Gather modules
-    ## NOTE: parse() should probably add these to proj
-    #modules = []
-    #for src in proj.files:
-    #    for unit in src.units:
-    #        if isinstance(unit, flint.units.Module):
-    #            modules.append(unit)
 
     for mod in proj.modules:
         doc_fname = mod.name + '.rst'
@@ -153,4 +129,4 @@ def print_unit(doc, unit, depth):
     #    doc.write('\n')
 
 if __name__ == '__main__':
-    main()
+    generate_docs(mom6_dirs, mom6_docpath)
