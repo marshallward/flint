@@ -8,7 +8,8 @@ import flint.tools.gendoc
 def parse():
     """Parse the command line inputs and execute the subcommand."""
 
-    # Construct the argument parser
+    # 1. Construct the argument parser
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--version',
             action='version',
@@ -17,10 +18,35 @@ def parse():
 
     subparsers = parser.add_subparsers()
 
-    # Setup gendoc
+    # Subcommand setup
     # XXX: This is more of a placeholder for now
+    #   These will presumably be defined in a separate module
+    # Setup gendoc
     gendoc_cmd = subparsers.add_parser('gendoc')
     gendoc_cmd.set_defaults(run_cmd=flint.tools.gendoc.generate_docs)
+
+    arg_srcdirs = {
+        'flags': ('srcdir',),
+        'parameters': {
+            'action': 'store',
+            'metavar': 'dir',
+            'type': str,
+            'nargs': '+',
+            'help': 'Source code directory'
+        }
+    }
+    gendoc_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
+
+    arg_docdir = {
+        'flags': ('--output', '-o'),
+        'parameters': {
+            'action': 'store',
+            'dest': 'docdir',
+            'default':  None,
+            'help': 'Documentation output directory',
+        }
+    }
+    gendoc_cmd.add_argument(*arg_docdir['flags'], **arg_docdir['parameters'])
 
     # If no argument given, then print the help page
     if len(sys.argv) == 1:
@@ -28,17 +54,10 @@ def parse():
         sys.exit()
 
     # Fetch the command line arguments
-    args = vars(parser.parse_args())
-    run_cmd = args.pop('run_cmd')
+    args = parser.parse_args()
+    run_cmd = args.run_cmd
 
-    # XXX: Hard-coded to generate MOM6 code, but this needs to be
-    # user-defined!
+    srcdir = args.srcdirs
+    docdir = args.docdir
 
-    mom6_dirs = (
-            'mom6/src',
-            'mom6/config_src/solo_driver',
-            'mom6/config_src/dynamic_symmetric'
-    )
-    
-    mom6_docpath = 'docs'
-    run_cmd(mom6_dirs, mom6_docpath)
+    run_cmd(args.srcdir, args.docdir)
