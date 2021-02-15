@@ -8,6 +8,7 @@ class Project(object):
 
     def __init__(self, verbose=False):
         self.verbose = verbose
+        self.debug = False
 
         # Source code
         self.path = None
@@ -34,7 +35,8 @@ class Project(object):
                     if os.path.splitext(fname)[1] in ('.f90', '.F90'):
                         filepaths.append(fpath)
                     else:
-                        print('SKIP file: {}'.format(fpath))
+                        if self.debug:
+                            print('SKIP file: {}'.format(fpath))
 
         for fpath in filepaths:
             f90file = Source(project=self, verbose=self.verbose)

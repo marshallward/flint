@@ -4,6 +4,7 @@ import sys
 
 import flint
 import flint.tools.gendoc
+import flint.tools.parse
 import flint.tools.report
 
 def parse():
@@ -22,10 +23,9 @@ def parse():
     # Subcommand setup
     # XXX: This is more of a placeholder for now
     #   These will presumably be defined in a separate module
-    # Setup gendoc
-    gendoc_cmd = subparsers.add_parser('gendoc')
-    gendoc_cmd.set_defaults(run_cmd=flint.tools.gendoc.generate_docs)
+    # TODO: argparse has some method for registering args over multiple cmds
 
+    # Arguments
     arg_srcdirs = {
         'flags': ('srcdirs',),
         'parameters': {
@@ -36,7 +36,6 @@ def parse():
             'help': 'Source code directory'
         }
     }
-    gendoc_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
 
     arg_docdir = {
         'flags': ('--output', '-o'),
@@ -47,10 +46,19 @@ def parse():
             'help': 'Documentation output directory',
         }
     }
+
+    # gendoc
+    gendoc_cmd = subparsers.add_parser('gendoc')
+    gendoc_cmd.set_defaults(run_cmd=flint.tools.gendoc.generate_docs)
+    gendoc_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
     gendoc_cmd.add_argument(*arg_docdir['flags'], **arg_docdir['parameters'])
 
-    # Report (NOTE: reuse srcdirs)
-    # TODO: argparse has some method for registering args over multiple cmds
+    # parse
+    report_cmd = subparsers.add_parser('parse')
+    report_cmd.set_defaults(run_cmd=flint.tools.parse.parse_lines)
+    report_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
+
+    # report
     report_cmd = subparsers.add_parser('report')
     report_cmd.set_defaults(run_cmd=flint.tools.report.report_whitespace)
     report_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
@@ -68,5 +76,4 @@ def parse():
     #   arguments and will probably be revised.
     run_args = vars(args)
     run_args.pop('run_cmd')
-    print(run_args)
     run_cmd(*run_args.values())

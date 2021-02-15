@@ -20,6 +20,8 @@ class Source(object):
     def __init__(self, project=None, verbose=False):
         self.project = project
         self.verbose = verbose
+        self.debug = False
+
         self.path = None
         self.abspath = None
 
@@ -193,8 +195,9 @@ class Source(object):
             try:
                 self.defines.pop(identifier)
             except KeyError:
-                print('flint: warning: unset identifier {} was never '
-                      'defined.'.format(identifier))
+                if self.debug:
+                    print('flint: warning: unset identifier {} was never '
+                          'defined.'.format(identifier))
 
         # TODO
         #elif directive == 'if':
@@ -248,9 +251,11 @@ class Source(object):
                 self.tokenize(path=inc_path, report=inc_report)
                 self.inc_reports[inc_path] = inc_report
             else:
-                print('flint: Include file {} not found; skipping.'
-                      ''.format(inc_fname))
+                if self.debug:
+                    print('flint: Include file {} not found; skipping.'
+                          ''.format(inc_fname))
 
         else:
-            print('flint: unsupported preprocess directive: {}'
-                  ''.format(line))
+            if self.debug:
+                print('flint: unsupported preprocess directive: {}'
+                      ''.format(line).rstrip())

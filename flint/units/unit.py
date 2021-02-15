@@ -74,6 +74,7 @@ class Unit(object):
         self.name = None
         self.utype = None
         self.verbose = verbose
+        self.debug = False
 
         self.subprograms = []
         self.variables = []
@@ -373,9 +374,10 @@ class Unit(object):
                 try:
                     var.doc.docstring = vardocs[i]
                 except IndexError:
-                    print('ERROR: no docstring found!')
-                    print('  vname:', vname)
-                    print('  vardocs:', vardocs)
+                    if self.debug:
+                        print('warning: no docstring found.')
+                        print('  vname:', vname)
+                        print('  vardocs:', vardocs)
 
                 self.variables.append(var)
 
