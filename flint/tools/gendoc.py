@@ -127,6 +127,3 @@ def print_unit(doc, unit, depth):
     #    for line in unit.doc.footer.split('\n'):
     #        doc.write(indent + line + '\n')
     #    doc.write('\n')
-
-if __name__ == '__main__':
-    generate_docs(mom6_dirs, mom6_docpath)

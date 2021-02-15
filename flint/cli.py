@@ -4,6 +4,7 @@ import sys
 
 import flint
 import flint.tools.gendoc
+import flint.tools.report
 
 def parse():
     """Parse the command line inputs and execute the subcommand."""
@@ -26,7 +27,7 @@ def parse():
     gendoc_cmd.set_defaults(run_cmd=flint.tools.gendoc.generate_docs)
 
     arg_srcdirs = {
-        'flags': ('srcdir',),
+        'flags': ('srcdirs',),
         'parameters': {
             'action': 'store',
             'metavar': 'dir',
@@ -48,6 +49,12 @@ def parse():
     }
     gendoc_cmd.add_argument(*arg_docdir['flags'], **arg_docdir['parameters'])
 
+    # Report (NOTE: reuse srcdirs)
+    # TODO: argparse has some method for registering args over multiple cmds
+    report_cmd = subparsers.add_parser('report')
+    report_cmd.set_defaults(run_cmd=flint.tools.report.report_whitespace)
+    report_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
+
     # If no argument given, then print the help page
     if len(sys.argv) == 1:
         parser.print_help()
@@ -57,7 +64,9 @@ def parse():
     args = parser.parse_args()
     run_cmd = args.run_cmd
 
-    srcdir = args.srcdirs
-    docdir = args.docdir
-
-    run_cmd(args.srcdir, args.docdir)
+    # TODO: This is a very rough method for generating a tuple of command
+    #   arguments and will probably be revised.
+    run_args = vars(args)
+    run_args.pop('run_cmd')
+    print(run_args)
+    run_cmd(*run_args.values())
