@@ -58,17 +58,21 @@ class FortLines(object):
             doc = line.pop()
 
         if ';' in line:
+            # First strip leading semicolons to avoid null lines
+            while line[0] == ';':
+                line = line[1:]
+
+            # Now do the formal split
             idx = line.index(';')
             line, self.buffered_line = line[:idx], line[1 + idx:]
 
-            # How literally do we handle end-line semicolons?
-            # This tosses them aside
-            if self.buffered_line == []:
-                self.buffered_line = None
+            # Again, strip any leading semicolons from the buffer
+            while self.buffered_line and self.buffered_line[0] == ';':
+                self.buffered_line = self.buffered_line[1:]
 
-        # Skip empty lines
-        while (line == []):
-            line = next(self.lines)
+            # Nullify the buffer if it's empty or a lone line continuation
+            if self.buffered_line in (['&'], []):
+                self.buffered_line = None
 
         # Join extended lines
         # TODO: 255-limit line check
@@ -101,14 +105,28 @@ class FortLines(object):
 
                 # True if string continues to next line
                 string_append = (next_line[idx][-1] not in '"\'')
+
             elif ';' in next_line:
+                # First strip leading semicolons to avoid null lines
+                # NOTE: This could probably be moved outside of the block.
+                while line[0] == ';':
+                    line = line[1:]
+
                 idx = next_line.index(';')
 
                 line = line[:-1] + next_line[:idx]
                 self.buffered_line = next_line[1 + idx:]
 
-                if self.buffered_line == []:
+                # Skip repeated semicolons
+                while self.buffered_line and self.buffered_line[0] == ';':
+                    self.buffered_line = self.buffered_line[1:]
+
+                # A lone line continuation serves no purpose (and may not even
+                # be compliant) so we drop it.
+                # We also nullify any empty buffers.
+                if self.buffered_line in (['&'], []):
                     self.buffered_line = None
+
             else:
                 idx = 1 if next_line[0] == '&' else 0
                 line = line[:-1] + next_line[idx:]
