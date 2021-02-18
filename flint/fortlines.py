@@ -75,6 +75,7 @@ class FortLines(object):
         string_append = False
         while line[-1] == '&':
             next_line = next(self.lines)
+
             if next_line and is_docstring(next_line[-1]):
                 doc = '\n'.join([doc, next_line.pop()])
                 if not next_line:
@@ -100,6 +101,14 @@ class FortLines(object):
 
                 # True if string continues to next line
                 string_append = (next_line[idx][-1] not in '"\'')
+            elif ';' in next_line:
+                idx = next_line.index(';')
+
+                line = line[:-1] + next_line[:idx]
+                self.buffered_line = next_line[1 + idx:]
+
+                if self.buffered_line == []:
+                    self.buffered_line = None
             else:
                 idx = 1 if next_line[0] == '&' else 0
                 line = line[:-1] + next_line[idx:]
