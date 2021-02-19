@@ -37,7 +37,8 @@ class Tokenizer(object):
                     word += self.char
                     self.update_chars()
 
-            elif self.char in '"\'' or (self.prior_delim and self.char != '&'):
+            elif self.char in '"\'' or (self.prior_delim
+                                        and self.char not in '&!'):
                 word = self.parse_string()
 
             elif self.char.isalpha() or self.char == '_':
