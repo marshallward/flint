@@ -313,7 +313,15 @@ class Unit(object):
                     tok = next(tokens)
                     assert tok == '('
                     var_intent = next(tokens)
+                    assert var_intent in ('in', 'out', 'inout')
                     tok = next(tokens)
+
+                    # Fortran permits a space between `inout`, so check the
+                    # next token.  (NOTE: `out in` is not allowed!)
+                    if var_intent == 'in' and tok == 'out':
+                        var_intent += tok
+                        tok = next(tokens)
+
                     assert tok == ')'
 
                 # TODO: We mostly skip over this information
