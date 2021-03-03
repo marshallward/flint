@@ -12,8 +12,11 @@ from flint.report import Report
 from flint.units.unit import Unit
 from flint.tokenizer import Tokenizer
 from flint.document import is_docstring
-
+from flint.token import Token
 from flint.units import get_program_unit_type
+
+# Debug control flag
+use_str_as_token = False
 
 
 class Source(object):
@@ -155,22 +158,59 @@ class Source(object):
                     if tok[0] not in ('!', '"', '\''):
                         report.cases[tok.lower()].add(tok)
 
-                # Strip comments and preprocessed lines, but keep docstrings
-                # TODO: Handle preprocessed lines better
-                tokens = [tok for tok in tokens
-                          if tok[0] not in '!#' or is_docstring(tok)]
+                # Two methods are shown below, the first explicitly converts
+                # all tokens to lowercase.  The second preserves the case but
+                # wraps the strings in a Token class, which retains its case
+                # but applies a lowercase when used in tests (eq, hash, etc.)
 
-                # XXX: Let's try doing this after docstring assignment
-                tokens = [
-                    tok.lower()
-                    if tok[0] not in '\'"' and not is_docstring(tok)
-                    else tok
-                    for tok in tokens
-                ]
+                # The first is *much* faster - but of course you lose the case
+                # information and null tokens.
 
-                # Remove whitespace
-                tokenized_line = [tok for tok in tokens
-                                  if not all(c in ' \t' for c in tok)]
+                # Some tweaks do improve the performance, e.g. store the
+                # original and lowercase in a container class, but not really
+                # enough to justify its use.
+
+                # Keeping both for now, but this needs further investigation.
+
+                if use_str_as_token:
+                    # 1. Explicitly store as a lowercase token
+
+                    # Strip comments and preprocessing, but keep docstrings
+                    tokens = [tok for tok in tokens
+                              if tok[0] not in '!#' or is_docstring(tok)]
+
+                    # Convert non-strings to lowercase
+                    # XXX: Let's try doing this after docstring assignment
+                    tokens = [
+                        tok.lower()
+                        if tok[0] not in '\'"' and not is_docstring(tok)
+                        else tok
+                        for tok in tokens
+                    ]
+
+                    # Remove whitespace
+                    tokenized_line = [tok for tok in tokens
+                                      if not all(c in ' \t' for c in tok)]
+                else:
+                    # 2. Store as a Token() with case-insensitive operations
+
+                    tokenized_line = [Token(tok) for tok in tokens
+                                      if not all(c in ' \t' for c in tok)]
+
+                    # TODO: Use some fancy iterator...?
+                    tokenized_line = []
+                    prior_tok = None
+                    for t in tokens:
+                        tok = Token(t)
+                        if (all(c in ' \t' for c in tok)
+                                or (tok[0] in '!#' and not is_docstring(tok))):
+                            if prior_tok:
+                                prior_tok.tail.append(tok)
+                            # XXX: else...?  where to put leading null tokens?
+                        else:
+                            tokenized_line.append(tok)
+                            prior_tok = tok
+
                 if tokenized_line:
                     src_lines.append(tokenized_line)
 
