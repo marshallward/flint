@@ -16,7 +16,7 @@ from flint.token import Token
 from flint.units import get_program_unit_type
 
 # Debug control flag
-use_str_as_token = False
+from flint import use_str_as_token
 
 
 class Source(object):
@@ -77,7 +77,7 @@ class Source(object):
                 self.units.append(unit)
             except ValueError:
                 # Unresolved line
-                print('X: {}'.format(' '.join(line)))
+                print('X: {}'.format(gen_stmt(line)))
 
             #if Unit.statement(line):
             #    unit = Unit(verbose=self.verbose)
@@ -85,7 +85,7 @@ class Source(object):
             #    self.units.append(unit)
             #else:
             #    # Unresolved line
-            #    print('X: {}'.format(' '.join(line)))
+            #    print('X: {}'.format(gen_stmt(line)))
 
     def tokenize(self, path=None, report=None):
         if not path:
@@ -172,6 +172,10 @@ class Source(object):
 
                 # Keeping both for now, but this needs further investigation.
 
+                # NOTE: This approach probably lets us defer reporting until
+                # later, and also may also mean we no longer need to explicitly
+                # treat the docstring as a parseable token.
+
                 if use_str_as_token:
                     # 1. Explicitly store as a lowercase token
 
@@ -193,9 +197,6 @@ class Source(object):
                                       if not all(c in ' \t' for c in tok)]
                 else:
                     # 2. Store as a Token() with case-insensitive operations
-
-                    tokenized_line = [Token(tok) for tok in tokens
-                                      if not all(c in ' \t' for c in tok)]
 
                     # TODO: Use some fancy iterator...?
                     tokenized_line = []

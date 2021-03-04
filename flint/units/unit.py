@@ -1,10 +1,10 @@
 from flint.calls import get_callable_symbols
 from flint.construct import Construct
+from flint.document import is_docstring, docstrip, Document
+from flint.fortlines import gen_stmt
+from flint.intrinsics import intrinsic_fns
 from flint.report import Report
 from flint.variable import Variable
-from flint.document import is_docstring, docstrip, Document
-
-from flint.intrinsics import intrinsic_fns
 
 
 class Unit(object):
@@ -233,15 +233,15 @@ class Unit(object):
         self.used_modules.add(line[idx])
 
         if self.verbose:
-            print('U: {}'.format(' '.join(line)))
+            print('U: {}'.format(gen_stmt(line)))
 
     def parse_import_stmt(self, line):
         if self.verbose:
-            print('i: {}'.format(' '.join(line)))
+            print('i: {}'.format(gen_stmt(line)))
 
     def parse_implicit_stmt(self, line):
         if self.verbose:
-            print('I: {}'.format(' '.join(line)))
+            print('I: {}'.format(gen_stmt(line)))
 
     def parse_declaration_construct(self, lines, line):
 
@@ -257,17 +257,17 @@ class Unit(object):
 
         elif line[0] in Unit.access_specs:
             if self.verbose:
-                print('d: {}'.format(' '.join(line)))
+                print('d: {}'.format(gen_stmt(line)))
 
         # R357 (placeholder)
         elif line[0] == 'data':
             if self.verbose:
-                print('d: {}'.format(' '.join(line)))
+                print('d: {}'.format(gen_stmt(line)))
 
         # R551 (placeholder)
         elif line[0] == 'parameter':
             if self.verbose:
-                print('p: {}'.format(' '.join(line)))
+                print('p: {}'.format(gen_stmt(line)))
 
         else:
             tokens = iter(line)
@@ -285,7 +285,7 @@ class Unit(object):
             else:
                 # Unhandled
                 if self.verbose:
-                    print('X: {}'.format(' '.join(line)))
+                    print('X: {}'.format(gen_stmt(line)))
                 return
 
             # Character length parsing
@@ -393,7 +393,7 @@ class Unit(object):
                 self.group_docstr = None
 
             if self.verbose:
-                print('D: {}'.format(' '.join(line)))
+                print('D: {}'.format(gen_stmt(line)))
 
     def parse_namelist(self, line):
         assert(line[0] == 'namelist')
@@ -417,7 +417,7 @@ class Unit(object):
                     tok = next(tokens)
 
         if self.verbose:
-            print('N: {}'.format(' '.join(line)))
+            print('N: {}'.format(gen_stmt(line)))
 
     # Execution
 
@@ -444,7 +444,7 @@ class Unit(object):
         else:
             # Unhandled
             if self.verbose:
-                print('E: {}'.format(' '.join(line)))
+                print('E: {}'.format(gen_stmt(line)))
 
         # Now iterate over the rest of the lines
         for line in lines:
@@ -460,7 +460,7 @@ class Unit(object):
             else:
                 # Unhandled
                 if self.verbose:
-                    print('E: {}'.format(' '.join(line)))
+                    print('E: {}'.format(gen_stmt(line)))
 
     def parse_subprogram(self, lines):
         # TODO: I think the first line of subprogram is always CONTAINS, so
@@ -488,4 +488,4 @@ class Unit(object):
                 break
             else:
                 if self.verbose:
-                    print('X: {}'.format(' '.join(line)))
+                    print('X: {}'.format(gen_stmt(line)))

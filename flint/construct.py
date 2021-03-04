@@ -1,4 +1,5 @@
 from flint.calls import get_callable_symbols
+from flint.fortlines import gen_stmt
 
 class Construct(object):
 
@@ -82,7 +83,6 @@ class Construct(object):
 
     def parse(self, lines):
         line = lines.current_line
-
         # Check for construct label (and pop off)
         if line[0][-1] == ':':
             self.name = line[0][:-1]
@@ -94,7 +94,7 @@ class Construct(object):
             self.ctype = line[0]
 
         if self.verbose:
-            print('C: {}{} '.format(' ' * (self.depth - 1), ' '.join(line)))
+            print('C: {}{} '.format(' ' * (self.depth - 1), gen_stmt(line)))
 
         # Generate the list of variable names
         var_names = [v.name for v in self.unit.variables]
@@ -108,9 +108,9 @@ class Construct(object):
                 cons.parse(lines)
             elif self.end_statement(line):
                 if self.verbose:
-                    print('C: {}{} '.format(' ' * self.depth, ' '.join(line)))
+                    print('C: {}{} '.format(' ' * self.depth, gen_stmt(line)))
                 break
             else:
                 # Unhandled
                 if self.verbose:
-                    print('e: {}{} '.format(' ' * self.depth, ' '.join(line)))
+                    print('e: {}{} '.format(' ' * self.depth, gen_stmt(line)))
