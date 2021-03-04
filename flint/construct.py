@@ -94,7 +94,7 @@ class Construct(object):
             self.ctype = line[0]
 
         if self.verbose:
-            print('C: {}{} '.format(' ' * (self.depth - 1), gen_stmt(line)))
+            print('C: {}'.format(gen_stmt(line, self.depth - 1)))
 
         # Generate the list of variable names
         var_names = [v.name for v in self.unit.variables]
@@ -108,9 +108,9 @@ class Construct(object):
                 cons.parse(lines)
             elif self.end_statement(line):
                 if self.verbose:
-                    print('C: {}{} '.format(' ' * self.depth, gen_stmt(line)))
+                    print('C: {}'.format(gen_stmt(line, self.depth)))
                 break
             else:
                 # Unhandled
                 if self.verbose:
-                    print('e: {}{} '.format(' ' * self.depth, gen_stmt(line)))
+                    print('e: {}'.format(gen_stmt(line, self.depth)))

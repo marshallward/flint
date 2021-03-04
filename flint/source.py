@@ -198,19 +198,25 @@ class Source(object):
                 else:
                     # 2. Store as a Token() with case-insensitive operations
 
-                    # TODO: Use some fancy iterator...?
                     tokenized_line = []
                     prior_tok = None
+                    head = []
                     for t in tokens:
                         tok = Token(t)
                         if (all(c in ' \t' for c in tok)
                                 or (tok[0] in '!#' and not is_docstring(tok))):
                             if prior_tok:
                                 prior_tok.tail.append(tok)
-                            # XXX: else...?  where to put leading null tokens?
+                            else:
+                                head.append(tok)
                         else:
                             tokenized_line.append(tok)
                             prior_tok = tok
+
+                    # Append header null tokens to tok[0]
+                    # TODO: Link tok[i].head to tok[i-1].tail
+                    if tokenized_line:
+                        tokenized_line[0].head = head
 
                 if tokenized_line:
                     src_lines.append(tokenized_line)

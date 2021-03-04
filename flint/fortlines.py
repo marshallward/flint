@@ -7,12 +7,14 @@ from flint import use_str_as_token
 
 
 # This probably ought to be somewhere else, but leaving it here for now.
-def gen_stmt(line):
+def gen_stmt(line, depth=0):
     """Recreate the statement by gathering tokens and null tokens."""
     if use_str_as_token:
-        s = ' '.join([tok for tok in line])
+        s = ' ' * depth + ' '.join([tok for tok in line])
     else:
         s = ''.join([tok + ''.join(tok.tail) for tok in line])
+        if line:
+            s = ''.join(line[0].head) + s
     return s
 
 

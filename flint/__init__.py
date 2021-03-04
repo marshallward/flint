@@ -5,3 +5,4 @@ __version__ = '0.0.1'
 
 # XXX: Debug flag to either use raw strings or Token() objects as tokens
 use_str_as_token = False
+#use_str_as_token = True
