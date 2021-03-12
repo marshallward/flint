@@ -165,7 +165,7 @@ class Unit(object):
         # Finalisation
         if self.verbose:
             print('{}: {}'.format(
-                  self.utype[0].upper(), ' '.join(lines.current_line)))
+                  self.utype[0].upper(), gen_stmt(lines.current_line)))
 
     def parse_header(self, line):
         """Parse the name of the program unit, if present.
@@ -193,7 +193,7 @@ class Unit(object):
             self.name = None
 
         if self.verbose:
-            print('{}: {} '.format(self.utype[0].upper(), ' '.join(line)))
+            print('{}: {} '.format(self.utype[0].upper(), gen_stmt(line)))
 
     # Specification
 
