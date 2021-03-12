@@ -1,5 +1,6 @@
 import itertools
 from flint.document import is_docstring
+from flint.tokenizer import Tokenizer
 from flint.token import Token
 
 # NOTE: This flag should be phased out
@@ -150,7 +151,45 @@ class FortLines(object):
                     self.buffered_line = None
 
             else:
-                idx = 1 if next_line[0] == '&' else 0
+                if next_line[0] == '&':
+                    if next_line[0].tail or line[-2].tail:
+                        idx = 1
+                    else:
+                        # Check for line continuations inbetween tokens
+
+                        # XXX: The following is a very overengineered method to
+                        # distinguish between two tokens which may be split
+                        # along a line separation but not separated by any
+                        # whitespace.
+                        #
+                        # e.g. integer&
+                        #             &:: x
+                        #
+                        # The tokens will be
+                        #   [['integer', '&'], ['&', '::', 'x']]
+                        #
+                        # Our method will concatenate to
+                        #   'integer::'
+                        # due to lack of whitespace.
+                        #
+                        # We then Tokenizer.parse() it to ['integer', '::'] and
+                        # wedge it between the two lines.
+                        #
+                        # This method is flawed and we really ought to just
+                        # handle line continuations in Tokenizer.parse(), and
+                        # log it in our Token metadata (e.g. like Token.tail).
+                        # Then this horrible code can be ditched.
+                        #
+                        # But for now, it stays.
+                        tokenizer = Tokenizer()
+                        new_toks = tokenizer.parse(line[-2] + next_line[1] + line[-1] + '\n')
+                        line = line[:-2] + [Token(tok) for tok in new_toks]
+                        line[-2].tail = next_line[1].tail
+
+                        idx = 2
+                else:
+                    idx = 0
+
                 line = line[:-1] + next_line[idx:]
 
         self.current_line = line
