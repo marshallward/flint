@@ -205,12 +205,17 @@ class Source(object):
                     head = []
                     for t in tokens:
                         tok = Token(t)
-                        if (all(c in ' \t' for c in tok)
-                                or (tok[0] in '!#' and not is_docstring(tok))):
+                        if (all(c in ' \t' for c in tok) or (tok[0] in '!#')):
                             if prior_tok:
                                 prior_tok.tail.append(tok)
                             else:
                                 head.append(tok)
+
+                            # XXX: Temporarily copy docstring to tokens
+                            #   (Can drop after gendoc looks in tail of token)
+                            if is_docstring(tok):
+                                tokenized_line.append(tok)
+                                prior_tok = tok
                         else:
                             tokenized_line.append(tok)
                             prior_tok = tok
