@@ -14,6 +14,7 @@ from flint.tokenizer import Tokenizer
 from flint.document import is_docstring
 from flint.token import Token
 from flint.units import get_program_unit_type
+from flint.fortlines import gen_stmt
 
 # Debug control flag
 from flint import use_str_as_token
@@ -176,7 +177,8 @@ class Source(object):
                 # later, and also may also mean we no longer need to explicitly
                 # treat the docstring as a parseable token.
 
-                if use_str_as_token:
+                #if use_str_as_token:
+                if False:
                     # 1. Explicitly store as a lowercase token
 
                     # Strip comments and preprocessing, but keep docstrings
