@@ -1,6 +1,7 @@
 from flint.units.subroutine import Subroutine, is_subroutine
 from flint.units.function import Function, is_function
 from flint.units.module import Module, is_module
+from flint.units.submodule import Submodule, is_submodule
 
 
 def get_program_unit_type(line):
@@ -10,6 +11,8 @@ def get_program_unit_type(line):
         return Function
     elif is_module(line):
         return Module
+    elif is_submodule(line):
+        return Submodule
     else:
         # TODO: Submodule, block
         raise ValueError
