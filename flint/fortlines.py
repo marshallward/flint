@@ -182,7 +182,8 @@ class FortLines(object):
                         #
                         # But for now, it stays.
                         tokenizer = Tokenizer()
-                        new_toks = tokenizer.parse(line[-2] + next_line[1] + line[-1] + '\n')
+                        tokstr = line[-2] + next_line[1] + line[-1] + '\n'
+                        new_toks = tokenizer.parse(tokstr)
                         line = line[:-2] + [Token(tok) for tok in new_toks]
                         line[-2].tail = next_line[1].tail
 

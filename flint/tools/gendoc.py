@@ -80,6 +80,7 @@ def generate_docs(project_dirs, doc_path):
                 for prog in mod.subprograms:
                     doc.write('.. |{0}| replace:: ``{0}``\n'.format(prog.name))
 
+
 def print_unit(doc, unit, depth):
     indent = depth * ' '
 
@@ -119,11 +120,3 @@ def print_unit(doc, unit, depth):
 
     for subprog in unit.subprograms:
         print_unit(doc, subprog, depth + 2)
-
-    # Only modules have footers, I think...
-    #if unit.doc.footer:
-    #    doc.write(indent + 'Detailed Description\n')
-    #    doc.write(indent + '--------------------\n')
-    #    for line in unit.doc.footer.split('\n'):
-    #        doc.write(indent + line + '\n')
-    #    doc.write('\n')

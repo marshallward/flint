@@ -7,15 +7,17 @@ import flint.tools.gendoc
 import flint.tools.parse
 import flint.tools.report
 
+
 def parse():
     """Parse the command line inputs and execute the subcommand."""
 
     # 1. Construct the argument parser
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--version',
-            action='version',
-            version='flint {0}'.format(flint.__version__)
+    parser.add_argument(
+        '--version',
+        action='version',
+        version='flint {0}'.format(flint.__version__)
     )
 
     subparsers = parser.add_subparsers()

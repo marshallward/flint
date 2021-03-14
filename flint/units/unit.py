@@ -359,7 +359,7 @@ class Unit(object):
             if lines.prior_doc:
                 grpstr = lines.prior_doc.strip().split('\n')[-1]
                 if grpstr.startswith('!>@{'):
-                    self.group_docstr = grpstr.replace('!>@{','')
+                    self.group_docstr = grpstr.replace('!>@{', '')
 
             # TODO: Currently group_doc overrides an inline doc, but maybe that
             # is dumb...
@@ -369,7 +369,7 @@ class Unit(object):
             elif lines.current_doc:
                 vardocs = [
                     docstrip(line)
-                    for line in lines.current_doc.strip().replace('!> ','!< ').split('!< ')[1:]
+                    for line in lines.current_doc.strip().replace('!> ', '!< ').split('!< ')[1:]
                 ]
             else:
                 vardocs = len(vnames) * ['']

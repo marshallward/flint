@@ -1,6 +1,7 @@
 from flint.calls import get_callable_symbols
 from flint.fortlines import gen_stmt
 
+
 class Construct(object):
 
     construct_types = [

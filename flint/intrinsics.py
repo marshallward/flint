@@ -288,5 +288,5 @@ intrinsic_fns = [
 ] + [
     # Operators?  What are these called?
     'allocate',
-    'deallocate', 
+    'deallocate',
 ]

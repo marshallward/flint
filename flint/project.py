@@ -4,6 +4,7 @@ import sys
 from flint.source import Source
 from flint.units import Module
 
+
 class Project(object):
 
     def __init__(self, verbose=False):

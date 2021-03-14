@@ -80,14 +80,6 @@ class Source(object):
                 # Unresolved line
                 print('X: {}'.format(gen_stmt(line)))
 
-            #if Unit.statement(line):
-            #    unit = Unit(verbose=self.verbose)
-            #    unit.parse(flines)
-            #    self.units.append(unit)
-            #else:
-            #    # Unresolved line
-            #    print('X: {}'.format(gen_stmt(line)))
-
     def tokenize(self, path=None, report=None):
         if not path:
             path = self.path
