@@ -89,6 +89,7 @@ class Source(object):
         tokenizer = Tokenizer()
         line_number = 0
         src_lines = []
+        prior_line = None
 
         if self.verbose:
             print('{} ({})'.format(self.path, self.abspath))
@@ -128,7 +129,7 @@ class Source(object):
 
                         replacement = val + '\n'
                         tokens[i:i+1] = tokenizer.parse(replacement)
-                        if (self.verbose):
+                        if (self.verbose > 1):
                             print('replacing {} with {}'
                                   ''.format(repr(tok), repr(val)))
 
@@ -195,12 +196,14 @@ class Source(object):
                     tokenized_line = []
                     prior_tok = None
                     head = []
+
                     for t in tokens:
                         tok = Token(t)
                         if (all(c in ' \t' for c in tok) or (tok[0] in '!#')):
                             if prior_tok:
                                 prior_tok.tail.append(tok)
-                            else:
+
+                            if not tokenized_line:
                                 head.append(tok)
 
                             # XXX: Temporarily copy docstring to tokens
@@ -213,12 +216,17 @@ class Source(object):
                             prior_tok = tok
 
                     # Append header null tokens to tok[0]
-                    # TODO: Link tok[i].head to tok[i-1].tail
                     if tokenized_line:
                         tokenized_line[0].head = head
+                    else:
+                        # Line only contains null tokens; append to previous line.
+                        if prior_line:
+                            prior_line[-1].tail.append('\n')
+                            prior_line[-1].tail.extend(head)
 
                 if tokenized_line:
                     src_lines.append(tokenized_line)
+                    prior_line = tokenized_line
 
         report.check_keyword_case()
 
@@ -232,7 +240,7 @@ class Source(object):
             # TODO: macro functions
             replacement = words[2] if len(words) == 3 else None
             self.defines[words[1]] = replacement
-            if (self.verbose):
+            if (self.verbose > 1):
                 print('#define: {} as {}'
                       ''.format(repr(words[1]), repr(replacement)))
 
