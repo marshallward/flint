@@ -19,7 +19,7 @@ def gen_stmt(line, depth=0):
         for tok in line:
             for i, ntok in enumerate(tok.tail):
                 if ntok == '\n':
-                    tok.tail.insert(i+1, '   ')
+                    tok.tail.insert(i+1, ' : ')
 
         s = ''.join([tok + ''.join(tok.tail) for tok in line])
         if line:
