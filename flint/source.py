@@ -16,9 +16,6 @@ from flint.token import Token
 from flint.units import get_program_unit_type
 from flint.fortlines import gen_stmt
 
-# Debug control flag
-from flint import use_str_as_token
-
 
 class Source(object):
     def __init__(self, project=None, verbose=False):
@@ -152,77 +149,36 @@ class Source(object):
                     if tok[0] not in ('!', '"', '\''):
                         report.cases[tok.lower()].add(tok)
 
-                # Two methods are shown below, the first explicitly converts
-                # all tokens to lowercase.  The second preserves the case but
-                # wraps the strings in a Token class, which retains its case
-                # but applies a lowercase when used in tests (eq, hash, etc.)
+                tokenized_line = []
+                prior_tok = None
+                head = []
 
-                # The first is *much* faster - but of course you lose the case
-                # information and null tokens.
+                for t in tokens:
+                    tok = Token(t)
+                    if (all(c in ' \t' for c in tok) or (tok[0] in '!#')):
+                        if prior_tok:
+                            prior_tok.tail.append(tok)
 
-                # Some tweaks do improve the performance, e.g. store the
-                # original and lowercase in a container class, but not really
-                # enough to justify its use.
+                        if not tokenized_line:
+                            head.append(tok)
 
-                # Keeping both for now, but this needs further investigation.
-
-                # NOTE: This approach probably lets us defer reporting until
-                # later, and also may also mean we no longer need to explicitly
-                # treat the docstring as a parseable token.
-
-                #if use_str_as_token:
-                if False:
-                    # 1. Explicitly store as a lowercase token
-
-                    # Strip comments and preprocessing, but keep docstrings
-                    tokens = [tok for tok in tokens
-                              if tok[0] not in '!#' or is_docstring(tok)]
-
-                    # Convert non-strings to lowercase
-                    # XXX: Let's try doing this after docstring assignment
-                    tokens = [
-                        tok.lower()
-                        if tok[0] not in '\'"' and not is_docstring(tok)
-                        else tok
-                        for tok in tokens
-                    ]
-
-                    # Remove whitespace
-                    tokenized_line = [tok for tok in tokens
-                                      if not all(c in ' \t' for c in tok)]
-                else:
-                    # 2. Store as a Token() with case-insensitive operations
-
-                    tokenized_line = []
-                    prior_tok = None
-                    head = []
-
-                    for t in tokens:
-                        tok = Token(t)
-                        if (all(c in ' \t' for c in tok) or (tok[0] in '!#')):
-                            if prior_tok:
-                                prior_tok.tail.append(tok)
-
-                            if not tokenized_line:
-                                head.append(tok)
-
-                            # XXX: Temporarily copy docstring to tokens
-                            #   (Can drop after gendoc looks in tail of token)
-                            if is_docstring(tok):
-                                tokenized_line.append(tok)
-                                prior_tok = tok
-                        else:
+                        # XXX: Temporarily copy docstring to tokens
+                        #   (Can drop after gendoc looks in tail of token)
+                        if is_docstring(tok):
                             tokenized_line.append(tok)
                             prior_tok = tok
-
-                    # Append header null tokens to tok[0]
-                    if tokenized_line:
-                        tokenized_line[0].head = head
                     else:
-                        # Line only contains null tokens; append to previous line.
-                        if prior_line:
-                            prior_line[-1].tail.append('\n')
-                            prior_line[-1].tail.extend(head)
+                        tokenized_line.append(tok)
+                        prior_tok = tok
+
+                # Append header null tokens to tok[0]
+                if tokenized_line:
+                    tokenized_line[0].head = head
+                else:
+                    # Line only contains null tokens; append to previous line
+                    if prior_line:
+                        prior_line[-1].tail.append('\n')
+                        prior_line[-1].tail.extend(head)
 
                 if tokenized_line:
                     src_lines.append(tokenized_line)

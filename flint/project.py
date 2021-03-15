@@ -7,8 +7,9 @@ from flint.units import Module
 
 class Project(object):
 
-    def __init__(self, verbose=False):
+    def __init__(self, verbose=False, reformat=False):
         self.verbose = verbose
+        self.reformat = reformat    # XXX: Currently unconfigured!
         self.debug = False
 
         # Source code

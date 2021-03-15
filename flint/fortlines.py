@@ -3,14 +3,11 @@ from flint.document import is_docstring
 from flint.tokenizer import Tokenizer
 from flint.token import Token
 
-# NOTE: This flag should be phased out
-from flint import use_str_as_token
-
 
 # This probably ought to be somewhere else, but leaving it here for now.
-def gen_stmt(line, depth=0):
+def gen_stmt(line, depth=0, reformat=False):
     """Recreate the statement by gathering tokens and null tokens."""
-    if use_str_as_token:
+    if reformat:
         s = ' ' * depth + ' '.join([tok for tok in line])
     else:
         # Pad newlines by two spaces to match tagged lines
@@ -130,9 +127,7 @@ class FortLines(object):
                 #   No clear plan yet on how to handle trailing null tokens for
                 #   split strings (or even lines) since we literally invent a
                 #   new token here.  This needs a plan.
-                new_string = line[-2] + next_line[idx]
-                if not use_str_as_token:
-                    new_string = Token(new_string)
+                new_string = Token(line[-2] + next_line[idx])
                 line = line[:-2] + [new_string] + next_line[idx + 1:]
 
                 # True if string continues to next line
