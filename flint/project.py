@@ -41,7 +41,8 @@ class Project(object):
                             print('SKIP file: {}'.format(fpath))
 
         for fpath in filepaths:
-            f90file = Source(project=self, verbose=self.verbose)
+            f90file = Source()
+            f90file.verbose = self.verbose
             f90file.parse(fpath)
             self.files.append(f90file)
 

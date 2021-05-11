@@ -141,13 +141,6 @@ class Unit(object):
         Program units are generally very similar, but we leave it undefined
         here due to some slight differences.
         """
-        # Gather docstring information
-        self.doc.statement = lines.current_line
-
-        # TODO: Validate Doxygen token syntax
-        self.doc.header = docstrip(lines.prior_doc)
-        self.doc.docstring = docstrip(lines.current_doc)
-
         # Parse program unit statements
         self.parse_header(lines.current_line)
         self.parse_specification(lines)
@@ -156,11 +149,6 @@ class Unit(object):
 
         # Remove intrinsic functions from the set of callables
         self.callees = self.callees - set(intrinsic_fns)
-
-        # Gather a final "footer" docstring near the `end` statement.
-        # TODO: Which do we want here?  Both?
-        #self.doc.footer = lines.current_doc
-        self.doc.footer = docstrip(lines.prior_doc, oneline=False)
 
         # Finalisation
         if self.verbose:
@@ -355,42 +343,11 @@ class Unit(object):
                         self.report.error_endcomma()
                     vnames.append(tok)
 
-            # Grouped Doxygen strings
-            if lines.prior_doc:
-                grpstr = lines.prior_doc.strip().split('\n')[-1]
-                if grpstr.startswith('!>@{'):
-                    self.group_docstr = grpstr.replace('!>@{', '')
-
-            # TODO: Currently group_doc overrides an inline doc, but maybe that
-            # is dumb...
-            # TODO: Supporting !< and !> may be better with re.split()
-            if self.group_docstr:
-                vardocs = len(vnames) * [self.group_docstr]
-            elif lines.current_doc:
-                vardocs = [
-                    docstrip(line)
-                    for line in lines.current_doc.strip().replace('!> ', '!< ').split('!< ')[1:]
-                ]
-            else:
-                vardocs = len(vnames) * ['']
-
             for i, vname in enumerate(vnames):
                 var = Variable(vname, vtype)
                 var.intent = var_intent
 
-                var.doc.statement = lines.current_line
-                try:
-                    var.doc.docstring = vardocs[i]
-                except IndexError:
-                    if self.debug:
-                        print('warning: no docstring found.')
-                        print('  vname:', vname)
-                        print('  vardocs:', vardocs)
-
                 self.variables.append(var)
-
-            if lines.current_doc.strip().startswith('!>@}'):
-                self.group_docstr = None
 
             if self.verbose:
                 print('D: {}'.format(gen_stmt(line)))

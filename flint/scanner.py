@@ -1,17 +1,27 @@
+"""The f90lex Scanner.
+
+The ``Scanner`` object creates a list of Fortran lexemes from a line of Fortran
+source.  The line is expected to be terminated with an endline (``\n``).
+
+We use an object here because there is some "state" regarding line continuation
+of split strings.  But more modular design options are possible and could be
+used in the future.
+
+``Scanner`` is a slightly updated version of the scanner which appeared in the
+``flint`` project (and is probably going to be ported back over anyway...).
+
+:copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
+:license: Apache License, Version 2.0, see LICENSE for details.
+"""
 import itertools
 
 
-class Tokenizer(object):
+class Scanner(object):
 
-    # I don't use these two
-    special_chars = ' =+-*/\\()[]{},.:;!"%&~<>?\'`|$#@'     # Table 3.1
-    lexical_tokens = '=+-*/()[],.:;%&<>'                    # Meaningful?
-
-    # I only use this one
     punctuation = '=+-*/\\()[]{},:;%&~<>?`|$#@'    # Unhandled Table 3.1 tokens
 
     # Token pairs (syntax and operators)
-    # TODO: (/ and /) are currently removed, for reasons discussed below.
+    # NOTE: (/ and /) are currently removed, for reasons discussed below.
     pairs = ('::', '=>', '**', '//', '==', '/=', '<=', '>=')
 
     def __init__(self):
@@ -30,16 +40,21 @@ class Tokenizer(object):
         self.characters = iter(line)
         self.update_chars()
 
+        # String line continuation?
+        lc = True if self.prior_delim else False
+
         while self.char != '\n':
             word = ''
             if self.char in ' \t':
                 while self.char in ' \t':
                     word += self.char
                     self.update_chars()
-
-            elif self.char in '"\'' or (self.prior_delim
-                                        and self.char not in '&!'):
+            #elif self.char in '"\'' or self.prior_delim
+            #                            and self.char not in '&!'):
+            elif self.char in '"\'' or (self.prior_delim and not lc):
                 word = self.parse_string()
+                if self.prior_delim:
+                    lc = True
 
             elif self.char.isalpha() or self.char == '_':
                 word = self.parse_name(line)
@@ -66,7 +81,11 @@ class Tokenizer(object):
                         word += self.char
                         self.update_chars()
 
-            elif self.char in Tokenizer.punctuation:
+            elif self.char in Scanner.punctuation:
+                # Turn off leading line continuation
+                if self.char == '&':
+                    lc = False
+
                 word = self.char
                 self.update_chars()
 
@@ -93,6 +112,9 @@ class Tokenizer(object):
                 word = macros[word]
 
             tokens.append(word)
+
+        # Append the final endline
+        tokens.append(self.char)
 
         return tokens
 
