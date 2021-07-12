@@ -232,7 +232,6 @@ class Unit(object):
             print('I: {}'.format(gen_stmt(line)))
 
     def parse_declaration_construct(self, lines, line):
-
         if (line[0] in ('enum', 'interface')
                 or (line[0] == 'type' and line[1] != '(')):
             block = Unit(verbose=self.verbose)

@@ -14,6 +14,7 @@ from flint.ftoken import Token, PToken
 
 # TODO: f90lex testing
 import os
+import sys
 
 
 class Lexer(object):
@@ -246,8 +247,10 @@ class Lexer(object):
         # Conditionals (stop_parsing not yet implemented (if ever))
 
         # TODO (#if #elif)
-        #elif directive == 'if':
-        #    expr = line.strip().split(None, 1)[1]
+        elif directive == 'if':
+            expr = line.strip().split(None, 1)[1]
+            # XXX: Always ignore these blocks for now
+            self.stop_parsing = True
 
         elif directive == 'ifdef':
             macro = line.split(None, 1)[1]
@@ -304,7 +307,7 @@ class Lexer(object):
                         self.includes.append(stmt)
             else:
                 print('f90lex: Include file {} not found; skipping.'
-                      ''.format(inc_fname))
+                      ''.format(inc_fname), file=sys.stderr)
 
         # What else is there?  #pragma, #line, #error, ... ?
 

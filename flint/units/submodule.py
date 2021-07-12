@@ -11,6 +11,11 @@ class Submodule(Unit):
 
 def is_submodule(line):
     """Return True if the line is a valid submodule statement."""
+    if len(line) < 2:
+        # XXX: This is just to prevent index error in the next test
+        #   Not entirely sure what this ought to be, come back to it...
+        return False
+
     if (line[0], line[1]) != ('submodule', '('):
         return False
 
