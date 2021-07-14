@@ -39,6 +39,10 @@ class Lexer(object):
         # XXX: This probably does not need to be an object property, and
         #   could be returned from preprocess() to get_liminals()
         self.stop_parsing = False
+        # XXX: This is a "poor man's" solution to nested if-block control.
+        #   It is incremeneted/decremented when stop_parsing is True.
+        #   It would be better to handle recursively.
+        self.pp_depth = 0
 
         # Gather leading liminal tokens before iteration
         self.prior_tail = self.get_liminals()
@@ -166,11 +170,12 @@ class Lexer(object):
                     #   Preprocessing is handled in liminals!
                     if lx in self.defines:
                         ptoks = [PToken(lxm) for lxm in self.defines[lx]]
-                        ptoks[0].head = prior_tail
-                        prior_tail = ptoks[-1].tail
-                        ptoks[0].pp = lx
+                        if ptoks:
+                            ptoks[0].head = prior_tail
+                            prior_tail = ptoks[-1].tail
+                            ptoks[0].pp = lx
 
-                        statement.extend(ptoks)
+                            statement.extend(ptoks)
                     else:
                         tok = Token(lx)
                         tok.head = prior_tail
@@ -244,29 +249,43 @@ class Lexer(object):
                 #       'defined.'.format(identifier))
                 pass
 
-        # Conditionals (stop_parsing not yet implemented (if ever))
+        # Conditionals
 
         # TODO (#if #elif)
         elif directive == 'if':
-            expr = line.strip().split(None, 1)[1]
-            # XXX: Always ignore these blocks for now
-            self.stop_parsing = True
+            if self.stop_parsing == True:
+                self.pp_depth += 1
+            else:
+                expr = line.strip().split(None, 1)[1]
+                # XXX: Always ignore these blocks for now
+                self.stop_parsing = True
 
         elif directive == 'ifdef':
-            macro = line.split(None, 1)[1]
-            if macro not in self.defines:
-                self.stop_parsing = True
+            if self.stop_parsing == True:
+                self.pp_depth += 1
+            else:
+                macro = line.split(None, 1)[1]
+                if macro not in self.defines:
+                    self.stop_parsing = True
 
         elif directive == 'ifndef':
-            macro = line.split(None, 1)[1]
-            if macro in self.defines:
-                self.stop_parsing = True
+            if self.stop_parsing == True:
+                self.pp_depth += 1
+            else:
+                macro = line.split(None, 1)[1]
+                if macro in self.defines:
+                    self.stop_parsing = True
 
         elif directive == 'else':
-            self.stop_parsing = not self.stop_parsing
+            if self.pp_depth == 0:
+                self.stop_parsing = not self.stop_parsing
 
         elif directive == 'endif':
-            self.stop_parsing = False
+            if self.pp_depth == 0:
+                self.stop_parsing = False
+
+            if self.stop_parsing:
+                self.pp_depth -= 1
 
         # Headers (this can't possibly be working...)
 

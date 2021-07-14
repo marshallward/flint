@@ -23,7 +23,10 @@ class Source(object):
         self.units = []
 
     def parse(self, path):
-        with open(path) as fpath:
+        # XXX: This chokes on non-unicode strings (e.g. latin-1).
+        #  Using errors='replace' will break roundtrip parsing.
+        #  This needs some additional thought.
+        with open(path, errors='replace') as fpath:
             lexer = Lexer(fpath)
             for line in lexer:
                 try:
