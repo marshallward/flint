@@ -34,4 +34,4 @@ class Source(object):
                     self.units.append(unit)
                 except ValueError:
                     # Unresolved line
-                    print('X: {}'.format(gen_stmt(line)))
+                    print('X│ {}'.format(gen_stmt(line)))

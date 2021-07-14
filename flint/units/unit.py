@@ -152,7 +152,7 @@ class Unit(object):
 
         # Finalisation
         if self.verbose:
-            print('{}: {}'.format(
+            print('{}│ {}'.format(
                   self.utype[0].upper(), gen_stmt(lines.current_line)))
 
     def parse_header(self, line):
@@ -181,7 +181,7 @@ class Unit(object):
             self.name = None
 
         if self.verbose:
-            print('{}: {} '.format(self.utype[0].upper(), gen_stmt(line)))
+            print('{}│ {} '.format(self.utype[0].upper(), gen_stmt(line)))
 
     # Specification
 
@@ -221,15 +221,15 @@ class Unit(object):
         self.used_modules.add(line[idx])
 
         if self.verbose:
-            print('U: {}'.format(gen_stmt(line)))
+            print('U│ {}'.format(gen_stmt(line)))
 
     def parse_import_stmt(self, line):
         if self.verbose:
-            print('i: {}'.format(gen_stmt(line)))
+            print('i│ {}'.format(gen_stmt(line)))
 
     def parse_implicit_stmt(self, line):
         if self.verbose:
-            print('I: {}'.format(gen_stmt(line)))
+            print('I│ {}'.format(gen_stmt(line)))
 
     def parse_declaration_construct(self, lines, line):
         if (line[0] in ('enum', 'interface')
@@ -244,17 +244,17 @@ class Unit(object):
 
         elif line[0] in Unit.access_specs:
             if self.verbose:
-                print('d: {}'.format(gen_stmt(line)))
+                print('d│ {}'.format(gen_stmt(line)))
 
         # R357 (placeholder)
         elif line[0] == 'data':
             if self.verbose:
-                print('d: {}'.format(gen_stmt(line)))
+                print('d│ {}'.format(gen_stmt(line)))
 
         # R551 (placeholder)
         elif line[0] == 'parameter':
             if self.verbose:
-                print('p: {}'.format(gen_stmt(line)))
+                print('p│ {}'.format(gen_stmt(line)))
 
         else:
             tokens = iter(line)
@@ -272,7 +272,7 @@ class Unit(object):
             else:
                 # Unhandled
                 if self.verbose:
-                    print('X: {}'.format(gen_stmt(line)))
+                    print('X│ {}'.format(gen_stmt(line)))
                 return
 
             # Character length parsing
@@ -349,7 +349,7 @@ class Unit(object):
                 self.variables.append(var)
 
             if self.verbose:
-                print('D: {}'.format(gen_stmt(line)))
+                print('D│ {}'.format(gen_stmt(line)))
 
     def parse_namelist(self, line):
         assert(line[0] == 'namelist')
@@ -373,7 +373,7 @@ class Unit(object):
                     tok = next(tokens)
 
         if self.verbose:
-            print('N: {}'.format(gen_stmt(line)))
+            print('N│ {}'.format(gen_stmt(line)))
 
     # Execution
 
@@ -400,7 +400,7 @@ class Unit(object):
         else:
             # Unhandled
             if self.verbose:
-                print('E: {}'.format(gen_stmt(line)))
+                print('E│ {}'.format(gen_stmt(line)))
 
         # Now iterate over the rest of the lines
         for line in lines:
@@ -416,7 +416,7 @@ class Unit(object):
             else:
                 # Unhandled
                 if self.verbose:
-                    print('E: {}'.format(gen_stmt(line)))
+                    print('E│ {}'.format(gen_stmt(line)))
 
     def parse_subprogram(self, lines):
         # TODO: I think the first line of subprogram is always CONTAINS, so
@@ -432,7 +432,7 @@ class Unit(object):
             return
         else:
             if self.verbose:
-                print('{}: {}'.format(self.utype[0].upper(), ' '.join(line)))
+                print('{}│ {}'.format(self.utype[0].upper(), ' '.join(line)))
 
         for line in lines:
             if Unit.statement(line):
@@ -444,4 +444,4 @@ class Unit(object):
                 break
             else:
                 if self.verbose:
-                    print('X: {}'.format(gen_stmt(line)))
+                    print('X│ {}'.format(gen_stmt(line)))
