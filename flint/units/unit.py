@@ -202,7 +202,7 @@ class Unit(object):
                 self.parse_use_stmt(line)
             elif line[0] == 'import':
                 self.parse_import_stmt(line)
-            elif line[0] in 'implicit':
+            elif line[0] == 'implicit':
                 # TODO: PARAMETER, FORMAT, ENTRY
                 self.parse_implicit_stmt(line)
             elif line[0] in Unit.declaration_types:
