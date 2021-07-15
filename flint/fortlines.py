@@ -8,8 +8,7 @@ def gen_stmt(line, depth=0):
 
     s = header.rsplit('\n')[-1] if header else ''
     s += ''.join([str(tok) + ''.join(tok.tail) for tok in line[:-1]])
-    s += line[-1]
+    s += str(line[-1])
     s += ''.join(footer.rsplit('\n', 1)[:-1]) if footer else ''
-
 
     return  s.replace('\n', '\n │ ')

@@ -290,7 +290,7 @@ class Lexer(object):
 
         # Headers (this can't possibly be working...)
 
-        elif directive.startswith('include'):
+        elif directive.startswith('include') and not self.stop_parsing:
             # This directive uniquely does not require a whitespace delimiter.
             if directive != 'include':
                 inc_fpath = directive.replace('include', '', 1)
