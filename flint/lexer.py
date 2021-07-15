@@ -19,8 +19,9 @@ import sys
 
 class Lexer(object):
     """An iterator which returns the lexemes from an input stream."""
-    def __init__(self, source):
+    def __init__(self, source, include_paths=None):
         self.source = source
+        self.include_paths = include_paths if include_paths else []
 
         # A reuseable Lexeme scanner
         self.scanner = Scanner()
@@ -66,7 +67,7 @@ class Lexer(object):
         if self.includes:
             inc_stmt = self.includes.pop()
             # Strip the statement of liminals and display strings
-            statement = [PToken(str(tok), pp='') for tok in inc_stmt]
+            statement = [PToken(tok, pp='') for tok in inc_stmt]
             return statement
 
         # If no self.includes, tokenize as usual
@@ -299,27 +300,17 @@ class Lexer(object):
             assert (words[1][0], words[1][-1]) in (('"', '"'), ('<', '>'))
             inc_fname = words[1][1:-1]
 
-            ## First check current directory
-            #curdir = os.path.dirname(self.path)
-            #test_fpath = os.path.join(curdir, inc_fname)
-
-            #inc_path = None
-            #if os.path.isfile(test_fpath):
-            #    inc_path = test_fpath
-            #elif self.project:
-            #    # Scan the project directories for the file
-            #    for idir in self.project.directories:
-            #        test_fpath = os.path.join(idir, inc_fname)
-            #        if os.path.isfile(test_fpath):
-            #            inc_path = test_fpath
-            ## else: do not bother looking
-
-            # XXX: Temporarily look in the current directory
-            inc_path = inc_fname if os.path.isfile(inc_fname) else None
+            # Search for path of include file
+            inc_path = None
+            for ipath in self.include_paths:
+                test_path = os.path.join(ipath, inc_fname)
+                if os.path.isfile(test_path):
+                    inc_path = test_path
+                    break
 
             if inc_path:
                 with open(inc_path) as inc:
-                    lexer = Lexer(inc)
+                    lexer = Lexer(inc, self.include_paths)
                     lexer.defines = self.defines
                     self.includes = []
                     for stmt in lexer:

@@ -7,9 +7,9 @@ def gen_stmt(line, depth=0):
     footer = ''.join(line[-1].tail)
 
     s = header.rsplit('\n')[-1] if header else ''
-    s += ''.join([tok + ''.join(tok.tail) for tok in line[:-1]])
+    s += ''.join([str(tok) + ''.join(tok.tail) for tok in line[:-1]])
     s += line[-1]
     s += ''.join(footer.rsplit('\n', 1)[:-1]) if footer else ''
 
 
-    return  s.replace('\n', '\n │  ')
+    return  s.replace('\n', '\n │ ')

@@ -16,6 +16,7 @@ class Project(object):
         self.path = None
         self.directories = []
         self.files = []
+        self.include_dirs = []
 
         # Program structure
         self.modules = []
@@ -43,7 +44,9 @@ class Project(object):
         for fpath in filepaths:
             f90file = Source()
             f90file.verbose = self.verbose
+            f90file.include_paths = self.directories + self.include_dirs
             f90file.parse(fpath)
+
             self.files.append(f90file)
 
         # Generate list of modules

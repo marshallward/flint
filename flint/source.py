@@ -16,18 +16,17 @@ class Source(object):
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.debug = False
-
-        self.path = None
+        self.include_paths = []
 
         # Program units
         self.units = []
 
     def parse(self, path):
         # XXX: This chokes on non-unicode strings (e.g. latin-1).
-        #  Using errors='replace' will break roundtrip parsing.
-        #  This needs some additional thought.
+        #  Using errors='replace' gets past these errors but will break
+        #  roundtrip parsing.  This needs some additional thought.
         with open(path, errors='replace') as fpath:
-            lexer = Lexer(fpath)
+            lexer = Lexer(fpath, self.include_paths)
             for line in lexer:
                 try:
                     unit_type = get_program_unit_type(line)

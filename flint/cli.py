@@ -39,6 +39,16 @@ def parse():
         }
     }
 
+    arg_incdirs = {
+        'flags': ('--include', '-I'),
+        'parameters': {
+            'action': 'append',
+            'metavar': 'incdir',
+            'type': str,
+            'help': 'Include directories'
+        }
+    }
+
     arg_docdir = {
         'flags': ('--output', '-o'),
         'parameters': {
@@ -69,6 +79,7 @@ def parse():
     tag_cmd = subparsers.add_parser('tag')
     tag_cmd.set_defaults(run_cmd=flint.tools.tag.tag_statements)
     tag_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
+    tag_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
     tag_cmd.add_argument(*arg_reformat['flags'], **arg_reformat['parameters'])
 
     # report
