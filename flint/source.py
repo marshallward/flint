@@ -9,17 +9,18 @@ except ImportError:
 
 from flint.lexer import Lexer
 from flint.units import get_program_unit_type
-from flint.fortlines import gen_stmt
+from flint.statement import Statement
 
 
 class Source(object):
-    def __init__(self, verbose=False):
-        self.verbose = verbose
+    def __init__(self):
+        # Configuration
         self.debug = False
         self.include_paths = []
 
-        # Program units
+        # Contents
         self.units = []
+        self.statements = []
 
     def parse(self, path):
         # XXX: This chokes on non-unicode strings (e.g. latin-1).
@@ -31,9 +32,9 @@ class Source(object):
                 try:
                     unit_type = get_program_unit_type(line)
                     unit = unit_type()
-                    unit.verbose = self.verbose
                     unit.parse(lexer)
                     self.units.append(unit)
+                    self.statements.append(unit.statements)
                 except ValueError:
-                    # Unresolved line
-                    print('X│ {}'.format(gen_stmt(line)))
+                    stmt = Statement(line)
+                    self.statements.append(stmt)

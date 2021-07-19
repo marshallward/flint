@@ -1,5 +1,5 @@
 from flint.calls import get_callable_symbols
-from flint.fortlines import gen_stmt
+from flint.statement import Statement
 
 
 class Construct(object):
@@ -71,16 +71,16 @@ class Construct(object):
         else:
             return False
 
-    def __init__(self, unit, depth=1, verbose=False):
+    def __init__(self, unit, depth=1):
         self.ctype = None
         self.name = None
-        self.verbose = verbose
 
         # Program unit containing the construct
         self.unit = unit
 
         # Testing
         self.depth = depth
+        self.statements = []
 
     def parse(self, lines):
         line = lines.current_line
@@ -94,8 +94,8 @@ class Construct(object):
         else:
             self.ctype = line[0]
 
-        if self.verbose:
-            print('C│ {}'.format(gen_stmt(line, self.depth - 1)))
+        stmt = Statement(line, tag='C')
+        self.statements.append(stmt)
 
         # Generate the list of variable names
         var_names = [v.name for v in self.unit.variables]
@@ -105,13 +105,14 @@ class Construct(object):
             self.unit.callees.update(get_callable_symbols(line, var_names))
 
             if Construct.statement(line):
-                cons = Construct(self.unit, depth=self.depth + 1, verbose=self.verbose)
+                cons = Construct(self.unit, depth=self.depth + 1)
                 cons.parse(lines)
+                self.statements.append(cons.statements)
             elif self.end_statement(line):
-                if self.verbose:
-                    print('C│ {}'.format(gen_stmt(line, self.depth)))
+                stmt = Statement(line, tag='C')
+                self.statements.append(stmt)
                 break
             else:
                 # Unhandled
-                if self.verbose:
-                    print('e│ {}'.format(gen_stmt(line, self.depth)))
+                stmt = Statement(line, tag='e')
+                self.statements.append(stmt)

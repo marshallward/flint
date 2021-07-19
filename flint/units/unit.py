@@ -1,9 +1,9 @@
 from flint.calls import get_callable_symbols
 from flint.construct import Construct
 from flint.document import is_docstring, docstrip, Document
-from flint.fortlines import gen_stmt
 from flint.intrinsics import intrinsic_fns
 from flint.report import Report
+from flint.statement import Statement
 from flint.variable import Variable
 
 
@@ -70,10 +70,9 @@ class Unit(object):
         'recursive',
     ]
 
-    def __init__(self, report=None, verbose=False):
+    def __init__(self, report=None):
         self.name = None
         self.utype = None
-        self.verbose = verbose
         self.debug = False
 
         self.subprograms = []
@@ -89,6 +88,9 @@ class Unit(object):
 
         self.doc = Document()
         self.group_docstr = None
+
+        # Testing
+        self.statements = []
 
     @staticmethod
     def statement(line):
@@ -151,9 +153,8 @@ class Unit(object):
         self.callees = self.callees - set(intrinsic_fns)
 
         # Finalisation
-        if self.verbose:
-            print('{}│ {}'.format(
-                  self.utype[0].upper(), gen_stmt(lines.current_line)))
+        stmt = Statement(lines.current_line, tag=self.utype[0].upper())
+        self.statements.append(stmt)
 
     def parse_header(self, line):
         """Parse the name of the program unit, if present.
@@ -180,8 +181,8 @@ class Unit(object):
         else:
             self.name = None
 
-        if self.verbose:
-            print('{}│ {} '.format(self.utype[0].upper(), gen_stmt(line)))
+        stmt = Statement(line, tag=self.utype[0].upper())
+        self.statements.append(stmt)
 
     # Specification
 
@@ -220,22 +221,23 @@ class Unit(object):
 
         self.used_modules.add(line[idx])
 
-        if self.verbose:
-            print('U│ {}'.format(gen_stmt(line)))
+        stmt = Statement(line, tag='U')
+        self.statements.append(stmt)
 
     def parse_import_stmt(self, line):
-        if self.verbose:
-            print('i│ {}'.format(gen_stmt(line)))
+        stmt = Statement(line, tag='i')
+        self.statements.append(stmt)
 
     def parse_implicit_stmt(self, line):
-        if self.verbose:
-            print('I│ {}'.format(gen_stmt(line)))
+        stmt = Statement(line, tag='I')
+        self.statements.append(stmt)
 
     def parse_declaration_construct(self, lines, line):
         if (line[0] in ('enum', 'interface')
                 or (line[0] == 'type' and line[1] != '(')):
-            block = Unit(verbose=self.verbose)
+            block = Unit()
             block.parse(lines)
+            self.statements.append(block.statements)
 
             # TODO: I think this is OK, since these are never defined as
             #   comma-separated lists, but need to check into this
@@ -243,18 +245,18 @@ class Unit(object):
             self.blocks.append(block)
 
         elif line[0] in Unit.access_specs:
-            if self.verbose:
-                print('d│ {}'.format(gen_stmt(line)))
+            stmt = Statement(line, tag='d')
+            self.statements.append(stmt)
 
         # R357 (placeholder)
         elif line[0] == 'data':
-            if self.verbose:
-                print('d│ {}'.format(gen_stmt(line)))
+            stmt = Statement(line, tag='d')
+            self.statements.append(stmt)
 
         # R551 (placeholder)
         elif line[0] == 'parameter':
-            if self.verbose:
-                print('p│ {}'.format(gen_stmt(line)))
+            stmt = Statement(line, tag='p')
+            self.statements.append(stmt)
 
         else:
             tokens = iter(line)
@@ -271,8 +273,8 @@ class Unit(object):
                 return
             else:
                 # Unhandled
-                if self.verbose:
-                    print('X│ {}'.format(gen_stmt(line)))
+                stmt = Statement(line, tag='X')
+                self.statements.append(stmt)
                 return
 
             # Character length parsing
@@ -348,8 +350,8 @@ class Unit(object):
 
                 self.variables.append(var)
 
-            if self.verbose:
-                print('D│ {}'.format(gen_stmt(line)))
+            stmt = Statement(line, tag='D')
+            self.statements.append(stmt)
 
     def parse_namelist(self, line):
         assert(line[0] == 'namelist')
@@ -372,8 +374,8 @@ class Unit(object):
                 if tok == ',':
                     tok = next(tokens)
 
-        if self.verbose:
-            print('N│ {}'.format(gen_stmt(line)))
+        stmt = Statement(line, tag='N')
+        self.statements.append(stmt)
 
     # Execution
 
@@ -393,14 +395,15 @@ class Unit(object):
         # First parse the line which terminated specification
         # TODO: How to merge with iteration below? Lookahead in parse_spec()?
         if Construct.statement(line):
-            cons = Construct(self, verbose=self.verbose)
+            cons = Construct(self)
             cons.parse(lines)
+            self.statements.append(cons.statements)
         elif self.end_statement(line) or line[0] == 'contains':
             return
         else:
             # Unhandled
-            if self.verbose:
-                print('E│ {}'.format(gen_stmt(line)))
+            stmt = Statement(line, tag='E')
+            self.statements.append(stmt)
 
         # Now iterate over the rest of the lines
         for line in lines:
@@ -408,15 +411,16 @@ class Unit(object):
 
             # Execution constructs
             if Construct.statement(line):
-                cons = Construct(self, verbose=self.verbose)
+                cons = Construct(self)
                 cons.parse(lines)
+                self.statements.append(cons.statements)
             elif self.end_statement(line) or line[0] == 'contains':
                 # TODO: Use return?
                 break
             else:
                 # Unhandled
-                if self.verbose:
-                    print('E│ {}'.format(gen_stmt(line)))
+                stmt = Statement(line, tag='E')
+                self.statements.append(stmt)
 
     def parse_subprogram(self, lines):
         # TODO: I think the first line of subprogram is always CONTAINS, so
@@ -425,23 +429,25 @@ class Unit(object):
         line = lines.current_line
 
         if Unit.statement(line):
-            subprog = Unit(verbose=self.verbose)
+            subprog = Unit()
             subprog.parse(lines)
             self.subprograms.append(subprog)
+            self.statements.append(subprog.statements)
         elif self.end_statement(line):
             return
         else:
-            if self.verbose:
-                print('{}│ {}'.format(self.utype[0].upper(), ' '.join(line)))
+            stmt = Statement(line, tag=self.utype[0].upper())
+            self.statements.append(stmt)
 
         for line in lines:
             if Unit.statement(line):
-                subprog = Unit(verbose=self.verbose)
+                subprog = Unit()
                 subprog.parse(lines)
                 self.subprograms.append(subprog)
+                self.statements.append(subprog.statements)
             elif self.end_statement(line):
                 # TODO: Use return?
                 break
             else:
-                if self.verbose:
-                    print('X│ {}'.format(gen_stmt(line)))
+                stmt = Statement(line, tag='X')
+                self.statements.append(stmt)

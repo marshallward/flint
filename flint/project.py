@@ -7,8 +7,7 @@ from flint.units import Module
 
 class Project(object):
 
-    def __init__(self, verbose=False, reformat=False):
-        self.verbose = verbose
+    def __init__(self, reformat=False):
         self.reformat = reformat    # XXX: Currently unconfigured!
         self.debug = False
 
@@ -43,7 +42,6 @@ class Project(object):
 
         for fpath in filepaths:
             f90file = Source()
-            f90file.verbose = self.verbose
             f90file.include_paths = self.directories + self.include_dirs
             f90file.parse(fpath)
 

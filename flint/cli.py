@@ -3,6 +3,7 @@ import argparse
 import sys
 
 import flint
+import flint.tools.format
 import flint.tools.gendoc
 import flint.tools.tag
 import flint.tools.report
@@ -59,15 +60,11 @@ def parse():
         }
     }
 
-    arg_reformat = {
-        'flags': ('--format',),
-        'parameters': {
-            'action':   'store_false',
-            'dest':     'reformat',
-            'default':  None,
-            'help':     'Reformat token spacing',
-        }
-    }
+    # reformat
+    tag_cmd = subparsers.add_parser('format')
+    tag_cmd.set_defaults(run_cmd=flint.tools.format.format_statements)
+    tag_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
+    tag_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
 
     # gendoc
     gendoc_cmd = subparsers.add_parser('gendoc')
@@ -75,12 +72,11 @@ def parse():
     gendoc_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
     gendoc_cmd.add_argument(*arg_docdir['flags'], **arg_docdir['parameters'])
 
-    # parse
+    # tag
     tag_cmd = subparsers.add_parser('tag')
     tag_cmd.set_defaults(run_cmd=flint.tools.tag.tag_statements)
     tag_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
     tag_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
-    tag_cmd.add_argument(*arg_reformat['flags'], **arg_reformat['parameters'])
 
     # report
     report_cmd = subparsers.add_parser('report')

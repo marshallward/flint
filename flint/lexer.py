@@ -323,7 +323,7 @@ class Lexer(object):
 
         else:
             print('f90lex: unsupported preprocess directive: {}'
-                  ''.format(line).rstrip())
+                  ''.format(line).rstrip(), file=sys.stderr)
 
 
 def is_liminal(lexeme):
