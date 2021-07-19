@@ -19,3 +19,8 @@ class Statement(list):
         s += ''.join(footer.rsplit('\n', 1)[:-1]) if footer else ''
 
         return  s.replace('\n', '\n │ ')
+
+    def reformat(self):
+        """This is just a placeholder at the moment, but the idea is that this
+        will 'reformat' the text according to a style guide."""
+        return ' '.join([str(tok) for tok in self])

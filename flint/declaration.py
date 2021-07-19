@@ -45,10 +45,10 @@ class Declaration(object):
     def end_statement(self, line):
         assert self.dtype
 
-        # TODO: Very similar to construct... can I merge somehow?
-        # XXX: And now Declaration... need to generalize this.
+        # NOTE: This explicitly checks that the type is part of the statement.
+        #   Unlike with program units, `end` is not sufficient.
         if line[0].startswith('end'):
-            if len(line) == 1 and line[0] in ('end', 'end' + self.dtype):
+            if len(line) == 1 and line[0] == 'end' + self.dtype:
                 return True
             elif len(line) >= 2 and (line[0], line[1]) == ('end', self.dtype):
                 return True
