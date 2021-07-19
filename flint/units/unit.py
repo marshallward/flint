@@ -1,5 +1,6 @@
 from flint.calls import get_callable_symbols
 from flint.construct import Construct
+from flint.declaration import Declaration
 from flint.document import is_docstring, docstrip, Document
 from flint.intrinsics import intrinsic_fns
 from flint.report import Report
@@ -235,14 +236,14 @@ class Unit(object):
     def parse_declaration_construct(self, lines, line):
         if (line[0] in ('enum', 'interface')
                 or (line[0] == 'type' and line[1] != '(')):
-            block = Unit()
+            block = Declaration()
             block.parse(lines)
-            self.statements.append(block.statements)
 
             # TODO: I think this is OK, since these are never defined as
             #   comma-separated lists, but need to check into this
             block.name = line[-1]
             self.blocks.append(block)
+            self.statements.append(block.statements)
 
         elif line[0] in Unit.access_specs:
             stmt = Statement(line, tag='d')
@@ -383,10 +384,6 @@ class Unit(object):
         # TODO: The val = fn(...) test for self.callees is very speculative...
 
         line = lines.current_line
-
-        # Exit for interfaces
-        if self.utype == 'interface':
-            return
 
         # Gather up any callable symbols
         var_names = [v.name for v in self.variables]
