@@ -16,10 +16,6 @@ class Unit(object):
         'module',
         'submodule',
         'block',
-        # Not really a program unit, but seems to work...
-        'interface',
-        'type',
-        'enum',
     ]
 
     # R507 access-spec
