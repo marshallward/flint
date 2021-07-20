@@ -1,3 +1,4 @@
+from flint.document import Document
 from flint.statement import Statement
 
 # This is a "declaration block", a made-up term to encapsulate multiline
@@ -18,11 +19,15 @@ class Declaration(object):
 
         # Code data
         self.statements = []
+        self.doc = Document()
 
     def parse(self, lines):
         self.parse_header(lines.current_line)
 
-        # A minimal parsing of the declaration contents.  TODO...
+        # TODO: Replace this with proper handling of the statements
+        # XXX: If an interface contains a subroutine, and it terminates with
+        #   `end`, rather than `end subroutine`, then this will abort early and
+        #   usually cause some unexpected error.
         for line in lines:
             if self.end_statement(line):
                 break

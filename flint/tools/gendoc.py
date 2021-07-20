@@ -3,6 +3,9 @@ import os
 from flint.project import Project
 import flint.units
 
+# Testing...
+from flint.declaration import Declaration
+
 
 def generate_docs(project_dirs, doc_path):
     proj = Project()
@@ -81,6 +84,7 @@ def generate_docs(project_dirs, doc_path):
                     doc.write('.. |{0}| replace:: ``{0}``\n'.format(prog.name))
 
 
+# XXX: I should probably split print_unit() from, say, print_type(), etc.
 def print_unit(doc, unit, depth):
     indent = depth * ' '
 
@@ -91,6 +95,11 @@ def print_unit(doc, unit, depth):
     for line in unit.doc.header.split('\n'):
         doc.write(indent + '  ' + line + '\n')
     doc.write('\n')
+
+    # XXX: The rest of this is not really for declarations... I need to think
+    #   about how to approach this.  For now, just exit.
+    if isinstance(unit, Declaration):
+        return
 
     if unit.variables:
         doc.write(indent + '  ' + 'Parameters\n')
