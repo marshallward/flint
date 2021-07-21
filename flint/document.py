@@ -7,22 +7,18 @@ def is_docstring(s):
     return any(s.startswith(tok) for tok in doc_tokens)
 
 
-def docstrip(docstr, oneline=True):
-    """Stip a docstring of its marker tokens."""
-    # TODO: There are still unanswered questions here with respect to when
-    #   whitespace should be preserved.  We should look to Python docstring
-    #   support for guidance.
-    doc = docstr
-    for tok in doc_tokens:
-        # First strip the docstring tokens
-        doc = doc.replace(tok + ' ', '')
-        doc = doc.replace(tok + '\n', '\n')
+def docstrip(tokens, oneline=True):
+    # XXX: Replace [3:] with something more robust
+    docstr_tokens = [
+        tok[3:] for tok in tokens
+        if any(tok.startswith(d) for d in doc_tokens)
+    ]
 
-        # XXX: `oneline` is a dumb variable name
-        if oneline:
-            # Next convert the lines into a single bytestream:
-            doc = ' '.join([s.strip() for s in doc.split('\n')])
-    return doc
+    # NOTE: When oneline is true, this converts blank lines (converted to empty
+    #   strings) to spaces.  It's not really clear what we want here.  If you
+    #   have paragraphs separated by blank lines, then you probably want to
+    #   preserve them.
+    return ' '.join(docstr_tokens) if oneline else '\n'.join(docstr_tokens)
 
 
 class Document(object):

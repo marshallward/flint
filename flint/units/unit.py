@@ -153,6 +153,8 @@ class Unit(object):
         stmt = Statement(lines.current_line, tag=self.utype[0].upper())
         self.statements.append(stmt)
 
+        self.doc.footer = docstrip(lines.current_line[0].head, oneline=False)
+
     def parse_header(self, line):
         """Parse the name of the program unit, if present.
 
@@ -164,6 +166,10 @@ class Unit(object):
         except StopIteration:
             print(line)
             raise
+
+        self.doc.header = docstrip(line[0].head)
+        self.doc.docstring = docstrip(line[-1].tail)
+        self.doc.statement = line
 
         # TODO: A safer approach may be to formally parse the first non-unit
         # type as a variable type.  A temporary step is to split the
@@ -344,8 +350,10 @@ class Unit(object):
             for i, vname in enumerate(vnames):
                 var = Variable(vname, vtype)
                 var.intent = var_intent
-
                 self.variables.append(var)
+
+                if is_docstring(''.join(line[-1].tail).lstrip()):
+                    var.doc.docstring = docstrip(line[-1].tail)
 
             stmt = Statement(line, tag='D')
             self.statements.append(stmt)
