@@ -3,8 +3,8 @@
 doc_tokens = ('!<', '!>', '!!')
 
 
-def is_docstring(s):
-    return any(s.startswith(tok) for tok in doc_tokens)
+def is_docstring(tokens):
+    return any(tok.startswith(dtok) for tok in tokens for dtok in doc_tokens)
 
 
 def docstrip(tokens, oneline=True):

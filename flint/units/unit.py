@@ -1,7 +1,7 @@
 from flint.calls import get_callable_symbols
 from flint.construct import Construct
-from flint.declaration import Declaration
 from flint.document import is_docstring, docstrip, Document
+from flint.interface import Interface
 from flint.intrinsics import intrinsic_fns
 from flint.report import Report
 from flint.statement import Statement
@@ -16,6 +16,9 @@ class Unit(object):
         'module',
         'submodule',
         'block',
+        # XXX: Currently `type` shares enough with program units to justify its
+        # presence here.  But it should not be here.
+        'type',
     ]
 
     # R507 access-spec
@@ -74,7 +77,8 @@ class Unit(object):
 
         self.subprograms = []
         self.variables = []
-        self.blocks = []
+        self.interfaces = []
+        self.derived_types = []
         self.namelists = {}
         self.report = report if report else Report()
 
@@ -236,16 +240,24 @@ class Unit(object):
         self.statements.append(stmt)
 
     def parse_declaration_construct(self, lines, line):
-        if (line[0] in ('enum', 'interface')
-                or (line[0] == 'type' and line[1] != '(')):
-            block = Declaration()
+        if line[0] == 'interface' or (
+                len(line) > 1 and line[:2] == ('abstract', 'interface')
+            ):
+            block = Interface()
             block.parse(lines)
+            self.interfaces.append(block)
+            self.statements.append(block.statements)
+
+        # TODO: Parse out type
+        elif (line[0] == 'enum' or (line[0] == 'type' and line[1] != '(')):
+            dtype = Unit()
+            dtype.parse(lines)
 
             # TODO: I think this is OK, since these are never defined as
             #   comma-separated lists, but need to check into this
-            block.name = line[-1]
-            self.blocks.append(block)
-            self.statements.append(block.statements)
+            dtype.name = line[-1]
+            self.derived_types.append(dtype)
+            self.statements.append(dtype.statements)
 
         elif line[0] in Unit.access_specs:
             stmt = Statement(line, tag='d')
@@ -333,27 +345,40 @@ class Unit(object):
             if tok == '::':
                 tok = next(tokens)
 
-            vnames = []
-            vnames.append(tok)
+            var = Variable(tok, vtype)
+            var.intent = var_intent
+
+            # First doc attempt: After the variable name
+            if is_docstring(tok.tail):
+                var.doc.docstring = docstrip(tok.tail)
+
+            self.variables.append(var)
 
             for tok in tokens:
                 if tok == '(':
                     while tok != ')':
                         tok = next(tokens)
+
+                # Second doc attempt: After the index right parenthesis
+                if is_docstring(tok.tail):
+                    self.variables[-1].doc.docstring = docstrip(tok.tail)
+
                 if tok == ',':
+                    # Third doc attempt: After the comma
+                    # XXX: Can this one be removed?
+                    if is_docstring(tok.tail):
+                        self.variables[-1].doc.docstring = docstrip(tok.tail)
+
                     try:
                         tok = next(tokens)
                     except StopIteration:
                         self.report.error_endcomma()
-                    vnames.append(tok)
 
-            for i, vname in enumerate(vnames):
-                var = Variable(vname, vtype)
-                var.intent = var_intent
-                self.variables.append(var)
-
-                if is_docstring(''.join(line[-1].tail).lstrip()):
-                    var.doc.docstring = docstrip(line[-1].tail)
+                    var = Variable(tok, vtype)
+                    var.intent = var_intent
+                    if is_docstring(tok.tail):
+                        var.doc.docstring = docstrip(tok.tail)
+                    self.variables.append(var)
 
             stmt = Statement(line, tag='D')
             self.statements.append(stmt)

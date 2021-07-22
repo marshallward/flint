@@ -4,7 +4,7 @@ from flint.project import Project
 import flint.units
 
 # Testing...
-from flint.declaration import Declaration
+from flint.interface import Interface
 
 
 def generate_docs(project_dirs, doc_path):
@@ -24,12 +24,12 @@ def generate_docs(project_dirs, doc_path):
             doc.write(mod.doc.header + '\n')
             doc.write('\n')
 
-            if mod.blocks:
+            if mod.derived_types:
                 doc.write('Data Types\n')
                 doc.write('==========\n')
 
                 doc.write('.. list-table::\n\n')
-                for dtype in mod.blocks:
+                for dtype in mod.derived_types:
                     doc.write('   * - |{0}|_\n'.format(dtype.name))
                     doc.write('     - {0}\n'.format(dtype.doc.header))
                     doc.write('\n')
@@ -53,13 +53,13 @@ def generate_docs(project_dirs, doc_path):
                     doc.write(line + '\n')
                 doc.write('\n')
 
-            if mod.blocks:
+            if mod.derived_types:
                 depth = 0
                 doc.write('Type Documentation\n')
                 doc.write('==================\n')
                 # TODO: Why did I even name these `blocks`?
-                for unit in mod.blocks:
-                    print_unit(doc, unit, depth)
+                for dtype in mod.derived_types:
+                    print_unit(doc, dtype, depth)
 
             if mod.subprograms:
                 depth = 0
@@ -69,12 +69,12 @@ def generate_docs(project_dirs, doc_path):
                 for sub in mod.subprograms:
                     print_unit(doc, sub, depth)
 
-            if mod.blocks:
+            if mod.derived_types:
                 doc.write('\n')
                 doc.write('.. Type/Interface labels\n')
                 doc.write('\n')
-                for block in mod.blocks:
-                    doc.write('.. |{0}| replace:: ``{0}``\n'.format(block.name))
+                for dtype in mod.derived_types:
+                    doc.write('.. |{0}| replace:: ``{0}``\n'.format(dtype.name))
 
             if mod.subprograms:
                 doc.write('\n')
@@ -95,11 +95,6 @@ def print_unit(doc, unit, depth):
     for line in unit.doc.header.split('\n'):
         doc.write(indent + '  ' + line + '\n')
     doc.write('\n')
-
-    # XXX: The rest of this is not really for declarations... I need to think
-    #   about how to approach this.  For now, just exit.
-    if isinstance(unit, Declaration):
-        return
 
     if unit.variables:
         doc.write(indent + '  ' + 'Parameters\n')
@@ -124,8 +119,8 @@ def print_unit(doc, unit, depth):
         doc.write(indent + '  ' + ' '.join('|{0}|_'.format(caller) for caller in unit.callers) + '\n')
         doc.write('\n')
 
-    for block in unit.blocks:
-        print_unit(doc, block, depth + 2)
+    for dtype in unit.derived_types:
+        print_unit(doc, dtype, depth + 2)
 
     for subprog in unit.subprograms:
         print_unit(doc, subprog, depth + 2)
