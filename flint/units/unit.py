@@ -88,7 +88,8 @@ class Unit(object):
         self.callers = set()
 
         self.doc = Document()
-        self.group_docstr = None
+        # XXX: Does this need to be here?
+        self.grp_docstr = None
 
         # Testing
         self.statements = []
@@ -277,6 +278,15 @@ class Unit(object):
             tokens = iter(line)
 
             tok = next(tokens)
+
+            # Check for any group tokens
+            # XXX: This probably should only happen for intrinsics and type/class
+            if (is_docstring(tok.head)
+                    and any(tok.startswith('!>@{') for tok in tok.head)
+                ):
+                # XXX: Use [2:] to strip '{ ', maybe do this in docstrip...?
+                self.grp_docstr = docstrip(tok.head)[2:]
+
             if tok in Variable.intrinsic_types:
                 vtype = tok
             elif tok in ('type', 'class'):
@@ -349,8 +359,12 @@ class Unit(object):
             var.intent = var_intent
 
             # First doc attempt: After the variable name
-            if is_docstring(tok.tail):
+            #   Also, attempt to apply the group docstring if it's been set
+            #if is_docstring(tok.tail):
+            if is_docstring(tok.tail) and not any(dtok.startswith('!>@}') for dtok in tok.tail):
                 var.doc.docstring = docstrip(tok.tail)
+            elif self.grp_docstr:
+                var.doc.docstring = self.grp_docstr
 
             self.variables.append(var)
 
@@ -360,14 +374,20 @@ class Unit(object):
                         tok = next(tokens)
 
                 # Second doc attempt: After the index right parenthesis
-                if is_docstring(tok.tail):
+                #if is_docstring(tok.tail):
+                if is_docstring(tok.tail) and not any(dtok.startswith('!>@}') for dtok in tok.tail):
                     self.variables[-1].doc.docstring = docstrip(tok.tail)
+                elif self.grp_docstr:
+                    var.doc.docstring = self.grp_docstr
 
                 if tok == ',':
                     # Third doc attempt: After the comma
                     # XXX: Can this one be removed?
-                    if is_docstring(tok.tail):
+                    #if is_docstring(tok.tail):
+                    if is_docstring(tok.tail) and not any(dtok.startswith('!>@}') for dtok in tok.tail):
                         self.variables[-1].doc.docstring = docstrip(tok.tail)
+                    elif self.grp_docstr:
+                        var.doc.docstring = self.grp_docstr
 
                     try:
                         tok = next(tokens)
@@ -379,6 +399,12 @@ class Unit(object):
                     if is_docstring(tok.tail):
                         var.doc.docstring = docstrip(tok.tail)
                     self.variables.append(var)
+
+            # Clear the group docstring
+            if (is_docstring(line[-1].tail)
+                    and any(dtok.startswith('!>@}') for dtok in line[-1].tail)
+                ):
+                self.grp_docstr = None
 
             stmt = Statement(line, tag='D')
             self.statements.append(stmt)
