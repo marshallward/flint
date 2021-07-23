@@ -32,20 +32,18 @@ class Function(Unit):
 def is_function(line):
     """Return True if the line is a valid function statement."""
     try:
-        idx = line.index('function')
+        f_idx = line.index('function')
+        s_idx = line.index(')') + 1
     except ValueError:
         return False
 
-    prefix, args = line[:idx], line[(idx+1):]
+    prefix, args, suffix = line[:f_idx], line[f_idx+1:s_idx], line[s_idx:]
 
     # Split attribute prefixes from return type
     # NOTE: This could fail if a type has the same name as an attribute.
     return_type, attrs = [], []
     for tok in prefix:
         (attrs if tok in subprog_attrs else return_type).append(tok)
-
-    # TODO: Split args from result and binding
-    # TODO: Also do this for subroutine btw...
 
     if return_type and not is_declaration_type(return_type):
         return False
@@ -55,6 +53,8 @@ def is_function(line):
 
     if not is_args(args):
         return False
+
+    # TODO: Validate suffix
 
     return True
 
