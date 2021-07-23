@@ -1,16 +1,42 @@
+import os
+
 from flint.project import Project
+from flint.statement import Statement
 
-
-def report_whitespace(project_dirs):
+def report_issues(project_dirs, include_dirs=None):
     proj = Project()
+    if include_dirs:
+        proj.include_dirs = include_dirs + proj.include_dirs
+
     proj.parse(*project_dirs)
 
+    ws_events = []
     for src in proj.files:
-        ws_lines = src.report.errors['C0102']
-        if ws_lines:
-            print(
-                '{fname}: {lineno}'.format(
-                    fname=src.path,
-                    lineno=', '.join(str(n) for n in ws_lines),
-                )
-            )
+        events = report_trailing_whitespace(src.statements)
+        # XXX: DO this in Statement, not here!!
+        for event in events:
+            event.src = src
+        ws_events.extend(events)
+
+    for event in ws_events:
+        filename = os.path.basename(event.src.path)
+        # TODO: Print statement with whitespace but not comments, etc
+        print('{}({}): {}'.format(filename, event.lineno, event.gen_stmt()))
+
+
+def report_trailing_whitespace(statements):
+    events = []
+    for stmt in statements:
+        if isinstance(stmt, Statement):
+            # TODO: Check for whitespace after line breaks (&)
+            # TODO: Non-statements also should not have whitespace (comments)
+            tail = stmt[-1].tail
+            if '\n' in tail:
+                end = tail[:tail.index('\n')]
+                if end and end[-1] and end[-1][-1] in ' \t':
+                    events.append(stmt)
+        else:
+            subevents = report_trailing_whitespace(stmt)
+            events.extend(subevents)
+
+    return events

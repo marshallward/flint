@@ -89,21 +89,22 @@ class Unit(object):
 
         self.doc = Document()
         # XXX: Does this need to be here?
+        #   This could be tracked inside Document and provided by docstrip()
         self.grp_docstr = None
 
         # Testing
         self.statements = []
 
     @staticmethod
-    def statement(line):
+    def statement(stmt):
         # TODO: If this ends up being a full type-statement parser, then it
         # needs to be moved into its own class
-        idx = next((i for i, w in enumerate(line) if w in Unit.unit_types), -1)
+        idx = next((i for i, w in enumerate(stmt) if w in Unit.unit_types), -1)
 
         if idx == 0:
             return True
         elif idx > 0:
-            words = iter(line[:idx])
+            words = iter(stmt[:idx])
 
             word = next(words)
             while True:
@@ -127,54 +128,58 @@ class Unit(object):
 
     # Call graph construction
 
-    def end_statement(self, line):
+    def end_statement(self, stmt):
         assert self.utype
 
         # TODO: Very similar to construct... can I merge somehow?
-        if line[0].startswith('end'):
-            if len(line) == 1 and line[0] in ('end', 'end' + self.utype):
+        if stmt[0].startswith('end'):
+            if len(stmt) == 1 and stmt[0] in ('end', 'end' + self.utype):
                 return True
-            elif len(line) >= 2 and (line[0], line[1]) == ('end', self.utype):
+            elif len(stmt) >= 2 and (stmt[0], stmt[1]) == ('end', self.utype):
                 return True
             else:
                 return False
 
-    def parse(self, lines):
-        """Parse the lines of a program unit.
+    def parse(self, statements):
+        """Parse the statements of a program unit.
 
         Program units are generally very similar, but we leave it undefined
         here due to some slight differences.
         """
         # Parse program unit statements
-        self.parse_header(lines.current_line)
-        self.parse_specification(lines)
-        self.parse_execution(lines)
-        self.parse_subprogram(lines)
+        self.parse_header(statements.current_line)
+        self.parse_specification(statements)
+        self.parse_execution(statements)
+        self.parse_subprogram(statements)
 
         # Remove intrinsic functions from the set of callables
         self.callees = self.callees - set(intrinsic_fns)
 
         # Finalisation
-        stmt = Statement(lines.current_line, tag=self.utype[0].upper())
+        stmt = statements.current_line
+        stmt.tag = self.utype[0].upper()
         self.statements.append(stmt)
 
-        self.doc.footer = docstrip(lines.current_line[0].head, oneline=False)
+        self.doc.footer = docstrip(
+            statements.current_line[0].head,
+            oneline=False
+        )
 
-    def parse_header(self, line):
+    def parse_header(self, stmt):
         """Parse the name of the program unit, if present.
 
         Each program unit has a different header format, so this method must be
         overridden by each subclass.
         """
         try:
-            self.utype = next(w for w in line if w in Unit.unit_types)
+            self.utype = next(w for w in stmt if w in Unit.unit_types)
         except StopIteration:
-            print(line)
+            print(stmt)
             raise
 
-        self.doc.header = docstrip(line[0].head)
-        self.doc.docstring = docstrip(line[-1].tail)
-        self.doc.statement = line
+        self.doc.header = docstrip(stmt[0].head)
+        self.doc.docstring = docstrip(stmt[-1].tail)
+        self.doc.statement = stmt
 
         # TODO: A safer approach may be to formally parse the first non-unit
         # type as a variable type.  A temporary step is to split the
@@ -182,19 +187,19 @@ class Unit(object):
         # But for now we just grab the name and ignore the rest.
         # TODO: Could also be that `function` is the only one that is not
         # the first character...
-        utype_idx = line.index(self.utype)
+        utype_idx = stmt.index(self.utype)
 
-        if len(line) >= 2:
-            self.name = line[utype_idx + 1]
+        if len(stmt) >= 2:
+            self.name = stmt[utype_idx + 1]
         else:
             self.name = None
 
-        stmt = Statement(line, tag=self.utype[0].upper())
+        stmt.tag = self.utype[0].upper()
         self.statements.append(stmt)
 
     # Specification
 
-    def parse_specification(self, lines):
+    def parse_specification(self, statements):
         """Parse the specification part (R204) of a program unit (R202).
 
         Specification parts contain the following:
@@ -206,76 +211,76 @@ class Unit(object):
         """
         # TODO: `use`, `implicit`, and declarations must appear in that order.
         #       This loop does not check order.
-        for line in lines:
-            if line[0] == 'use':
-                self.parse_use_stmt(line)
-            elif line[0] == 'import':
-                self.parse_import_stmt(line)
-            elif line[0] == 'implicit':
+        for stmt in statements:
+            if stmt[0] == 'use':
+                self.parse_use_stmt(stmt)
+            elif stmt[0] == 'import':
+                self.parse_import_stmt(stmt)
+            elif stmt[0] == 'implicit':
                 # TODO: PARAMETER, FORMAT, ENTRY
-                self.parse_implicit_stmt(line)
-            elif line[0] in Unit.declaration_types:
-                self.parse_declaration_construct(lines, line)
+                self.parse_implicit_stmt(stmt)
+            elif stmt[0] in Unit.declaration_types:
+                self.parse_declaration_construct(statements, stmt)
             else:
                 break
 
-    def parse_use_stmt(self, line):
+    def parse_use_stmt(self, stmt):
         """Parse the use statement (R1109) within a specification (R204)."""
         idx = 1
-        if line[idx] == ',':
+        if stmt[idx] == ',':
             idx = idx + 2
-        if line[idx] == '::':
+        if stmt[idx] == '::':
             idx = idx + 1
 
-        self.used_modules.add(line[idx])
+        self.used_modules.add(stmt[idx])
 
-        stmt = Statement(line, tag='U')
+        stmt.tag = 'U'
         self.statements.append(stmt)
 
-    def parse_import_stmt(self, line):
-        stmt = Statement(line, tag='i')
+    def parse_import_stmt(self, stmt):
+        stmt.tag = 'i'
         self.statements.append(stmt)
 
-    def parse_implicit_stmt(self, line):
-        stmt = Statement(line, tag='I')
+    def parse_implicit_stmt(self, stmt):
+        stmt.tag = 'I'
         self.statements.append(stmt)
 
-    def parse_declaration_construct(self, lines, line):
-        if line[0] == 'interface' or (
-                len(line) > 1 and line[:2] == ('abstract', 'interface')
+    def parse_declaration_construct(self, statements, stmt):
+        if stmt[0] == 'interface' or (
+                len(stmt) > 1 and stmt[:2] == ('abstract', 'interface')
             ):
             block = Interface()
-            block.parse(lines)
+            block.parse(statements)
             self.interfaces.append(block)
             self.statements.append(block.statements)
 
         # TODO: Parse out type
-        elif (line[0] == 'enum' or (line[0] == 'type' and line[1] != '(')):
+        elif (stmt[0] == 'enum' or (stmt[0] == 'type' and stmt[1] != '(')):
             dtype = Unit()
-            dtype.parse(lines)
+            dtype.parse(statements)
 
             # TODO: I think this is OK, since these are never defined as
             #   comma-separated lists, but need to check into this
-            dtype.name = line[-1]
+            dtype.name = stmt[-1]
             self.derived_types.append(dtype)
             self.statements.append(dtype.statements)
 
-        elif line[0] in Unit.access_specs:
-            stmt = Statement(line, tag='d')
+        elif stmt[0] in Unit.access_specs:
+            stmt.tag = 'd'
             self.statements.append(stmt)
 
         # R357 (placeholder)
-        elif line[0] == 'data':
-            stmt = Statement(line, tag='d')
+        elif stmt[0] == 'data':
+            stmt.tag = 'd'
             self.statements.append(stmt)
 
         # R551 (placeholder)
-        elif line[0] == 'parameter':
-            stmt = Statement(line, tag='p')
+        elif stmt[0] == 'parameter':
+            stmt.tag = 'p'
             self.statements.append(stmt)
 
         else:
-            tokens = iter(line)
+            tokens = iter(stmt)
 
             tok = next(tokens)
 
@@ -294,11 +299,11 @@ class Unit(object):
                 vtype = next(tokens)
                 assert next(tokens) == ')'
             elif tok == 'namelist':
-                self.parse_namelist(line)
+                self.parse_namelist(stmt)
                 return
             else:
                 # Unhandled
-                stmt = Statement(line, tag='X')
+                stmt.tag = 'X'
                 self.statements.append(stmt)
                 return
 
@@ -401,17 +406,17 @@ class Unit(object):
                     self.variables.append(var)
 
             # Clear the group docstring
-            if (is_docstring(line[-1].tail)
-                    and any(dtok.startswith('!>@}') for dtok in line[-1].tail)
+            if (is_docstring(stmt[-1].tail)
+                    and any(dtok.startswith('!>@}') for dtok in stmt[-1].tail)
                 ):
                 self.grp_docstr = None
 
-            stmt = Statement(line, tag='D')
+            stmt.tag = 'D'
             self.statements.append(stmt)
 
-    def parse_namelist(self, line):
-        assert(line[0] == 'namelist')
-        tokens = iter(line[1:])
+    def parse_namelist(self, stmt):
+        assert(stmt[0] == 'namelist')
+        tokens = iter(stmt[1:])
 
         tok = next(tokens)
         while tok:
@@ -430,76 +435,76 @@ class Unit(object):
                 if tok == ',':
                     tok = next(tokens)
 
-        stmt = Statement(line, tag='N')
+        stmt.tag = 'N'
         self.statements.append(stmt)
 
     # Execution
 
-    def parse_execution(self, lines):
+    def parse_execution(self, statements):
         # TODO: The val = fn(...) test for self.callees is very speculative...
 
-        line = lines.current_line
+        stmt = statements.current_line
 
         # Gather up any callable symbols
         var_names = [v.name for v in self.variables]
-        self.callees.update(get_callable_symbols(line, var_names))
+        self.callees.update(get_callable_symbols(stmt, var_names))
 
-        # First parse the line which terminated specification
+        # First parse the statement which terminated specification
         # TODO: How to merge with iteration below? Lookahead in parse_spec()?
-        if Construct.statement(line):
+        if Construct.construct_stmt(stmt):
             cons = Construct(self)
-            cons.parse(lines)
+            cons.parse(statements)
             self.statements.append(cons.statements)
-        elif self.end_statement(line) or line[0] == 'contains':
+        elif self.end_statement(stmt) or stmt[0] == 'contains':
             return
         else:
             # Unhandled
-            stmt = Statement(line, tag='E')
+            stmt.tag = 'E'
             self.statements.append(stmt)
 
-        # Now iterate over the rest of the lines
-        for line in lines:
-            self.callees.update(get_callable_symbols(line, var_names))
+        # Now iterate over the rest of the statements
+        for stmt in statements:
+            self.callees.update(get_callable_symbols(stmt, var_names))
 
             # Execution constructs
-            if Construct.statement(line):
+            if Construct.construct_stmt(stmt):
                 cons = Construct(self)
-                cons.parse(lines)
+                cons.parse(statements)
                 self.statements.append(cons.statements)
-            elif self.end_statement(line) or line[0] == 'contains':
+            elif self.end_statement(stmt) or stmt[0] == 'contains':
                 # TODO: Use return?
                 break
             else:
                 # Unhandled
-                stmt = Statement(line, tag='E')
+                stmt.tag = 'E'
                 self.statements.append(stmt)
 
-    def parse_subprogram(self, lines):
-        # TODO: I think the first line of subprogram is always CONTAINS, so
-        # this check may be pointless. (No, not for interfaces)
+    def parse_subprogram(self, statements):
+        # TODO: I think the first statemetn of subprogram is always CONTAINS,
+        #   so this check may be pointless. (No, not for interfaces)
 
-        line = lines.current_line
+        stmt = statements.current_line
 
-        if Unit.statement(line):
+        if Unit.statement(stmt):
             subprog = Unit()
-            subprog.parse(lines)
+            subprog.parse(statements)
             self.subprograms.append(subprog)
             self.statements.append(subprog.statements)
-        elif self.end_statement(line):
+        elif self.end_statement(stmt):
             return
         else:
-            stmt = Statement(line, tag=self.utype[0].upper())
+            stmt.tag = self.utype[0].upper()
             self.statements.append(stmt)
 
-        for line in lines:
-            if Unit.statement(line):
+        for stmt in statements:
+            if Unit.statement(stmt):
                 subprog = Unit()
-                subprog.parse(lines)
+                subprog.parse(statements)
                 self.subprograms.append(subprog)
                 self.statements.append(subprog.statements)
-            elif self.end_statement(line):
+            elif self.end_statement(stmt):
                 # TODO: Use return?
                 break
             else:
-                stmt = Statement(line, tag='X')
+                stmt.tag = 'X'
                 self.statements.append(stmt)

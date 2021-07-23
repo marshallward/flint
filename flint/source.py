@@ -17,24 +17,25 @@ class Source(object):
         # Configuration
         self.debug = False
         self.include_paths = []
+        self.path = None
 
         # Contents
         self.units = []
         self.statements = []
 
     def parse(self, path):
+        self.path = path
         # XXX: This chokes on non-unicode strings (e.g. latin-1).
         #  Using errors='replace' gets past these errors but will break
         #  roundtrip parsing.  This needs some additional thought.
         with open(path, errors='replace') as fpath:
             lexer = Lexer(fpath, self.include_paths)
-            for line in lexer:
+            for stmt in lexer:
                 try:
-                    unit_type = get_program_unit_type(line)
+                    unit_type = get_program_unit_type(stmt)
                     unit = unit_type()
                     unit.parse(lexer)
                     self.units.append(unit)
                     self.statements.append(unit.statements)
                 except ValueError:
-                    stmt = Statement(line)
                     self.statements.append(stmt)

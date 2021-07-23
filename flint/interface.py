@@ -15,27 +15,28 @@ class Interface(object):
         self.statements = []
         self.doc = Document()
 
-    def parse(self, lines):
-        self.parse_header(lines.current_line)
+    def parse(self, statements):
+        self.parse_header(statements.current_line)
 
-        for line in lines:
-            if self.procedure_stmt(line):
-                self.parse_procedure_stmt(line)
-            elif line[0] in ('function', 'subroutine'):
-                stmt = Statement(lines.current_line, tag='S')
+        for stmt in statements:
+            if self.procedure_stmt(stmt):
+                self.parse_procedure_stmt(stmt)
+            elif stmt[0] in ('function', 'subroutine'):
+                stmt.tag = 'S'
                 self.statements.append(stmt)
-            elif self.end_interface_stmt(line):
+            elif self.end_interface_stmt(stmt):
                 break
             else:
-                stmt = Statement(line, tag='I')
+                stmt.tag = 'I'
                 self.statements.append(stmt)
 
         # Finalisation
-        stmt = Statement(lines.current_line, tag='I')
+        stmt = statements.current_line
+        stmt.tag = 'I'
         self.statements.append(stmt)
 
-    def parse_header(self, line):
-        tokens = iter(line)
+    def parse_header(self, stmt):
+        tokens = iter(stmt)
         tok = next(tokens)
 
         if tok == 'abstract':
@@ -49,18 +50,18 @@ class Interface(object):
         except StopIteration:
             pass
 
-        stmt = Statement(line, tag='I')
+        stmt.tag = 'I'
         self.statements.append(stmt)
 
-    def procedure_stmt(self, line):
+    def procedure_stmt(self, stmt):
         # XXX: Assert self.name is set?
-        return line[0] == 'procedure' or line[:2] == ('module', 'procedure') 
+        return stmt[0] == 'procedure' or stmt[:2] == ('module', 'procedure') 
 
-    def parse_procedure_stmt(self, line):
-        stmt = Statement(line, tag='P')
+    def parse_procedure_stmt(self, stmt):
+        stmt.tag = 'P'
         self.statements.append(stmt)
 
-        tokens = iter(line)
+        tokens = iter(stmt)
         tok = next(tokens)
 
         # TODO: Check if procedure belongs to a module
@@ -77,14 +78,14 @@ class Interface(object):
         # TODO: Validate the name
         self.procedures.append(tok)
 
-    def end_interface_stmt(self, line):
-        if line[0].startswith('end'):
-            if len(line) == 1 and line[0] == 'endinterface':
+    def end_interface_stmt(self, stmt):
+        if stmt[0].startswith('end'):
+            if len(stmt) == 1 and stmt[0] == 'endinterface':
                 return True
-            elif len(line) >= 2 and (line[0], line[1]) == ('end', 'interface'):
+            elif len(stmt) >= 2 and (stmt[0], stmt[1]) == ('end', 'interface'):
                 # TODO: other generic-spec tests
-                if len(line) >= 3:
-                    assert line[2] == self.name
+                if len(stmt) >= 3:
+                    assert stmt[2] == self.name
                 return True
             else:
                 return False

@@ -8,13 +8,12 @@ file) and each iteration returns the next complete Fortran statement.
 """
 from collections import OrderedDict
 import itertools
-
-from flint.scanner import Scanner
-from flint.ftoken import Token, PToken
-
-# TODO: f90lex testing
 import os
 import sys
+
+from flint.scanner import Scanner
+from flint.statement import Statement
+from flint.ftoken import Token, PToken
 
 
 class Lexer(object):
@@ -45,6 +44,9 @@ class Lexer(object):
         #   It would be better to handle recursively.
         self.pp_depth = 0
 
+        # TODO: Define as an input?  It will depend on the state of source.
+        self.lineno = 0
+
         # Gather leading liminal tokens before iteration
         self.prior_tail = self.get_liminals()
 
@@ -67,14 +69,18 @@ class Lexer(object):
         if self.includes:
             inc_stmt = self.includes.pop()
             # Strip the statement of liminals and display strings
-            statement = [PToken(tok, pp='') for tok in inc_stmt]
+            statement = Statement([PToken(tok, pp='') for tok in inc_stmt])
+            statement.lineno = self.lineno
+
             return statement
 
         # If no self.includes, tokenize as usual
         prior_tail = self.prior_tail
-        statement = []
-        line_continue = True
 
+        statement = Statement()
+        statement.lineno = self.lineno
+
+        line_continue = True
         while line_continue:
             line_continue = False
 
@@ -102,6 +108,7 @@ class Lexer(object):
                     self.preprocess(pp)
 
                 line = next(self.source)
+                self.lineno += 1
                 lexemes = self.scanner.parse(line)
 
             # Reconstruct any line continuations
@@ -196,6 +203,7 @@ class Lexer(object):
     def get_liminals(self):
         lims = []
         for line in self.source:
+            self.lineno += 1
             lexemes = self.scanner.parse(line)
 
             new_lims = list(itertools.takewhile(is_liminal, lexemes))

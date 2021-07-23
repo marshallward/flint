@@ -27,19 +27,19 @@ class Construct(object):
 
     # TODO: Override for individual constructs?
     @staticmethod
-    def statement(line):
+    def construct_stmt(stmt):
         # Pop off construct label
-        if line[0][-1] == ':':
-            line = line[1:]
+        if stmt[0][-1] == ':':
+            stmt = stmt[1:]
 
         # TODO: Actual rules vary for every construct type, not just 'if'
-        if line[0] in Construct.construct_types:
-            if line[0] == 'if':
-                return (line[0], line[-1]) == ('if', 'then')
-            elif line[0] == 'where':
-                assert line[1] == '('
+        if stmt[0] in Construct.construct_types:
+            if stmt[0] == 'if':
+                return (stmt[0], stmt[-1]) == ('if', 'then')
+            elif stmt[0] == 'where':
+                assert stmt[1] == '('
                 par_count = 1
-                for idx, tok in enumerate(line[2:], start=2):
+                for idx, tok in enumerate(stmt[2:], start=2):
                     if tok == '(':
                         par_count += 1
                     elif tok == ')':
@@ -48,24 +48,24 @@ class Construct(object):
                     if par_count == 0:
                         break
 
-                return idx == len(line) - 1
+                return idx == len(stmt) - 1
 
                 # XXX: Need to figure this out!
                 return
             else:
                 return True
 
-    def end_statement(self, line):
-        if line[0].startswith('end'):
-            if len(line) == 1 and line[0] in ('end', 'end' + self.ctype):
+    def end_statement(self, stmt):
+        if stmt[0].startswith('end'):
+            if len(stmt) == 1 and stmt[0] in ('end', 'end' + self.ctype):
                 return True
-            elif len(line) == 2 and (line[0], line[1]) == ('end', self.ctype):
+            elif len(stmt) == 2 and (stmt[0], stmt[1]) == ('end', self.ctype):
                 return True
             else:
                 return False
 
-        elif self.ctype == 'do' and len(line) > 1 and line[1] == 'continue':
-            # TODO: Will line[0] always be a label?
+        elif self.ctype == 'do' and len(stmt) > 1 and stmt[1] == 'continue':
+            # TODO: Will stmt[0] always be a label?
             # TODO: Check if label is inside the 'do' construct?
             return True
         else:
@@ -82,37 +82,37 @@ class Construct(object):
         self.depth = depth
         self.statements = []
 
-    def parse(self, lines):
-        line = lines.current_line
+    def parse(self, statements):
+        stmt = statements.current_line
         # Check for construct label (and pop off)
-        if line[0][-1] == ':':
-            self.name = line[0][:-1]
-            line = line[1:]
+        if stmt[0][-1] == ':':
+            self.name = stmt[0][:-1]
+            stmt = stmt[1:]
 
-        if line[0] == 'select':
-            self.ctype = line[1]
+        if stmt[0] == 'select':
+            self.ctype = stmt[1]
         else:
-            self.ctype = line[0]
+            self.ctype = stmt[0]
 
-        stmt = Statement(line, tag='C')
+        stmt.tag = 'C'
         self.statements.append(stmt)
 
         # Generate the list of variable names
         var_names = [v.name for v in self.unit.variables]
 
         # Parse the contents of the construct
-        for line in lines:
-            self.unit.callees.update(get_callable_symbols(line, var_names))
+        for stmt in statements:
+            self.unit.callees.update(get_callable_symbols(stmt, var_names))
 
-            if Construct.statement(line):
+            if Construct.construct_stmt(stmt):
                 cons = Construct(self.unit, depth=self.depth + 1)
-                cons.parse(lines)
+                cons.parse(statements)
                 self.statements.append(cons.statements)
-            elif self.end_statement(line):
-                stmt = Statement(line, tag='C')
+            elif self.end_statement(stmt):
+                stmt.tag = 'C'
                 self.statements.append(stmt)
                 break
             else:
                 # Unhandled
-                stmt = Statement(line, tag='e')
+                stmt.tag = 'e'
                 self.statements.append(stmt)

@@ -12,8 +12,7 @@ import flint.tools.report
 def parse():
     """Parse the command line inputs and execute the subcommand."""
 
-    # 1. Construct the argument parser
-
+    # Construct the argument parser
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--version',
@@ -24,8 +23,6 @@ def parse():
     subparsers = parser.add_subparsers()
 
     # Subcommand setup
-    # XXX: This is more of a placeholder for now
-    #   These will presumably be defined in a separate module
     # TODO: argparse has some method for registering args over multiple cmds
 
     # Arguments
@@ -61,10 +58,10 @@ def parse():
     }
 
     # reformat
-    tag_cmd = subparsers.add_parser('format')
-    tag_cmd.set_defaults(run_cmd=flint.tools.format.format_statements)
-    tag_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
-    tag_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
+    format_cmd = subparsers.add_parser('format')
+    format_cmd.set_defaults(run_cmd=flint.tools.format.format_statements)
+    format_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
+    format_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
 
     # gendoc
     gendoc_cmd = subparsers.add_parser('gendoc')
@@ -80,8 +77,9 @@ def parse():
 
     # report
     report_cmd = subparsers.add_parser('report')
-    report_cmd.set_defaults(run_cmd=flint.tools.report.report_whitespace)
+    report_cmd.set_defaults(run_cmd=flint.tools.report.report_issues)
     report_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
+    report_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
 
     # If no argument given, then print the help page
     if len(sys.argv) == 1:
