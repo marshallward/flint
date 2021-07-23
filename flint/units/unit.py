@@ -190,7 +190,12 @@ class Unit(object):
         utype_idx = stmt.index(self.utype)
 
         if len(stmt) >= 2:
+            # This fails for derived types (which aren't program units and
+            # don't belong here but we're stuck with it for now..)
             self.name = stmt[utype_idx + 1]
+            # A dumb fix for the moment..
+            if self.name == '::':
+                self.name = stmt[utype_idx + 2]
         else:
             self.name = None
 
@@ -480,11 +485,19 @@ class Unit(object):
                 self.statements.append(stmt)
 
     def parse_subprogram(self, statements):
-        # TODO: I think the first statemetn of subprogram is always CONTAINS,
-        #   so this check may be pointless. (No, not for interfaces)
-
         stmt = statements.current_line
 
+        # XXX: This is an odd code block.  It mostly checks the following:
+        #  1. Am I new subprogram?  Launch a new parser
+        #  2. Am I the end statement for the parent Unit?  Exit immediately
+        #  3. Otherwise keep going.
+        #
+        # In practice, I think 1 can never happen, and 3 is always 'contains'.
+        # So the logic here seems very flawed.
+        # But it hasn't yet caused any problems, so I leave it for now.
+        #
+        # (Historical note: When interfaces were piggybacking off of Unit,
+        # this may have made more sense.  But that is no longer the case.)
         if Unit.statement(stmt):
             subprog = Unit()
             subprog.parse(statements)

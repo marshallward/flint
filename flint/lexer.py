@@ -6,6 +6,7 @@ file) and each iteration returns the next complete Fortran statement.
 :copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
+from collections import deque
 from collections import OrderedDict
 import itertools
 import os
@@ -26,7 +27,7 @@ class Lexer(object):
         self.scanner = Scanner()
 
         # Cached statements from preprocessed headers
-        self.includes = []
+        self.includes = deque()
 
         # Split line cache
         self.cache = []
@@ -67,11 +68,12 @@ class Lexer(object):
     def __next__(self):
         # Return `#include` statments if cached, and exit immediately
         if self.includes:
-            inc_stmt = self.includes.pop()
+            inc_stmt = self.includes.popleft()
             # Strip the statement of liminals and display strings
             statement = Statement([PToken(tok, pp='') for tok in inc_stmt])
             statement.lineno = self.lineno
 
+            self.current_line = statement
             return statement
 
         # If no self.includes, tokenize as usual
@@ -195,9 +197,7 @@ class Lexer(object):
             statement[-1].tail.extend(self.get_liminals())
             self.prior_tail = statement[-1].tail
 
-        # TODO: f90lex integration
         self.current_line = statement
-
         return statement
 
     def get_liminals(self):
@@ -261,7 +261,7 @@ class Lexer(object):
         # Conditionals
 
         # TODO (#if #elif)
-        elif directive == 'if':
+        elif directive in ('if', 'elif'):
             if self.stop_parsing == True:
                 self.pp_depth += 1
             else:
@@ -298,7 +298,9 @@ class Lexer(object):
 
         # Headers (this can't possibly be working...)
 
-        elif directive.startswith('include') and not self.stop_parsing:
+        elif directive.startswith('include'):
+            if self.stop_parsing:
+                return
             # This directive uniquely does not require a whitespace delimiter.
             if directive != 'include':
                 inc_fpath = directive.replace('include', '', 1)
@@ -320,7 +322,7 @@ class Lexer(object):
                 with open(inc_path) as inc:
                     lexer = Lexer(inc, self.include_paths)
                     lexer.defines = self.defines
-                    self.includes = []
+                    self.includes = deque()
                     for stmt in lexer:
                         self.includes.append(stmt)
             else:

@@ -12,8 +12,9 @@ class Statement(list):
         """Recreate the statement by gathering tokens and null tokens."""
         header = ''.join(self[0].head)
         footer = ''.join(self[-1].tail)
+        tag = self.tag if self.tag else '~'
 
-        s = '{}│ '.format(self.tag)
+        s = '{}│ '.format(tag)
         s += header.rsplit('\n')[-1] if header else ''
         s += ''.join([str(tok) + ''.join(tok.tail) for tok in self[:-1]])
         s += str(self[-1])
