@@ -107,7 +107,7 @@ class Construct(object):
             if Construct.construct_stmt(stmt):
                 cons = Construct(self.unit, depth=self.depth + 1)
                 cons.parse(statements)
-                self.statements.append(cons.statements)
+                self.statements.extend(cons.statements)
             elif self.end_statement(stmt):
                 stmt.tag = 'C'
                 self.statements.append(stmt)

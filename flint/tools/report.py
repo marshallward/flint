@@ -27,16 +27,12 @@ def report_issues(project_dirs, include_dirs=None):
 def report_trailing_whitespace(statements):
     events = []
     for stmt in statements:
-        if isinstance(stmt, Statement):
-            # TODO: Check for whitespace after line breaks (&)
-            # TODO: Non-statements also should not have whitespace (comments)
-            tail = stmt[-1].tail
-            if '\n' in tail:
-                end = tail[:tail.index('\n')]
-                if end and end[-1] and end[-1][-1] in ' \t':
-                    events.append(stmt)
-        else:
-            subevents = report_trailing_whitespace(stmt)
-            events.extend(subevents)
+        # TODO: Check for whitespace after line breaks (&)
+        # TODO: Non-statements also should not have whitespace (comments)
+        tail = stmt[-1].tail
+        if '\n' in tail:
+            end = tail[:tail.index('\n')]
+            if end and end[-1] and end[-1][-1] in ' \t':
+                events.append(stmt)
 
     return events

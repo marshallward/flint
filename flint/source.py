@@ -36,6 +36,6 @@ class Source(object):
                     unit = unit_type()
                     unit.parse(lexer)
                     self.units.append(unit)
-                    self.statements.append(unit.statements)
+                    self.statements.extend(unit.statements)
                 except ValueError:
                     self.statements.append(stmt)

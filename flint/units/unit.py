@@ -257,7 +257,7 @@ class Unit(object):
             block = Interface()
             block.parse(statements)
             self.interfaces.append(block)
-            self.statements.append(block.statements)
+            self.statements.extend(block.statements)
 
         # TODO: Parse out type
         elif (stmt[0] == 'enum' or (stmt[0] == 'type' and stmt[1] != '(')):
@@ -268,7 +268,7 @@ class Unit(object):
             #   comma-separated lists, but need to check into this
             dtype.name = stmt[-1]
             self.derived_types.append(dtype)
-            self.statements.append(dtype.statements)
+            self.statements.extend(dtype.statements)
 
         elif stmt[0] in Unit.access_specs:
             stmt.tag = 'd'
@@ -370,7 +370,6 @@ class Unit(object):
 
             # First doc attempt: After the variable name
             #   Also, attempt to apply the group docstring if it's been set
-            #if is_docstring(tok.tail):
             if is_docstring(tok.tail) and not any(dtok.startswith('!>@}') for dtok in tok.tail):
                 var.doc.docstring = docstrip(tok.tail)
             elif self.grp_docstr:
@@ -384,7 +383,6 @@ class Unit(object):
                         tok = next(tokens)
 
                 # Second doc attempt: After the index right parenthesis
-                #if is_docstring(tok.tail):
                 if is_docstring(tok.tail) and not any(dtok.startswith('!>@}') for dtok in tok.tail):
                     self.variables[-1].doc.docstring = docstrip(tok.tail)
                 elif self.grp_docstr:
@@ -393,7 +391,6 @@ class Unit(object):
                 if tok == ',':
                     # Third doc attempt: After the comma
                     # XXX: Can this one be removed?
-                    #if is_docstring(tok.tail):
                     if is_docstring(tok.tail) and not any(dtok.startswith('!>@}') for dtok in tok.tail):
                         self.variables[-1].doc.docstring = docstrip(tok.tail)
                     elif self.grp_docstr:
@@ -459,7 +456,7 @@ class Unit(object):
         if Construct.construct_stmt(stmt):
             cons = Construct(self)
             cons.parse(statements)
-            self.statements.append(cons.statements)
+            self.statements.extend(cons.statements)
         elif self.end_statement(stmt) or stmt[0] == 'contains':
             return
         else:
@@ -475,7 +472,7 @@ class Unit(object):
             if Construct.construct_stmt(stmt):
                 cons = Construct(self)
                 cons.parse(statements)
-                self.statements.append(cons.statements)
+                self.statements.extend(cons.statements)
             elif self.end_statement(stmt) or stmt[0] == 'contains':
                 # TODO: Use return?
                 break
@@ -502,7 +499,7 @@ class Unit(object):
             subprog = Unit()
             subprog.parse(statements)
             self.subprograms.append(subprog)
-            self.statements.append(subprog.statements)
+            self.statements.extend(subprog.statements)
         elif self.end_statement(stmt):
             return
         else:
@@ -514,7 +511,7 @@ class Unit(object):
                 subprog = Unit()
                 subprog.parse(statements)
                 self.subprograms.append(subprog)
-                self.statements.append(subprog.statements)
+                self.statements.extend(subprog.statements)
             elif self.end_statement(stmt):
                 # TODO: Use return?
                 break
