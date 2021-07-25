@@ -3,6 +3,7 @@ import os
 from flint.project import Project
 from flint.statement import Statement
 
+
 def report_issues(project_dirs, include_dirs=None):
     proj = Project()
     if include_dirs:
@@ -21,7 +22,7 @@ def report_issues(project_dirs, include_dirs=None):
     for event in ws_events:
         filename = os.path.basename(event.src.path)
         # TODO: Print statement with whitespace but not comments, etc
-        print('{}({}): {}'.format(filename, event.lineno, event.gen_stmt()))
+        print('{}({}): {}'.format(filename, event.line_number, event.gen_stmt()))
 
 
 def report_trailing_whitespace(statements):

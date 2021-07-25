@@ -3,7 +3,7 @@ class Statement(list):
         # XXX: 'tag' is a dumb name, "type" or "class" is better but namespace
         #   issues ofc...
         self.tag = kwds.pop('tag') if 'tag' in kwds else None
-        self.lineno = None
+        self.line_number = None
 
         super(Statement, self).__init__(*args, **kwds)
 

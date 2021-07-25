@@ -46,7 +46,7 @@ class Lexer(object):
         self.pp_depth = 0
 
         # TODO: Define as an input?  It will depend on the state of source.
-        self.lineno = 0
+        self.line_number = 0
 
         # Gather leading liminal tokens before iteration
         self.prior_tail = self.get_liminals()
@@ -71,7 +71,7 @@ class Lexer(object):
             inc_stmt = self.includes.popleft()
             # Strip the statement of liminals and display strings
             statement = Statement([PToken(tok, pp='') for tok in inc_stmt])
-            statement.lineno = self.lineno
+            statement.line_number = self.line_number
 
             self.current_line = statement
             return statement
@@ -80,7 +80,7 @@ class Lexer(object):
         prior_tail = self.prior_tail
 
         statement = Statement()
-        statement.lineno = self.lineno
+        statement.line_number = self.line_number
 
         line_continue = True
         while line_continue:
@@ -110,7 +110,7 @@ class Lexer(object):
                     self.preprocess(pp)
 
                 line = next(self.source)
-                self.lineno += 1
+                self.line_number += 1
                 lexemes = self.scanner.parse(line)
 
             # Reconstruct any line continuations
@@ -203,7 +203,7 @@ class Lexer(object):
     def get_liminals(self):
         lims = []
         for line in self.source:
-            self.lineno += 1
+            self.line_number += 1
             lexemes = self.scanner.parse(line)
 
             new_lims = list(itertools.takewhile(is_liminal, lexemes))
