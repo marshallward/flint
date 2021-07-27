@@ -1,3 +1,8 @@
+"""flint program unit classes
+
+:copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
+:license: Apache License, Version 2.0, see LICENSE for details.
+"""
 from flint.units.subroutine import Subroutine, is_subroutine
 from flint.units.function import Function, is_function
 from flint.units.module import Module, is_module

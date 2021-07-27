@@ -1,3 +1,8 @@
+"""flint Statement class
+
+:copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
+:license: Apache License, Version 2.0, see LICENSE for details.
+"""
 class Statement(list):
     def __init__(self, *args, **kwds):
         # XXX: 'tag' is a dumb name, "type" or "class" is better but namespace

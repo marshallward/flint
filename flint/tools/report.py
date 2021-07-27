@@ -1,3 +1,8 @@
+"""flint report command
+
+:copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
+:license: Apache License, Version 2.0, see LICENSE for details.
+"""
 import os
 
 from flint.lines import Lines

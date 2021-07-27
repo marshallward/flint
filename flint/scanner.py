@@ -1,4 +1,4 @@
-"""The f90lex Scanner.
+"""The flint Scanner.
 
 The ``Scanner`` object creates a list of Fortran lexemes from a line of Fortran
 source.  The line is expected to be terminated with an endline (``\n``).

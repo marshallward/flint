@@ -1,5 +1,8 @@
-"""Some sample functions to test parsing of program unit statements."""
+"""flint Submodule class
 
+:copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
+:license: Apache License, Version 2.0, see LICENSE for details.
+"""
 from flint.units.unit import Unit
 
 

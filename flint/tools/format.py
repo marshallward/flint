@@ -1,3 +1,8 @@
+"""flint format command
+
+:copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
+:license: Apache License, Version 2.0, see LICENSE for details.
+"""
 from flint.project import Project
 from flint.statement import Statement
 

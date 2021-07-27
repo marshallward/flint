@@ -1,3 +1,8 @@
+"""flint Construct class
+
+:copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
+:license: Apache License, Version 2.0, see LICENSE for details.
+"""
 from flint.calls import get_callable_symbols
 from flint.statement import Statement
 

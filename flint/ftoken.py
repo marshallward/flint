@@ -1,4 +1,4 @@
-"""f90lex Token and PToken classes.
+"""flint Token and PToken classes.
 
 ``Token`` is a representation of the Fortran token, designed as a subclass of
 the Python string.  The usual (string) value corresponds to the original

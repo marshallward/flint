@@ -1,3 +1,8 @@
+"""Fortran linter reporting methods.
+
+:copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
+:license: Apache License, Version 2.0, see LICENSE for details.
+"""
 import collections
 import string
 

@@ -1,4 +1,4 @@
-"""The f90lex Lexer.
+"""The flint Lexer.
 
 ``Lexer`` is an iterator which is initalized by an input stream (usually a
 file) and each iteration returns the next complete Fortran statement.
