@@ -6,10 +6,15 @@
 # TODO: Make this a class with a configurable token set
 
 doc_tokens = ('!<', '!>', '!!')
+grp_tokens = ('!>@{', '!>@}')
 
 
 def is_docstring(tokens):
     return any(tok.startswith(dtok) for tok in tokens for dtok in doc_tokens)
+
+
+def is_docgroup(tokens):
+    return any(tok.startswith(dtok) for tok in tokens for dtok in grp_tokens)
 
 
 def docstrip(tokens, oneline=True):

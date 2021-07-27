@@ -3,7 +3,8 @@
 :copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
-k
+
+
 def get_callable_symbols(line, variables):
     # XXX: Checking against intrinsic_fns on every line is very costly.
     #   Perhaps a better solution is to just scoop up symbols on every line

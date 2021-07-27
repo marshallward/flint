@@ -262,7 +262,7 @@ class Lexer(object):
 
         # TODO (#if #elif)
         elif directive in ('if', 'elif'):
-            if self.stop_parsing == True:
+            if self.stop_parsing:
                 self.pp_depth += 1
             else:
                 expr = line.strip().split(None, 1)[1]
@@ -270,7 +270,7 @@ class Lexer(object):
                 self.stop_parsing = True
 
         elif directive == 'ifdef':
-            if self.stop_parsing == True:
+            if self.stop_parsing:
                 self.pp_depth += 1
             else:
                 macro = line.split(None, 1)[1]
@@ -278,7 +278,7 @@ class Lexer(object):
                     self.stop_parsing = True
 
         elif directive == 'ifndef':
-            if self.stop_parsing == True:
+            if self.stop_parsing:
                 self.pp_depth += 1
             else:
                 macro = line.split(None, 1)[1]

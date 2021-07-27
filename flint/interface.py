@@ -7,7 +7,6 @@ from flint.document import Document
 from flint.statement import Statement
 
 
-# XXX: Separate parsing from the actual object itself and its manipulation!!
 class Interface(object):
     def __init__(self):
         self.name = None
@@ -60,7 +59,7 @@ class Interface(object):
 
     def procedure_stmt(self, stmt):
         # XXX: Assert self.name is set?
-        return stmt[0] == 'procedure' or stmt[:2] == ('module', 'procedure') 
+        return stmt[0] == 'procedure' or stmt[:2] == ('module', 'procedure')
 
     def parse_procedure_stmt(self, stmt):
         stmt.tag = 'P'
@@ -94,5 +93,3 @@ class Interface(object):
                 return True
             else:
                 return False
-
-

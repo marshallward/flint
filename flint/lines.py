@@ -5,6 +5,7 @@
 """
 import itertools
 
+
 class Lines(object):
     """Iterator which reconstructs lines from lists of statements.
 

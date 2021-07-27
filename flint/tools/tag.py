@@ -6,6 +6,7 @@
 from flint.project import Project
 from flint.statement import Statement
 
+
 def tag_statements(project_dirs, include_dirs=None):
     proj = Project()
     if include_dirs:

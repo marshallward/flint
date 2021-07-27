@@ -71,9 +71,6 @@ def is_args(args):
     if any(t != ',' for t in args[(i_l + 2):i_r:2]):
         return False
 
-    # TODO: Confirm valid argument names
-    #dummy_arg_list = args[(i_l + 1):i_r:2]
-
     bind = args[(i_r+1):]
     if bind:
         if tuple(bind[0:3]) != ('bind', '(', 'c') or bind[-1] != ')':

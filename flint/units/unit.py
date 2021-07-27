@@ -5,7 +5,7 @@
 """
 from flint.calls import get_callable_symbols
 from flint.construct import Construct
-from flint.document import is_docstring, docstrip, Document
+from flint.document import is_docstring, is_docgroup, docstrip, Document
 from flint.interface import Interface
 from flint.intrinsics import intrinsic_fns
 from flint.report import Report
@@ -258,7 +258,7 @@ class Unit(object):
     def parse_declaration_construct(self, statements, stmt):
         if stmt[0] == 'interface' or (
                 len(stmt) > 1 and stmt[:2] == ('abstract', 'interface')
-            ):
+        ):
             block = Interface()
             block.parse(statements)
             self.interfaces.append(block)
@@ -295,10 +295,7 @@ class Unit(object):
             tok = next(tokens)
 
             # Check for any group tokens
-            # XXX: This probably should only happen for intrinsics and type/class
-            if (is_docstring(tok.head)
-                    and any(tok.startswith('!>@{') for tok in tok.head)
-                ):
+            if (is_docstring(tok.head) and is_docgroup(tok.head)):
                 # XXX: Use [2:] to strip '{ ', maybe do this in docstrip...?
                 self.grp_docstr = docstrip(tok.head)[2:]
 
@@ -375,7 +372,7 @@ class Unit(object):
 
             # First doc attempt: After the variable name
             #   Also, attempt to apply the group docstring if it's been set
-            if is_docstring(tok.tail) and not any(dtok.startswith('!>@}') for dtok in tok.tail):
+            if is_docstring(tok.tail) and not is_docgroup(tok.tail):
                 var.doc.docstring = docstrip(tok.tail)
             elif self.grp_docstr:
                 var.doc.docstring = self.grp_docstr
@@ -388,7 +385,7 @@ class Unit(object):
                         tok = next(tokens)
 
                 # Second doc attempt: After the index right parenthesis
-                if is_docstring(tok.tail) and not any(dtok.startswith('!>@}') for dtok in tok.tail):
+                if is_docstring(tok.tail) and not is_docgroup(tok.tail):
                     self.variables[-1].doc.docstring = docstrip(tok.tail)
                 elif self.grp_docstr:
                     var.doc.docstring = self.grp_docstr
@@ -396,7 +393,7 @@ class Unit(object):
                 if tok == ',':
                     # Third doc attempt: After the comma
                     # XXX: Can this one be removed?
-                    if is_docstring(tok.tail) and not any(dtok.startswith('!>@}') for dtok in tok.tail):
+                    if is_docstring(tok.tail) and not is_docgroup(tok.tail):
                         self.variables[-1].doc.docstring = docstrip(tok.tail)
                     elif self.grp_docstr:
                         var.doc.docstring = self.grp_docstr
@@ -413,9 +410,7 @@ class Unit(object):
                     self.variables.append(var)
 
             # Clear the group docstring
-            if (is_docstring(stmt[-1].tail)
-                    and any(dtok.startswith('!>@}') for dtok in stmt[-1].tail)
-                ):
+            if is_docstring(stmt[-1].tail) and is_docgroup(stmt[-1].tail):
                 self.grp_docstr = None
 
             stmt.tag = 'D'

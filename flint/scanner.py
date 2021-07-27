@@ -7,9 +7,6 @@ We use an object here because there is some "state" regarding line continuation
 of split strings.  But more modular design options are possible and could be
 used in the future.
 
-``Scanner`` is a slightly updated version of the scanner which appeared in the
-``flint`` project (and is probably going to be ported back over anyway...).
-
 :copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """

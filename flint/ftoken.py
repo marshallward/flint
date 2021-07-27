@@ -17,6 +17,8 @@ parsing output.
 :copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
+
+
 class Token(str):
     # NOTE: Immutable types generally need __new__ implementations
     #   (At least that is my understanding...)

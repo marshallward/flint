@@ -79,7 +79,9 @@ def generate_docs(project_dirs, doc_path):
                 doc.write('.. Type/Interface labels\n')
                 doc.write('\n')
                 for dtype in mod.derived_types:
-                    doc.write('.. |{0}| replace:: ``{0}``\n'.format(dtype.name))
+                    doc.write(
+                        '.. |{0}| replace:: ``{0}``\n'.format(dtype.name)
+                    )
 
             if mod.subprograms:
                 doc.write('\n')
@@ -115,13 +117,21 @@ def print_unit(doc, unit, depth):
     if unit.callees:
         doc.write('\n')
         doc.write(indent + 'Calls into\n')
-        doc.write(indent + '  ' + ' '.join('|{0}|_'.format(callee) for callee in unit.callees) + '\n')
+        doc.write(
+            indent + '  '
+            + ' '.join('|{0}|_'.format(callee) for callee in unit.callees)
+            + '\n'
+        )
         doc.write('\n')
 
     if unit.callers:
         doc.write('\n')
         doc.write(indent + 'Called by\n')
-        doc.write(indent + '  ' + ' '.join('|{0}|_'.format(caller) for caller in unit.callers) + '\n')
+        doc.write(
+            indent + '  '
+            + ' '.join('|{0}|_'.format(caller) for caller in unit.callers)
+            + '\n'
+        )
         doc.write('\n')
 
     for dtype in unit.derived_types:

@@ -3,6 +3,8 @@
 :copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
+
+
 class Statement(list):
     def __init__(self, *args, **kwds):
         # XXX: 'tag' is a dumb name, "type" or "class" is better but namespace
@@ -25,7 +27,7 @@ class Statement(list):
         s += str(self[-1])
         s += ''.join(footer.rsplit('\n', 1)[:-1]) if footer else ''
 
-        return  s.replace('\n', '\n │ ')
+        return s.replace('\n', '\n │ ')
 
     def reformat(self):
         """This is just a placeholder at the moment, but the idea is that this
