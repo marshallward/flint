@@ -1,5 +1,6 @@
 import os
 
+from flint.lines import Lines
 from flint.project import Project
 from flint.statement import Statement
 
@@ -11,29 +12,17 @@ def report_issues(project_dirs, include_dirs=None):
 
     proj.parse(*project_dirs)
 
-    ws_events = []
     for src in proj.files:
-        events = report_trailing_whitespace(src.statements)
-        # XXX: DO this in Statement, not here!!
-        for event in events:
-            event.src = src
-        ws_events.extend(events)
+        filename = os.path.basename(src.path)
 
-    for event in ws_events:
-        filename = os.path.basename(event.src.path)
-        # TODO: Print statement with whitespace but not comments, etc
-        print('{}({}): {}'.format(filename, event.line_number, event.gen_stmt()))
+        lines = Lines(src.statements)
+        line_number = 0
 
+        for line in lines:
+            line_number += 1
+            if line and line[-1][-1].isspace():
+                out = ''.join(line)
+                idx = len(out.rstrip())
+                mesg = out[:idx] + '\033[41m' + out[idx:] + '\033[0m'
 
-def report_trailing_whitespace(statements):
-    events = []
-    for stmt in statements:
-        # TODO: Check for whitespace after line breaks (&)
-        # TODO: Non-statements also should not have whitespace (comments)
-        tail = stmt[-1].tail
-        if '\n' in tail:
-            end = tail[:tail.index('\n')]
-            if end and end[-1] and end[-1][-1] in ' \t':
-                events.append(stmt)
-
-    return events
+                print('{}({}): {}'.format(filename, line_number, mesg))
