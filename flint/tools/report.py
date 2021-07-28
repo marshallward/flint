@@ -4,6 +4,7 @@
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
 import os
+import sys
 
 from flint.lines import Lines
 from flint.project import Project
@@ -28,6 +29,10 @@ def report_issues(project_dirs, include_dirs=None):
             if line and line[-1][-1].isspace():
                 out = ''.join(line)
                 idx = len(out.rstrip())
-                mesg = out[:idx] + '\033[41m' + out[idx:] + '\033[0m'
+
+                if sys.stdout.isatty():
+                    mesg = out[:idx] + '\033[41m' + out[idx:] + '\033[0m'
+                else:
+                    mesg = out + '↵'
 
                 print('{}({}): {}'.format(filename, line_number, mesg))
