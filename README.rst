@@ -28,7 +28,7 @@ limited features.
 `flint report`
    Apply a generic linter and static analysis to a Fortran project.
 
-   Currently, only trailing whitespace is reported.
+   Currently, only trailing whitespace and excessive line length are reported.
 
 `flint gendoc`
    Generates a reST documentation file based on docstrings in the source code.
