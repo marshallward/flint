@@ -10,6 +10,8 @@ from flint.lines import Lines
 from flint.project import Project
 from flint.statement import Statement
 
+MAX_LINE_LENGTH = 120
+
 
 def report_issues(project_dirs, include_dirs=None):
     proj = Project()
@@ -26,13 +28,26 @@ def report_issues(project_dirs, include_dirs=None):
 
         for line in lines:
             line_number += 1
-            if line and line[-1][-1].isspace():
-                out = ''.join(line)
+            out = ''.join(line)
+
+            # Trailing whitespace
+            if line and line[-1] and line[-1][-1].isspace():
                 idx = len(out.rstrip())
 
                 if sys.stdout.isatty():
                     mesg = out[:idx] + '\033[41m' + out[idx:] + '\033[0m'
                 else:
                     mesg = out + '↵'
+
+                print('{}({}): {}'.format(filename, line_number, mesg))
+
+            # Line length
+            if len(out) > MAX_LINE_LENGTH:
+                idx = MAX_LINE_LENGTH
+
+                if sys.stdout.isatty():
+                    mesg = out[:idx] + '\033[31m' + out[idx:] + '\033[0m'
+                else:
+                    mesg = out[:idx] + '|' + out[idx:] + '|'
 
                 print('{}({}): {}'.format(filename, line_number, mesg))

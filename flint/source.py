@@ -3,9 +3,6 @@
 :copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
-import os
-import sys
-
 # Use Python 3 compatible open()
 try:
     from io import open     # Python 2
@@ -14,7 +11,6 @@ except ImportError:
 
 from flint.lexer import Lexer
 from flint.units import get_program_unit_type
-from flint.statement import Statement
 
 
 class Source(object):

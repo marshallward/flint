@@ -21,13 +21,13 @@ class Statement(list):
         footer = ''.join(self[-1].tail)
         tag = self.tag if self.tag else '~'
 
-        s = '{}│ '.format(tag)
-        s += header.rsplit('\n')[-1] if header else ''
-        s += ''.join([str(tok) + ''.join(tok.tail) for tok in self[:-1]])
-        s += str(self[-1])
-        s += ''.join(footer.rsplit('\n', 1)[:-1]) if footer else ''
+        stmt = '{}│ '.format(tag)
+        stmt += header.rsplit('\n')[-1] if header else ''
+        stmt += ''.join([str(tok) + ''.join(tok.tail) for tok in self[:-1]])
+        stmt += str(self[-1])
+        stmt += ''.join(footer.rsplit('\n', 1)[:-1]) if footer else ''
 
-        return s.replace('\n', '\n │ ')
+        return stmt.replace('\n', '\n │ ')
 
     def reformat(self):
         """This is just a placeholder at the moment, but the idea is that this

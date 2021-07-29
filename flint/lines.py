@@ -19,11 +19,10 @@ class Lines(object):
         next_stmt = next(self.statements)
 
         # Create a new list with semantic and liminal tokens in a single list
-        self.buffer = next_stmt[0].head + [
-            tok for tok in itertools.chain(
-                *([t] + t.tail for t in next_stmt)
-            )
-        ]
+        self.buffer = next_stmt[0].head
+        for tok in next_stmt:
+            self.buffer += tok.pp if hasattr(tok, 'pp') else [tok]
+            self.buffer += tok.tail
 
     def __iter__(self):
         return self
@@ -46,11 +45,9 @@ class Lines(object):
                 lines, self.buffer = self.buffer, []
                 return lines
 
-            self.buffer += [
-                tok for tok in itertools.chain(
-                    *([t] + t.tail for t in next_stmt)
-                )
-            ]
+            for tok in next_stmt:
+                self.buffer += tok.pp if hasattr(tok, 'pp') else [tok]
+                self.buffer += tok.tail
 
         idx = self.buffer.index('\n')
         line, self.buffer = self.buffer[:idx], self.buffer[idx+1:]

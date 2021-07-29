@@ -125,20 +125,18 @@ class Lexer(object):
 
                 # The token has been split, try to reconstruct it here.
                 if not lx_split:
-                    stok = statement[-1]
-                    tok = Token(''.join(new_lx[:2]))
+                    # XXX: Not sure why the [:2] slice is here...?
+                    tok = PToken(''.join(new_lx[:2]))
 
-                    tok.head = stok.head
+                    if isinstance(statement[-1], PToken):
+                        pp_toks = statement[-1].pp
+                    else:
+                        pp_toks = [statement[-1]]
 
-                    # Set up the interior liminal tokens (what a paradox!)
-                    prior_tail.append('&')
-
-                    sp = stok.split if stok.split else str(stok)
-                    sp = sp + ''.join(prior_tail) + lexemes[1]
-                    tok.split = sp
+                    tok.pp = pp_toks + prior_tail + ['&', lexemes[1]]
                     prior_tail = []
 
-                    # Currently empty, but may be filled after iteration
+                    tok.head = statement[-1].head
                     tok.tail = prior_tail
 
                     # Assign the new reconstructed token
@@ -183,7 +181,7 @@ class Lexer(object):
                         if ptoks:
                             ptoks[0].head = prior_tail
                             prior_tail = ptoks[-1].tail
-                            ptoks[0].pp = lx
+                            ptoks[0].pp = [lx]
 
                             statement.extend(ptoks)
                     else:

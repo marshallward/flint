@@ -29,8 +29,11 @@ class Scanner(object):
 
         self.prior_delim = None
 
-    def parse(self, line, macros={}):
+    def parse(self, line, macros=None):
         """Tokenize a line of Fortran source."""
+        if macros is None:
+            macros = {}
+
         tokens = []
 
         self.idx = -1   # Bogus value to ensure idx = 0 after first iteration

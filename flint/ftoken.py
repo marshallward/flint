@@ -26,7 +26,6 @@ class Token(str):
         tok = str.__new__(cls, value, *args)
         tok.head = []
         tok.tail = []
-        tok.split = None
         return tok
 
     def __eq__(self, other):
@@ -42,4 +41,4 @@ class PToken(Token):
         self.pp = pp
 
     def __str__(self):
-        return self.pp
+        return ''.join(self.pp)

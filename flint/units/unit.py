@@ -417,7 +417,7 @@ class Unit(object):
             self.statements.append(stmt)
 
     def parse_namelist(self, stmt):
-        assert(stmt[0] == 'namelist')
+        assert stmt[0] == 'namelist'
         tokens = iter(stmt[1:])
 
         tok = next(tokens)

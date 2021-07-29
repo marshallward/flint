@@ -4,7 +4,6 @@
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
 import os
-import sys
 
 from flint.source import Source
 from flint.units import Module
@@ -33,7 +32,7 @@ class Project(object):
             assert os.path.isdir(path)
             self.path = path
 
-            for root, dirs, files in os.walk(self.path):
+            for root, _, files in os.walk(self.path):
                 self.directories.append(root)
 
                 for fname in files:
