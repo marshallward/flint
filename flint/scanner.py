@@ -29,11 +29,8 @@ class Scanner(object):
 
         self.prior_delim = None
 
-    def parse(self, line, macros=None):
+    def parse(self, line):
         """Tokenize a line of Fortran source."""
-        if macros is None:
-            macros = {}
-
         tokens = []
 
         self.idx = -1   # Bogus value to ensure idx = 0 after first iteration
@@ -104,12 +101,6 @@ class Scanner(object):
             else:
                 # This should never happen
                 raise ValueError
-
-            # Modify token if needed
-            if word in macros:
-                # TODO: Multiword substitutions are not tokenized!
-                print('replacing {} with {}'.format(word, macros[word]))
-                word = macros[word]
 
             tokens.append(word)
 
