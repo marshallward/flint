@@ -22,10 +22,10 @@ development, features may change, expand, or be dropped without any notice.
 Commands
 --------
 
-Use `flint` to invoke the CLI.  The following tools have been implemented with
-limited features.
+Use ``flint`` to invoke the CLI.  The following tools have been implemented
+with limited features.
 
-`flint report`
+``flint report``
    Apply a generic linter and static analysis to a Fortran project.
 
    The following tests are included:
@@ -35,17 +35,17 @@ limited features.
    * Tabs within statements
    * Excessive line length (both with and without comments)
 
-`flint gendoc`
+``flint gendoc``
    Generates a reST documentation file based on docstrings in the source code.
    Currently follows the Doxygen convention.
 
-`flint format`
+``flint format``
    In principle, this will provide a formatted version of an input source code.
    Currently, it returns each statement with whitespace and comments removed.
 
-`flint tag`
+``flint tag``
    Return the input files, with statements tagged based on type.  For example,
-   a `module` statement is tagged with the letter `M`.
+   a ``module`` statement is tagged with the letter ``M``.
 
    This is primarily a debugging tool, but might be of interest to users.
 
@@ -56,7 +56,7 @@ Development API
 Flint provides an interface to the details of the source code, which can be
 used to develop tools which are customized to your project.
 
-To parse the source code, create a `Project` and call `parse()` over the
+To parse the source code, create a ``Project`` and call ``parse()`` over the
 top-level directory of the project.
 
 .. code:: python
@@ -66,7 +66,7 @@ top-level directory of the project.
    proj = Project()
    proj.parse('path/to/source')
 
-The `proj` in this example will contain several containers describing the
+The ``proj`` in this example will contain several containers describing the
 contents of the source code.  (*NOTE: This is limited to the current needs of
 the developers, but is expected to grow over time.*)
 
@@ -81,7 +81,7 @@ its derived types.
 
 (More concrete examples to follow)
 
-For more examples, inspect the `flint/tools` directory, which describe the
+For more examples, inspect the ``flint/tools`` directory, which describe the
 command line tools.
 
 
@@ -90,65 +90,68 @@ How it Works
 
 Flint is broken into three stages, which closely resemble compiler frontends.
 
-1. The `Scanner` object takes an input stream and returns the "lexemes", the
+1. The ``Scanner`` object takes an input stream and returns the "lexemes", the
    "words" of the grammar.  No semantic meaning is attached to them at this
    stage.
 
-   One important feature of `Scanner` is that it also preserves the nonsemantic
-   lexemes.  Examples include grouped whitespace, endlines, and comments.
+   One important feature of ``Scanner`` is that it also preserves the
+   nonsemantic lexemes.  Examples include grouped whitespace, endlines, and
+   comments.
 
-   Users would generally not use the `Scanner` since it is a component of the
-   `Lexer`, which is described below.
+   Users would generally not use the ``Scanner`` since it is a component of the
+   ``Lexer``, which is described below.
 
 
-2. The lexemes are passed to the `Lexer`, which is structured as an iterator.
+2. The lexemes are passed to the ``Lexer``, which is structured as an iterator.
    It has three major responsibilities:
 
    1. Lexemes are identified as either semantic or *liminal*, which is our term
       for non-semantic tokens such as whitespace, comments, or statement
-      separators (`;`).
+      separators (``;``).
 
-   2. Lexemes are converted from lines to `Statements`.  A statement may span
-      many lines (`&`), or a line may contain many statements (`;`).  The
-      `Lexer` will resolve these cases and return the next semantic
-      `Statement`.
+   2. Lexemes are converted from lines to ``Statements``.  A statement may span
+      many lines (``&``), or a line may contain many statements (``;``).  The
+      ``Lexer`` will resolve these cases and return the next semantic
+      ``Statement``.
 
    3. Preprocessing is applied at this stage.  Macro substitutions are applied,
       but the original macro name is preserved.
 
-   Each iteration of the lexer returns a `Statement`, which is a `list`
-   subclass containing the `Token` lexemes.
+   Each iteration of the lexer returns a ``Statement``, which is a ``list``
+   subclass containing the ``Token`` lexemes.
 
-   Each `Token` contains a `head` and `tail`, which point to lists of the
+   Each ``Token`` contains a ``head`` and ``tail``, which point to lists of the
    "liminals" inbewteen the semantic lexemes.  This includes whitespace
-   (including endlines), line breaks (`&`), statement terminators (`;`), and
-   comments.  Each `Token` preserves its original case, but uses lowercase for
-   general operations, such as comparison tests or dictionary keys.
+   (including endlines), line breaks (``&``), statement terminators (``;``),
+   and comments.  Each ``Token`` preserves its original case, but uses
+   lowercase for general operations, such as comparison tests or dictionary
+   keys.
 
-   There is also a `PToken` subclass from preprocessed content.  These tokens
+   There is also a ``PToken`` subclass from preprocessed content.  These tokens
    display as the original unprocessed lexemes, but are evaluated as the
    postprocessed value.  For example, macros appear unchanged but use their
-   substituted value in comparison tests.  Values from an `#include` statement
-   appear as empty strings but are returned as semantically valid statements.
+   substituted value in comparison tests.  Values from an ``#include``
+   statement appear as empty strings but are returned as semantically valid
+   statements.
 
    Although we call these "tokens", they are not quite equivalent to the tokens
    produced by a compiler's parser, since we do not yet classify them into, for
    example, identifiers or operators.  There is some advantage in deferring
    this, since most Fortran keywords can also be used as identifiers.
 
-   As with the `Scanner`, most users will never need to interact with the
-   `Lexer`, which is a component of the `Parser` described below.
+   As with the ``Scanner``, most users will never need to interact with the
+   ``Lexer``, which is a component of the ``Parser`` described below.
 
 
-3. Finally, the `Lexer` output is passed to the `Parser`, which interprets the
-   semantic contents to recreate an abstraction of the source code and its
+3. Finally, the ``Lexer`` output is passed to the ``Parser``, which interprets
+   the semantic contents to recreate an abstraction of the source code and its
    components.
 
    This is where modules, subprograms, variables, and other content are
    organized into equivalent data structures which can be probed and traversed
    for further analysis.
 
-   The `Parser` is contained with the `Source` objects, which represent
+   The ``Parser`` is contained with the ``Source`` objects, which represent
    abstractions of the source code (aka "translation units" in compiler-talk).
 
    If working as intended, this should be the only level at which the user is
@@ -167,8 +170,8 @@ we are aware of the following issues.
 * The Fortran expressions themselves remain unparsed beyond identification of
   its tokens.  Further parsing such as AST generation is not yet attempted.
 
-* Expressions inside of an `#if` or `#elif` statement are not parsed, and for
-  simplicity are currently assumed to always be false.
+* Expressions inside of an ``#if`` or ``#elif`` statement are not parsed, and
+  for simplicity are currently assumed to always be false.
 
   To fix this would require a full expression parser, which is not yet
   available.
