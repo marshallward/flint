@@ -8,7 +8,6 @@ from flint.construct import Construct
 from flint.document import is_docstring, is_docgroup, docstrip, Document
 from flint.interface import Interface
 from flint.intrinsics import intrinsic_fns
-from flint.report import Report
 from flint.statement import Statement
 from flint.variable import Variable
 
@@ -75,7 +74,7 @@ class Unit(object):
         'recursive',
     ]
 
-    def __init__(self, report=None):
+    def __init__(self):
         self.name = None
         self.utype = None
         self.debug = False
@@ -85,7 +84,6 @@ class Unit(object):
         self.interfaces = []
         self.derived_types = []
         self.namelists = {}
-        self.report = report if report else Report()
 
         # Call tree properties
         self.used_modules = set()
@@ -398,10 +396,7 @@ class Unit(object):
                     elif self.grp_docstr:
                         var.doc.docstring = self.grp_docstr
 
-                    try:
-                        tok = next(tokens)
-                    except StopIteration:
-                        self.report.error_endcomma()
+                    tok = next(tokens)
 
                     var = Variable(tok, vtype)
                     var.intent = var_intent
