@@ -12,6 +12,26 @@ Flint is in the early stages of development, but currently provides some basic
 functionality.
 
 
+Installation
+============
+
+In most cases, flint can be installed with ``setup.py``
+
+.. code:: python
+
+   python setup.py install --user
+
+If you want to install it in your system directories (and have permission):
+
+.. code:: python
+
+   python setup.py install
+
+This may not work for some users, and more elegant installation methods ought
+to be available in the future, depending on how well-received this project
+becomes.
+
+
 Basic usage
 ===========
 
