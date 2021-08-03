@@ -61,7 +61,7 @@ class Scanner(object):
 
             elif self.char in ('!', '#'):
                 # Abort the iteration and build the comment token
-                word = line[self.idx:-1]
+                word = line[self.idx:].rstrip('\n')
                 self.char = '\n'
 
             elif self.char == '.':
@@ -105,7 +105,8 @@ class Scanner(object):
             tokens.append(word)
 
         # Append the final endline
-        tokens.append(self.char)
+        if line[-1] == '\n':
+            tokens.append(self.char)
 
         return tokens
 
