@@ -8,19 +8,19 @@ import os
 from flint.project import Project
 import flint.units
 
-# Testing...
-from flint.interface import Interface
 
-
-def generate_docs(project_dirs, doc_path):
+def generate_docs(srcdirs, docdir, includes=None, excludes=None):
     proj = Project()
-    proj.parse(*project_dirs)
+    if includes:
+        proj.include_dirs += includes
 
-    os.makedirs(doc_path, exist_ok=True)
+    proj.parse(*srcdirs, excludes=excludes)
+
+    os.makedirs(docdir, exist_ok=True)
 
     for mod in proj.modules:
         doc_fname = mod.name + '.rst'
-        doc_fpath = os.path.join(doc_path, doc_fname)
+        doc_fpath = os.path.join(docdir, doc_fname)
         with open(doc_fpath, 'w') as doc:
             mod_title = mod.name + ' module reference'
             doc.write('=' * len(mod_title) + '\n')

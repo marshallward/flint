@@ -45,18 +45,32 @@ def parse():
         'flags': ('--include', '-I'),
         'parameters': {
             'action': 'append',
+            'dest': 'includes',
             'metavar': 'incdir',
             'type': str,
-            'help': 'Include directories'
+            'help': 'Preprocessor #include directories'
         }
     }
 
+    arg_exclude = {
+        'flags': ('--exclude',),
+        'parameters': {
+            'action': 'append',
+            'dest': 'excludes',
+            'metavar': 'excl',
+            'type': str,
+            'help': 'Exclude directory from project'
+        }
+    }
+
+    # gendoc flags
+    # NOTE: Should we make this mandatory (i.e. positional)?
     arg_docdir = {
         'flags': ('--output', '-o'),
         'parameters': {
             'action': 'store',
             'dest': 'docdir',
-            'default':  None,
+            'default': 'docs',
             'help': 'Documentation output directory',
         }
     }
@@ -66,24 +80,29 @@ def parse():
     format_cmd.set_defaults(run_cmd=flint.tools.format.format_statements)
     format_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
     format_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
+    format_cmd.add_argument(*arg_exclude['flags'], **arg_exclude['parameters'])
 
     # gendoc
     gendoc_cmd = subparsers.add_parser('gendoc')
     gendoc_cmd.set_defaults(run_cmd=flint.tools.gendoc.generate_docs)
     gendoc_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
     gendoc_cmd.add_argument(*arg_docdir['flags'], **arg_docdir['parameters'])
+    gendoc_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
+    gendoc_cmd.add_argument(*arg_exclude['flags'], **arg_exclude['parameters'])
 
     # tag
     tag_cmd = subparsers.add_parser('tag')
     tag_cmd.set_defaults(run_cmd=flint.tools.tag.tag_statements)
     tag_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
     tag_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
+    tag_cmd.add_argument(*arg_exclude['flags'], **arg_exclude['parameters'])
 
     # report
     report_cmd = subparsers.add_parser('report')
     report_cmd.set_defaults(run_cmd=flint.tools.report.report_issues)
     report_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
     report_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
+    report_cmd.add_argument(*arg_exclude['flags'], **arg_exclude['parameters'])
 
     # If no argument given, then print the help page
     if len(sys.argv) == 1:
@@ -94,8 +113,6 @@ def parse():
     args = parser.parse_args()
     run_cmd = args.run_cmd
 
-    # TODO: This is a very rough method for generating a tuple of command
-    #   arguments and will probably be revised.
     run_args = vars(args)
     run_args.pop('run_cmd')
-    run_cmd(*run_args.values())
+    run_cmd(**run_args)

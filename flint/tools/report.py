@@ -14,12 +14,12 @@ MAX_STMT_LENGTH = 132
 MAX_LINE_LENGTH = 512
 
 
-def report_issues(project_dirs, include_dirs=None):
+def report_issues(srcdirs, includes=None, excludes=None):
     proj = Project()
-    if include_dirs:
-        proj.include_dirs = include_dirs + proj.include_dirs
+    if includes:
+        proj.include_dirs += includes
 
-    proj.parse(*project_dirs)
+    proj.parse(*srcdirs, excludes=excludes)
 
     for src in proj.files:
         filename = os.path.basename(src.path)
@@ -33,7 +33,7 @@ def report_issues(project_dirs, include_dirs=None):
             out = ''.join(line)
 
             # NOTE: Each of these tests should be packed up and moved to a
-            #  separate function, or even into a module.  But for now, we 
+            #  separate function, or even into a module.  But for now, we
             #  provide light implementations in this function.
 
             # Trailing whitespace
@@ -104,8 +104,9 @@ def report_issues(project_dirs, include_dirs=None):
                 mesg = 'Tab stop in statement of source code'
                 print('{}({}): {}'.format(filename, line_number, mesg))
                 if sys.stdout.isatty():
-                    print(line[0]
-                        + ''.join(line[1:]).replace('\t','\033[31m\\t\033[0m')
+                    print(
+                        line[0]
+                        + ''.join(line[1:]).replace('\t', '\033[31m\\t\033[0m')
                     )
                 else:
-                    print(line[0] + ''.join(line[1:]).replace('\t','\\t'))
+                    print(line[0] + ''.join(line[1:]).replace('\t', '\\t'))

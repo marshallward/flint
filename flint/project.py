@@ -25,18 +25,28 @@ class Project(object):
 
     # TODO: *paths is generally a bad idea for a public API.  I am only using
     #   it here to get sensible output in my MOM6 tests.
-    # TODO: `exclude` may prove more useful here.
-    def parse(self, *paths):
+    def parse(self, *paths, excludes=None):
+        # Set up the exclusion list
+        if excludes:
+            exclude_dirs = [os.path.normpath(p) for p in excludes]
+        else:
+            exclude_dirs = []
+
         filepaths = []
         for path in paths:
             assert os.path.isdir(path)
             self.path = path
 
-            for root, _, files in os.walk(self.path):
+            for root, dirs, files in os.walk(self.path):
                 self.directories.append(root)
+
+                # Skip any excluded directories
+                if os.path.normpath(root) in exclude_dirs:
+                    continue
 
                 for fname in files:
                     fpath = os.path.join(root, fname)
+
                     if os.path.splitext(fname)[1] in ('.f90', '.F90'):
                         filepaths.append(fpath)
                     else:
