@@ -18,12 +18,10 @@ class Scanner(object):
     punctuation = '=+-*/\\()[]{},:;%&~<>?`|$#@'    # Unhandled Table 3.1 tokens
 
     # Token pairs (syntax and operators)
-    # NOTE: (/ and /) are currently removed, for reasons discussed below.
-    pairs = ('::', '=>', '**', '//', '==', '/=', '<=', '>=')
+    pairs = ('::', '=>', '**', '//', '==', '/=', '<=', '>=', '(/', '/)')
 
     def __init__(self):
         self.characters = None
-        self.prior_char = None
         self.char = None
         self.idx = None
 
@@ -46,8 +44,6 @@ class Scanner(object):
                 while self.char in ' \t':
                     word += self.char
                     self.update_chars()
-            #elif self.char in '"\'' or self.prior_delim
-            #                            and self.char not in '&!'):
             elif self.char in '"\'' or (self.prior_delim and not lc):
                 word = self.parse_string()
                 if self.prior_delim:
@@ -86,18 +82,28 @@ class Scanner(object):
                 word = self.char
                 self.update_chars()
 
-                # NOTE: The following check does not work for (/ and /) because
-                # it produces false tokens inside `operator (/)` declarations.
-                # One potential solution is to check for the `operator` token
-                # inside of `tokens`, but it's a little more complicated...
-                # For now, I just omit (/ and /).
-
-                if self.prior_char + self.char in self.pairs:
-                    word = self.prior_char + self.char
-                    tokens.append(word)
-                    self.update_chars()
-                    continue
-
+                # Test for a valid character pair
+                pair = word + self.char
+                try:
+                    if pair in self.pairs:
+                        if (
+                            pair == '(/' and tokens
+                            and tokens[-1] == 'operator'
+                        ):
+                            pass
+                        elif (
+                            pair == '/)' and tokens
+                            and tokens[-1] == '('
+                            and tokens[-2] == 'operator'
+                        ):
+                            pass
+                        else:
+                            tokens.append(pair)
+                            self.update_chars()
+                            continue
+                except IndexError:
+                    print(line)
+                    raise
             else:
                 # This should never happen
                 raise ValueError
@@ -212,5 +218,5 @@ class Scanner(object):
         return word
 
     def update_chars(self):
-        self.prior_char, self.char = self.char, next(self.characters)
+        self.char = next(self.characters)
         self.idx += 1
