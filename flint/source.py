@@ -10,6 +10,7 @@ except ImportError:
     pass                    # Python 3
 
 from flint.lexer import Lexer
+from flint.lines import Lines
 from flint.units import get_program_unit_type
 
 
@@ -23,6 +24,10 @@ class Source(object):
         # Contents
         self.units = []
         self.statements = []
+
+    @property
+    def lines(self):
+        return Lines(self.statements)
 
     def parse(self, path):
         self.path = path

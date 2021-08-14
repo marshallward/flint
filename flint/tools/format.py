@@ -14,6 +14,6 @@ def format_statements(srcdirs, includes=None, excludes=None):
 
     proj.parse(*srcdirs, excludes=excludes)
 
-    for src in proj.files:
+    for src in proj.sources:
         for stmt in src.statements:
             print(stmt.reformat())

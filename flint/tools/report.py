@@ -21,7 +21,7 @@ def report_issues(srcdirs, includes=None, excludes=None):
 
     proj.parse(*srcdirs, excludes=excludes)
 
-    for src in proj.files:
+    for src in proj.sources:
         filename = os.path.basename(src.path)
 
         lines = Lines(src.statements)
