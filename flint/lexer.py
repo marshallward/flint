@@ -48,13 +48,8 @@ class Lexer(object):
         # TODO: Define as an input?  It will depend on the state of source.
         self.line_number = 0
 
-        # Gather leading liminal tokens before iteration
+        # Gather (and preprocess) leading liminal tokens before iteration
         self.prior_tail = self.get_liminals()
-
-        # Preprocess the liminals preceding the first statement
-        preproc = (lx for lx in self.prior_tail if lx[0] == '#')
-        for pp in preproc:
-            self.preprocess(pp)
 
         # TODO: f90lex integration
         self.current_line = None
@@ -243,6 +238,15 @@ class Lexer(object):
             # - We currently do not track whitespace created by macros.
             # - This also strips the endline.
             pp_lexemes = [lx for lx in lexemes if not lx.isspace()]
+
+            # Preprocessor line continuation handler
+            while pp_lexemes and pp_lexemes[-1] == '\\':
+                next_line = next(self.source).lstrip()
+                lexemes = scanner.parse(next_line + '\n')
+
+                pp_lexemes = pp_lexemes[:-1] + [
+                    lx for lx in lexemes if not lx.isspace()
+                ]
 
             self.defines[macro_name] = pp_lexemes
 

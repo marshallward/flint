@@ -17,9 +17,8 @@ from flint.units import get_program_unit_type
 class Source(object):
     def __init__(self):
         # Configuration
-        self.debug = False
-        self.include_paths = []
         self.path = None
+        self.include_paths = []
 
         # Contents
         self.units = []
@@ -44,4 +43,5 @@ class Source(object):
                     self.units.append(unit)
                     self.statements.extend(unit.statements)
                 except ValueError:
-                    self.statements.append(stmt)
+                    #self.statements.append(stmt)
+                    raise

@@ -10,10 +10,10 @@ from flint.units import Module
 
 
 class Project(object):
+    # TODO: make a control parameter
+    extensions = ['.f90', '.F90']
 
     def __init__(self):
-        self.debug = False
-
         # Source code
         self.path = None
         self.directories = []
@@ -21,6 +21,7 @@ class Project(object):
         self.include_dirs = []
 
         # Program structure
+        self.main = None
         self.modules = []
 
     # TODO: *paths is generally a bad idea for a public API.  I am only using
@@ -47,11 +48,8 @@ class Project(object):
                 for fname in files:
                     fpath = os.path.join(root, fname)
 
-                    if os.path.splitext(fname)[1] in ('.f90', '.F90'):
+                    if os.path.splitext(fname)[1] in Project.extensions:
                         filepaths.append(fpath)
-                    else:
-                        if self.debug:
-                            print('SKIP file: {}'.format(fpath))
 
         for fpath in filepaths:
             f90file = Source()
