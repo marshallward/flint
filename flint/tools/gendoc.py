@@ -5,16 +5,11 @@
 """
 import os
 
-from flint.project import Project
-import flint.units
+import flint
 
 
 def generate_docs(srcdirs, docdir, includes=None, excludes=None):
-    proj = Project()
-    if includes:
-        proj.include_dirs += includes
-
-    proj.parse(*srcdirs, excludes=excludes)
+    proj = flint.parse(*srcdirs, includes=includes, excludes=excludes)
 
     os.makedirs(docdir, exist_ok=True)
 

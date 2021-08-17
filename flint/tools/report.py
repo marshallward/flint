@@ -6,28 +6,21 @@
 import os
 import sys
 
-from flint.lines import Lines
-from flint.project import Project
-from flint.statement import Statement
+import flint
 
 MAX_STMT_LENGTH = 132
 MAX_LINE_LENGTH = 512
 
 
 def report_issues(srcdirs, includes=None, excludes=None):
-    proj = Project()
-    if includes:
-        proj.include_dirs += includes
-
-    proj.parse(*srcdirs, excludes=excludes)
+    proj = flint.parse(*srcdirs, includes=includes, excludes=excludes)
 
     for src in proj.sources:
         filename = os.path.basename(src.path)
 
-        lines = Lines(src.statements)
         line_number = 0
 
-        for line in lines:
+        for line in src.lines:
             line_number += 1
             # XXX: Keep this?  Or just re-compute when needed?
             out = ''.join(line)
