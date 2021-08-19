@@ -7,7 +7,7 @@ from flint.units.subroutine import Subroutine, is_subroutine
 from flint.units.function import Function, is_function
 from flint.units.module import Module, is_module
 from flint.units.submodule import Submodule, is_submodule
-
+from flint.units.program import Program
 
 def get_program_unit_type(line):
     if is_subroutine(line):
@@ -19,5 +19,6 @@ def get_program_unit_type(line):
     elif is_submodule(line):
         return Submodule
     else:
-        # TODO: Submodule, block
-        raise ValueError
+        # At this point, assume that there is either a program-stmt, or has no
+        # declaration and is an implicit main function.
+        return Program

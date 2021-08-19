@@ -3,6 +3,8 @@
 :copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
+import itertools
+
 from flint.calls import get_callable_symbols
 from flint.construct import Construct
 from flint.document import is_docstring, is_docgroup, docstrip, Document
@@ -149,7 +151,6 @@ class Unit(object):
         Program units are generally very similar, but we leave it undefined
         here due to some slight differences.
         """
-        # Parse program unit statements
         self.parse_header(statements.current_line)
         self.parse_specification(statements)
         self.parse_execution(statements)
@@ -174,11 +175,14 @@ class Unit(object):
         Each program unit has a different header format, so this method must be
         overridden by each subclass.
         """
-        try:
+        if any(tok in Unit.unit_types for tok in stmt):
             self.utype = next(w for w in stmt if w in Unit.unit_types)
-        except StopIteration:
-            print(stmt)
-            raise
+            utype_idx = stmt.index(self.utype)
+        else:
+            # Assume anonymous main
+            self.utype = 'program'
+            utype_idx = None
+            # TODO: But now we need to re-parse stmt??
 
         self.doc.header = docstrip(stmt[0].head)
         self.doc.docstring = docstrip(stmt[-1].tail)
@@ -190,9 +194,8 @@ class Unit(object):
         # But for now we just grab the name and ignore the rest.
         # TODO: Could also be that `function` is the only one that is not
         # the first character...
-        utype_idx = stmt.index(self.utype)
 
-        if len(stmt) >= 2:
+        if utype_idx is not None and len(stmt) >= 2:
             # This fails for derived types (which aren't program units and
             # don't belong here but we're stuck with it for now..)
             self.name = stmt[utype_idx + 1]

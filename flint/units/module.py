@@ -3,6 +3,7 @@
 :copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
+from flint.syntax import is_name
 from flint.units.unit import Unit
 
 
@@ -28,10 +29,5 @@ class Module(Unit):
 
 
 def is_module(line):
-    """Return True if the line is a valid module statement."""
-    if len(line) != 2 and line[0] != 'module':
-        return False
-
-    # TODO: line[1] must be a valid name
-
-    return True
+    """Return True if the line is a valid *module-stmt*."""
+    return len(line) == 2 and line[0] == 'module' and is_name(line[1])

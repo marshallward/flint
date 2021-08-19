@@ -36,12 +36,8 @@ class Source(object):
         with open(path, errors='replace') as fpath:
             lexer = Lexer(fpath, self.include_paths)
             for stmt in lexer:
-                try:
-                    unit_type = get_program_unit_type(stmt)
-                    unit = unit_type()
-                    unit.parse(lexer)
-                    self.units.append(unit)
-                    self.statements.extend(unit.statements)
-                except ValueError:
-                    #self.statements.append(stmt)
-                    raise
+                unit_type = get_program_unit_type(stmt)
+                unit = unit_type()
+                unit.parse(lexer)
+                self.units.append(unit)
+                self.statements.extend(unit.statements)
