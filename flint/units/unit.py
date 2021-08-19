@@ -25,13 +25,13 @@ class Unit(object):
         'type',
     ]
 
-    # R507 access-spec
+    # access-spec
     access_specs = [
         'public',
         'private',
     ]
 
-    # R502 attr-spec
+    # attr-spec
     attribute_specs = access_specs + [
         'allocatable',
         'asynchronous',
@@ -50,20 +50,21 @@ class Unit(object):
         'target',
         'value',
         'volatile',
-        'common',       # Deprecated
-        'equivalence',  # Deprecated
+        # Deprecated
+        'common',
+        'equivalence',
     ]
 
     declaration_types = Variable.intrinsic_types + attribute_specs + [
-        'type',         # R426, R403
-        'enum',         # R459 ("ENUM, BIND(C)")
-        'generic',      # R1210
-        'interface',    # R1201
-        'parameter',    # R551
-        'procedure',    # R1213: Procedure declaration statement
-        'data',         # R537
-        'format',       # R1001
-        'entry',        # R1242 (obsolete)
+        'type',
+        'enum',         # ENUM, BIND(C)
+        'generic',
+        'interface',
+        'parameter',
+        'procedure',
+        'data',
+        'format',
+        'entry',
     ]
 
     unit_prefix = Variable.intrinsic_types + [
@@ -207,14 +208,12 @@ class Unit(object):
     # Specification
 
     def parse_specification(self, statements):
-        """Parse the specification part (R204) of a program unit (R202).
+        """Parse the specification-part of a program-unit
 
-        Specification parts contain the following:
-
-        1. USE statements (R1109)
-        2. IMPORT statements (R1211)
-        3. IMPLICIT statements (R205)
-        4. Declaration constructs (R207)
+        [use-stmt]
+          [import-stmt]
+          [implicit-part]
+          [declaration-construct]
         """
         # TODO: `use`, `implicit`, and declarations must appear in that order.
         #       This loop does not check order.
@@ -232,7 +231,11 @@ class Unit(object):
                 break
 
     def parse_use_stmt(self, stmt):
-        """Parse the use statement (R1109) within a specification (R204)."""
+        """Parse a use-stmt from the grammar
+
+        * USE [[, module-nature] ::] module-name [, rename-list]
+        * USE [[, module-nature] ::] module-name, ONLY : [only-list]
+        """
         idx = 1
         if stmt[idx] == ',':
             idx = idx + 2
@@ -276,12 +279,12 @@ class Unit(object):
             stmt.tag = 'd'
             self.statements.append(stmt)
 
-        # R357 (placeholder)
+        # Placeholder
         elif stmt[0] == 'data':
             stmt.tag = 'd'
             self.statements.append(stmt)
 
-        # R551 (placeholder)
+        # Placeholder
         elif stmt[0] == 'parameter':
             stmt.tag = 'p'
             self.statements.append(stmt)
