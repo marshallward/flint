@@ -1,9 +1,10 @@
 =====
 flint
 =====
+
 Flint is a framework for building Fortran code analysis tools in Python.  It
-includes a basic command line tool for linting and code checks, and also
-provides a framework for developing custom tests.
+includes a basic command line tool for linting and code checks, and a more
+general API for developing one's own custom tests.
 
 More generally, flint provides an interface to a Fortran source code project
 within a Python environment.
@@ -76,19 +77,17 @@ Development API
 Flint provides an interface to the details of the source code, which can be
 used to develop tools which are customized to your project.
 
-To parse the source code, create a ``Project`` and call ``parse()`` over the
-top-level directory of the project.
+To parse the source code, call the `parse()` function with the top-level
+directory of your project.
 
 .. code:: python
 
-   from flint.project import Project
+   import flint
 
-   proj = Project()
-   proj.parse('path/to/source')
+   project = flint.parse('path/to/source')
 
-The ``proj`` in this example will contain several containers describing the
-contents of the source code.  (*NOTE: This is limited to the current needs of
-the developers, but is expected to grow over time.*)
+This functions returns a `Project()`, object, which itself contains several
+objects representing the contents and attributes of the source code.
 
 For example, the following code block will return a list of all the modules and
 its derived types.
@@ -98,8 +97,6 @@ its derived types.
    for mod in proj.modules:
        for dtype in mod.derived_types:
            print(dtype.name)
-
-(More concrete examples to follow)
 
 For more examples, inspect the ``flint/tools`` directory, which describe the
 command line tools.
