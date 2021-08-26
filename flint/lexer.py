@@ -14,7 +14,7 @@ import sys
 
 from flint.scanner import Scanner
 from flint.statement import Statement
-from flint.ftoken import Token, PToken
+from flint.token import Token, PToken
 
 
 class Lexer(object):

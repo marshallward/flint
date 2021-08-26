@@ -19,6 +19,7 @@ class Source(object):
         # Configuration
         self.path = None
         self.include_paths = []
+        self.macros = {}
 
         # Contents
         self.units = []
@@ -41,3 +42,6 @@ class Source(object):
                 unit.parse(lexer)
                 self.units.append(unit)
                 self.statements.extend(unit.statements)
+
+            # Transfer macros from the lexer to the source
+            self.macros = lexer.defines
