@@ -14,10 +14,13 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None):
     os.makedirs(docdir, exist_ok=True)
 
     for mod in proj.modules:
-        doc_fname = mod.name + '.rst'
+        # TODO: Check that `External` is not one of the modules!
+        modname = mod.name if mod.name else 'External'
+
+        doc_fname = modname + '.rst'
         doc_fpath = os.path.join(docdir, doc_fname)
         with open(doc_fpath, 'w') as doc:
-            mod_title = mod.name + ' module reference'
+            mod_title = modname + ' module reference'
             doc.write('=' * len(mod_title) + '\n')
             doc.write(mod_title + '\n')
             doc.write('=' * len(mod_title) + '\n')

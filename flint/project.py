@@ -23,6 +23,7 @@ class Project(object):
         # Program structure
         self.main = None
         self.modules = []
+        self.externals = []
 
     # TODO: *paths is generally a bad idea for a public API.  I am only using
     #   it here to get sensible output in my MOM6 tests.
@@ -35,6 +36,12 @@ class Project(object):
 
         filepaths = []
         for path in paths:
+            # Single files can be handled independently
+            if os.path.isfile(path):
+                filepaths.append(path)
+                continue
+
+            # Herein assume directories containing source files
             assert os.path.isdir(path)
             self.path = path
 
@@ -63,6 +70,14 @@ class Project(object):
             for unit in src.units:
                 if isinstance(unit, Module):
                     self.modules.append(unit)
+                else:
+                    self.externals.append(unit)
+
+        # Append the globals as a hidden module
+        extmod = Module()
+        for unit in self.externals:
+            extmod.subprograms.append(unit)
+        self.modules.append(extmod)
 
         # Now gather the callers for each function
         for mod in self.modules:
