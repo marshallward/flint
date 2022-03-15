@@ -70,7 +70,7 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None):
                 doc.write('==================================\n')
                 doc.write('\n')
                 for sub in mod.subprograms:
-                    print_unit(doc, sub, depth)
+                    print_unit(doc, sub, depth, graph=proj.graph)
 
             if mod.derived_types:
                 doc.write('\n')
@@ -90,7 +90,7 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None):
 
 
 # XXX: I should probably split print_unit() from, say, print_type(), etc.
-def print_unit(doc, unit, depth):
+def print_unit(doc, unit, depth, graph=None):
     indent = depth * ' '
 
     doc.write(indent + '.. _' + unit.name + ':\n')
@@ -122,12 +122,14 @@ def print_unit(doc, unit, depth):
         )
         doc.write('\n')
 
-    if unit.callers:
+    if graph and unit.name in graph:
         doc.write('\n')
         doc.write(indent + 'Called by\n')
         doc.write(
             indent + '  '
-            + ' '.join('|{0}|_'.format(caller) for caller in unit.callers)
+            + ' '.join(
+                '|{0}|_'.format(caller) for caller in graph[unit.name]
+            )
             + '\n'
         )
         doc.write('\n')
@@ -136,4 +138,4 @@ def print_unit(doc, unit, depth):
         print_unit(doc, dtype, depth + 2)
 
     for subprog in unit.subprograms:
-        print_unit(doc, subprog, depth + 2)
+        print_unit(doc, subprog, depth + 2, graph=graph)

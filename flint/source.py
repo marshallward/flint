@@ -29,7 +29,7 @@ class Source(object):
     def lines(self):
         return Lines(self.statements)
 
-    def parse(self, path):
+    def parse(self, path, graph=None):
         self.path = path
         # XXX: This chokes on non-unicode strings (e.g. latin-1).
         #  Using errors='replace' gets past these errors but will break
@@ -39,7 +39,8 @@ class Source(object):
             for stmt in lexer:
                 unit_type = get_program_unit_type(stmt)
                 unit = unit_type()
-                unit.parse(lexer)
+
+                unit.parse(lexer, graph=graph)
                 self.units.append(unit)
                 self.statements.extend(unit.statements)
 

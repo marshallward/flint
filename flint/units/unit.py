@@ -90,7 +90,6 @@ class Unit(object):
         # Call tree properties
         self.used_modules = set()
         self.callees = set()
-        self.callers = set()
 
         self.doc = Document()
         # XXX: Does this need to be here?
@@ -131,8 +130,6 @@ class Unit(object):
         else:
             return False
 
-    # Call graph construction
-
     def end_statement(self, stmt):
         assert self.utype
 
@@ -145,7 +142,7 @@ class Unit(object):
             else:
                 return False
 
-    def parse(self, statements):
+    def parse(self, statements, graph=None):
         """Parse the statements of a program unit.
 
         Program units are generally very similar, but we leave it undefined
@@ -154,10 +151,19 @@ class Unit(object):
         self.parse_header(statements.current_line)
         self.parse_specification(statements)
         self.parse_execution(statements)
-        self.parse_subprogram(statements)
+        self.parse_subprogram(statements, graph=graph)
 
         # Remove intrinsic functions from the set of callables
         self.callees = self.callees - set(intrinsic_fns)
+
+        # Assign this unit as caller for each callee
+        if graph is not None:
+            for proc in self.callees:
+                try:
+                    graph[proc].add(self.name)
+                except KeyError:
+                    graph[proc] = set()
+                    graph[proc].add(self.name)
 
         # Finalisation
         stmt = statements.current_line
@@ -481,7 +487,7 @@ class Unit(object):
                 stmt.tag = 'E'
                 self.statements.append(stmt)
 
-    def parse_subprogram(self, statements):
+    def parse_subprogram(self, statements, graph=None):
         stmt = statements.current_line
 
         # XXX: This is an odd code block.  It mostly checks the following:
@@ -509,7 +515,7 @@ class Unit(object):
         for stmt in statements:
             if Unit.statement(stmt):
                 subprog = Unit()
-                subprog.parse(statements)
+                subprog.parse(statements, graph=graph)
                 self.subprograms.append(subprog)
                 self.statements.extend(subprog.statements)
             elif self.end_statement(stmt):

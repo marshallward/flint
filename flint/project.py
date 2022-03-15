@@ -24,6 +24,10 @@ class Project(object):
         self.main = None
         self.modules = []
         self.externals = []
+        # NOTE: Currently just a dict containing procedure names as keys, and
+        #   returns the list of procedure names which call it.
+        # TODO: Replace this with an actual call graph
+        self.graph = {}
 
     # TODO: *paths is generally a bad idea for a public API.  I am only using
     #   it here to get sensible output in my MOM6 tests.
@@ -61,7 +65,7 @@ class Project(object):
         for fpath in filepaths:
             f90file = Source()
             f90file.include_paths = self.directories + self.include_dirs
-            f90file.parse(fpath)
+            f90file.parse(fpath, graph=self.graph)
 
             self.sources.append(f90file)
 
@@ -78,15 +82,3 @@ class Project(object):
         for unit in self.externals:
             extmod.subprograms.append(unit)
         self.modules.append(extmod)
-
-        # Now gather the callers for each function
-        for mod in self.modules:
-            for fn in mod.subprograms:
-                # Check for fn() calls in the other modules
-                for caller_mod in self.modules:
-                    for caller_fn in caller_mod.subprograms:
-                        if fn.name in caller_fn.callees:
-                            cname = caller_fn.name
-                            if (caller_mod != mod):
-                                cname = '{}::{}'.format(caller_mod.name, cname)
-                            fn.callers.add(cname)

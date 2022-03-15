@@ -9,6 +9,7 @@ from flint.units.module import Module, is_module
 from flint.units.submodule import Submodule, is_submodule
 from flint.units.program import Program
 
+
 def get_program_unit_type(line):
     if is_subroutine(line):
         return Subroutine
