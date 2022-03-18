@@ -87,6 +87,9 @@ class Unit(object):
         self.derived_types = []
         self.namelists = {}
 
+        # Internal set of array namespace, to rule out potential external functions
+        self._arrays = set()
+
         # Call tree properties
         self.used_modules = set()
         self.callees = set()
@@ -339,6 +342,7 @@ class Unit(object):
 
             # Set defaults
             var_intent = None
+            is_array = False
 
             while tok == ',':
                 tok = next(tokens)
@@ -361,6 +365,8 @@ class Unit(object):
 
                 # TODO: We mostly skip over this information
                 elif attr == 'dimension':
+                    is_array = True
+
                     tok = next(tokens)
                     assert tok == '('
                     par_count = 1
@@ -371,6 +377,7 @@ class Unit(object):
                         elif tok == ')':
                             par_count -= 1
 
+
                 tok = next(tokens)
 
             if tok == '::':
@@ -378,6 +385,8 @@ class Unit(object):
 
             var = Variable(tok, vtype)
             var.intent = var_intent
+            if is_array:
+                self._arrays.add(var.name)
 
             # First doc attempt: After the variable name
             #   Also, attempt to apply the group docstring if it's been set
@@ -389,7 +398,10 @@ class Unit(object):
             self.variables.append(var)
 
             for tok in tokens:
+                is_inline_array = False
                 if tok == '(':
+                    is_inline_array = True
+
                     while tok != ')':
                         tok = next(tokens)
 
@@ -414,6 +426,8 @@ class Unit(object):
                     if is_docstring(tok.tail):
                         var.doc.docstring = docstrip(tok.tail)
                     self.variables.append(var)
+                    if is_array or is_inline_array:
+                        self._arrays.add(var.name)
 
             # Clear the group docstring
             if is_docstring(stmt[-1].tail) and is_docgroup(stmt[-1].tail):
@@ -449,13 +463,10 @@ class Unit(object):
     # Execution
 
     def parse_execution(self, statements):
-        # TODO: The val = fn(...) test for self.callees is very speculative...
-
         stmt = statements.current_line
 
         # Gather up any callable symbols
-        var_names = [v.name for v in self.variables]
-        self.callees.update(get_callable_symbols(stmt, var_names))
+        self.callees.update(get_callable_symbols(stmt, self._arrays))
 
         # First parse the statement which terminated specification
         # TODO: How to merge with iteration below? Lookahead in parse_spec()?
@@ -472,7 +483,7 @@ class Unit(object):
 
         # Now iterate over the rest of the statements
         for stmt in statements:
-            self.callees.update(get_callable_symbols(stmt, var_names))
+            self.callees.update(get_callable_symbols(stmt, self._arrays))
 
             # Execution constructs
             if Construct.construct_stmt(stmt):

@@ -102,12 +102,10 @@ class Construct(object):
         stmt.tag = 'C'
         self.statements.append(stmt)
 
-        # Generate the list of variable names
-        var_names = [v.name for v in self.unit.variables]
-
         # Parse the contents of the construct
         for stmt in statements:
-            self.unit.callees.update(get_callable_symbols(stmt, var_names))
+            callables = get_callable_symbols(stmt, self.unit._arrays)
+            self.unit.callees.update(get_callable_symbols(stmt, callables))
 
             if Construct.construct_stmt(stmt):
                 cons = Construct(self.unit, depth=self.depth + 1)
