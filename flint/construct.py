@@ -105,7 +105,7 @@ class Construct(object):
         # Parse the contents of the construct
         for stmt in statements:
             callables = get_callable_symbols(stmt, self.unit._arrays)
-            self.unit.callees.update(get_callable_symbols(stmt, callables))
+            self.unit.callees.update(callables)
 
             if Construct.construct_stmt(stmt):
                 cons = Construct(self.unit, depth=self.depth + 1)
