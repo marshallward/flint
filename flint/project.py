@@ -31,7 +31,7 @@ class Project(object):
 
     # TODO: *paths is generally a bad idea for a public API.  I am only using
     #   it here to get sensible output in my MOM6 tests.
-    def parse(self, *paths, excludes=None):
+    def parse(self, *paths, excludes=None, followlinks=False):
         # Set up the exclusion list
         if excludes:
             exclude_dirs = [os.path.normpath(p) for p in excludes]
@@ -49,7 +49,7 @@ class Project(object):
             assert os.path.isdir(path)
             self.path = path
 
-            for root, dirs, files in os.walk(self.path):
+            for root, dirs, files in os.walk(self.path, followlinks=followlinks):
                 self.directories.append(root)
 
                 # Skip any excluded directories
