@@ -77,7 +77,7 @@ Development API
 Flint provides an interface to the details of the source code, which can be
 used to develop tools which are customized to your project.
 
-To parse the source code, call the `parse()` function with the top-level
+To parse the source code, call the ``parse()`` function with the top-level
 directory of your project.
 
 .. code:: python
@@ -86,7 +86,7 @@ directory of your project.
 
    project = flint.parse('path/to/source')
 
-This functions returns a `Project()`, object, which itself contains several
+This functions returns a ``Project`` object, which itself contains several
 objects representing the contents and attributes of the source code.
 
 For example, the following code block will return a list of all the modules and
@@ -112,7 +112,7 @@ Flint is broken into three stages, which closely resemble compiler frontends.
    stage.
 
    One important feature of ``Scanner`` is that it also preserves the
-   nonsemantic lexemes.  Examples include grouped whitespace, endlines, and
+   non-semantic lexemes.  Examples include grouped whitespace, endlines, and
    comments.
 
    Users would generally not use the ``Scanner`` since it is a component of the
@@ -138,7 +138,7 @@ Flint is broken into three stages, which closely resemble compiler frontends.
    subclass containing the ``Token`` lexemes.
 
    Each ``Token`` contains a ``head`` and ``tail``, which point to lists of the
-   "liminals" inbewteen the semantic lexemes.  This includes whitespace
+   "liminals" inbetween the semantic lexemes.  This includes whitespace
    (including endlines), line breaks (``&``), statement terminators (``;``),
    and comments.  Each ``Token`` preserves its original case, but uses
    lowercase for general operations, such as comparison tests or dictionary
@@ -174,8 +174,8 @@ Flint is broken into three stages, which closely resemble compiler frontends.
    If working as intended, this should be the only level at which the user is
    required to interact with the parser.
 
-   This is currently the least developed part of flint, so at this point I will
-   just say to watch this space for future work.
+   This is also the least developed part of flint, so at this point I will just
+   say to watch this space for future work.
 
 
 Unimplemented Features
