@@ -11,7 +11,7 @@ used in the future.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
 import itertools
-
+import string
 
 class Scanner(object):
 
@@ -19,6 +19,10 @@ class Scanner(object):
 
     # Token pairs (syntax and operators)
     pairs = ('::', '=>', '**', '//', '==', '/=', '<=', '>=', '(/', '/)')
+
+    # Word token character set
+    # NOTE: First character cannot be _ or a digit
+    word_charset = string.ascii_letters + string.digits + '_'
 
     def __init__(self):
         self.characters = None
@@ -50,7 +54,7 @@ class Scanner(object):
                     lc = True
 
             elif self.char.isalpha() or self.char == '_':
-                word = self.parse_name(line)
+                word = self.parse_name(line[self.idx:])
 
             elif self.char.isdigit():
                 word = self.parse_numeric()
@@ -116,19 +120,13 @@ class Scanner(object):
 
         return tokens
 
-    def parse_name(self, line):
-        end = self.idx
-        for char in line[self.idx:]:
-            if not char.isalnum() and char != '_':
-                break
-            end += 1
+    def parse_name(self, segment):
+        end = len(segment) - len(segment.lstrip(Scanner.word_charset))
+        word = segment[:end]
 
-        word = line[self.idx:end]
-
-        self.idx = end - 1
         # Update iterator, minus first character which was already read
-        self.characters = itertools.islice(self.characters, len(word) - 1,
-                                           None)
+        self.characters = itertools.islice(self.characters, end - 1, None)
+        self.idx += end - 1
         self.update_chars()
 
         return word
