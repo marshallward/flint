@@ -4,6 +4,7 @@
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
 import os
+import sys
 
 from flint.source import Source
 from flint.units import Module
@@ -65,7 +66,11 @@ class Project(object):
         for fpath in filepaths:
             f90file = Source()
             f90file.include_paths = self.directories + self.include_dirs
-            f90file.parse(fpath, graph=self.graph)
+            try:
+                f90file.parse(fpath, graph=self.graph)
+            except IOError:
+                print('Warning: Unable to open {}'.format(fpath),
+                      file=sys.stderr)
 
             self.sources.append(f90file)
 
