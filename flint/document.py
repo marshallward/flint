@@ -5,7 +5,8 @@
 """
 # TODO: Make this a class with a configurable token set
 
-doc_tokens = ('!<', '!>', '!!')
+doc_tokens = ('!<', '!>', '!!', '!')
+#doc_tokens = ('!<', '!>', '!!')
 grp_tokens = ('!>@{', '!>@}')
 
 
@@ -18,11 +19,19 @@ def is_docgroup(tokens):
 
 
 def docstrip(tokens, oneline=True):
-    # XXX: Replace [3:] with something more robust
     docstr_tokens = [
-        tok[3:] for tok in tokens
+        tok.lstrip('!>< ') for tok in tokens
         if any(tok.startswith(d) for d in doc_tokens)
     ]
+    #docstr_tokens = [
+    #    tok[len(d)+1:]
+    #    for tok in tokens
+    #    for d in doc_tokens if tok.startswith(d)
+    #]
+    #docstr_tokens = [
+    #    tok[len(next(d for d in doc_tokens if tok.startswith(d)))+1:]
+    #    for tok in tokens if is_docstring(tok)
+    #]
 
     # NOTE: When oneline is true, this converts blank lines (converted to empty
     #   strings) to spaces.  It's not really clear what we want here.  If you
