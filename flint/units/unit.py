@@ -302,6 +302,7 @@ class Unit(object):
             self.statements.append(stmt)
 
         else:
+            stmt_vars = []
             tokens = iter(stmt)
 
             tok = next(tokens)
@@ -395,7 +396,7 @@ class Unit(object):
             elif self.grp_docstr:
                 var.doc.docstring = self.grp_docstr
 
-            self.variables.append(var)
+            stmt_vars.append(var)
 
             for tok in tokens:
                 is_inline_array = False
@@ -407,7 +408,7 @@ class Unit(object):
 
                 # Second doc attempt: After the index right parenthesis
                 if is_docstring(tok.tail) and not is_docgroup(tok.tail):
-                    self.variables[-1].doc.docstring = docstrip(tok.tail)
+                    stmt_vars[-1].doc.docstring = docstrip(tok.tail)
                 elif self.grp_docstr:
                     var.doc.docstring = self.grp_docstr
 
@@ -415,7 +416,7 @@ class Unit(object):
                     # Third doc attempt: After the comma
                     # XXX: Can this one be removed?
                     if is_docstring(tok.tail) and not is_docgroup(tok.tail):
-                        self.variables[-1].doc.docstring = docstrip(tok.tail)
+                        stmt_vars[-1].doc.docstring = docstrip(tok.tail)
                     elif self.grp_docstr:
                         var.doc.docstring = self.grp_docstr
 
@@ -425,13 +426,23 @@ class Unit(object):
                     var.intent = var_intent
                     if is_docstring(tok.tail):
                         var.doc.docstring = docstrip(tok.tail)
-                    self.variables.append(var)
+
+                    stmt_vars.append(var)
                     if is_array or is_inline_array:
                         self._arrays.add(var.name)
+
+            # Retroactively apply docstrings to any comma-separated variables
+            stmt_docstring = stmt_vars[-1].doc.docstring
+            for svar in stmt_vars[:-1]:
+                if stmt_docstring and not svar.doc.docstring:
+                    svar.doc.docstring = stmt_docstring
 
             # Clear the group docstring
             if is_docstring(stmt[-1].tail) and is_docgroup(stmt[-1].tail):
                 self.grp_docstr = None
+
+            # Transfer variablest to the AST
+            self.variables.extend(stmt_vars)
 
             stmt.tag = 'D'
             self.statements.append(stmt)
