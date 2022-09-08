@@ -45,4 +45,5 @@ class Source(object):
                 self.statements.extend(unit.statements)
 
             # Transfer macros from the lexer to the source
-            self.macros = lexer.defines
+            self.macros = lexer.macros
+            self.fn_macros = lexer.fn_macros

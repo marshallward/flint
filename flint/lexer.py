@@ -34,7 +34,8 @@ class Lexer(object):
 
         # Preprocessor macros
         # NOTE: Macros are applied in order of #define, so use OrderedDict
-        self.defines = OrderedDict()
+        self.macros = OrderedDict()
+        self.fn_macros = OrderedDict()
 
         # Parser flow control
         # XXX: This probably does not need to be an object property, and
@@ -171,14 +172,15 @@ class Lexer(object):
                 else:
                     # NOTE: This is probably happening later than it should;
                     #   Preprocessing is handled in liminals!
-                    if lx in self.defines:
-                        ptoks = [PToken(lxm) for lxm in self.defines[lx]]
+                    if lx in self.macros:
+                        ptoks = [PToken(lxm) for lxm in self.macros[lx]]
                         if ptoks:
                             ptoks[0].head = prior_tail
                             prior_tail = ptoks[-1].tail
                             ptoks[0].pp = [lx]
 
                             statement.extend(ptoks)
+                    # TODO: elif lx in self.fn_macros?
                     else:
                         tok = Token(lx)
                         tok.head = prior_tail
@@ -221,18 +223,18 @@ class Lexer(object):
         assert line[0] == '#'
         line = line[1:]
 
-        words = line.strip().split(None, 2)
+        words = line.strip().split(None, 1)
         directive = words[0]
 
         # Macros
 
         if directive == 'define':
-            macro_name = words[1]
-            replacement = words[2] if len(words) == 3 else ''
+            #macro_name = words[1]
+            #replacement = words[2] if len(words) == 3 else ''
 
             # My berk scanner needs an endline
             scanner = Scanner()
-            lexemes = scanner.parse(replacement + '\n')
+            lexemes = scanner.parse(words[1] + '\n')
 
             # NOTES:
             # - We currently do not track whitespace created by macros.
@@ -248,12 +250,25 @@ class Lexer(object):
                     lx for lx in lexemes if not lx.isspace()
                 ]
 
-            self.defines[macro_name] = pp_lexemes
+            macro_name = pp_lexemes[0]
+
+            # NOTE: Use `lexemes` to ensure no whitespace between name and `(`.
+            if len(lexemes) > 1 and lexemes[1] == '(':
+                # Function-like macro
+                rpar_idx = pp_lexemes.index(')')
+                macro_vars = [lx for lx in pp_lexemes[2:rpar_idx] if lx != ',']
+                macro_toks = pp_lexemes[rpar_idx+1:]
+
+                self.fn_macros[macro_name] = (macro_vars, macro_toks)
+            else:
+                # Object-like macro
+                self.macros[macro_name] = pp_lexemes
 
         elif directive == 'undef':
             identifier = words[1]
             try:
-                self.defines.pop(identifier)
+                self.macros.pop(identifier)
+                # self.fn_macros?
             except KeyError:
                 # Useful, but perhaps too aggressive.
                 # print('f90lex: warning: unset identifier {} was never '
@@ -280,7 +295,7 @@ class Lexer(object):
                 self.pp_depth += 1
             else:
                 macro = line.split(None, 1)[1]
-                if macro not in self.defines:
+                if macro not in self.macros:
                     self.stop_parsing = True
 
         elif directive == 'ifndef':
@@ -288,7 +303,7 @@ class Lexer(object):
                 self.pp_depth += 1
             else:
                 macro = line.split(None, 1)[1]
-                if macro in self.defines:
+                if macro in self.macros:
                     self.stop_parsing = True
 
         elif directive == 'else':
@@ -327,7 +342,8 @@ class Lexer(object):
             if inc_path:
                 with open(inc_path) as inc:
                     lexer = Lexer(inc, self.include_paths)
-                    lexer.defines = self.defines
+                    lexer.macros = self.macros
+                    lexer.fn_macros = self.fn_macros
                     self.includes = deque()
                     for stmt in lexer:
                         self.includes.append(stmt)
