@@ -9,25 +9,48 @@ import flint
 debug = False
 #debug = True
 
-proj = flint.parse('samples/mom6')
+def main():
+    var_dim_missing = {}
 
-for mod in proj.modules:
-    print(79 * '=')
-    mod_title = mod.name if mod.name else 'External'
-    print(mod_title)
-    print(len(mod_title) * '=')
+    proj = flint.parse('samples/mom6',
+                       excludes='samples/mom6/src/equation_of_state/TEOS10')
 
-    for proc in mod.subprograms:
-        for var in proc.variables:
-            if var.type != 'real':
-                continue
+    for src in proj.sources:
+        vmiss = []
+        for unit in src.units:
 
-            # Not a great test, but syntax is probably not formal anyway...
-            dim_l = var.doc.docstring.find('[')
-            dim_r = var.doc.docstring.find(']') + 1
+            # First parse the module variables
+            for var in unit.variables:
+                # This will have to be a function
 
-            dim_str = var.doc.docstring[dim_l:dim_r]
+                # Only parse real variables
+                if var.type != 'real':
+                    continue
 
-            print('{}: {}'.format(var.name, dim_str))
-            if debug:
-                print(4*' ' + var.doc.docstring)
+                # Weak test, but good enough for now
+                dim_l = var.doc.docstring.find('[')
+                dim_r = var.doc.docstring.find(']') + 1
+                dim_str = var.doc.docstring[dim_l:dim_r]
+
+                if debug:
+                    print('{}: {}'.format(src.path, var.doc.docstring))
+
+                if not dim_str:
+                    vmiss.append(var)
+
+            # TODO: Now repeat through each subprogram (subroutines, func, etc)
+
+        if vmiss:
+            var_dim_missing[src] = vmiss
+
+    # Print output
+    for src in var_dim_missing:
+        print(79 * '=')
+        print(src.path)
+        print(len(src.path) * '=')
+
+        for var in var_dim_missing[src]:
+            print(var.name)
+
+if __name__ == '__main__':
+    main()
