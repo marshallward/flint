@@ -38,7 +38,40 @@ def main():
                 if not dim_str:
                     vmiss.append(var)
 
-            # TODO: Now repeat through each subprogram (subroutines, func, etc)
+            # TODO: Derived types
+            for dtype in unit.derived_types:
+                # Durr
+                for var in dtype.variables:
+                    if var.type != 'real':
+                        continue
+
+                    # Weak test, but good enough for now
+                    dim_l = var.doc.docstring.find('[')
+                    dim_r = var.doc.docstring.find(']') + 1
+                    dim_str = var.doc.docstring[dim_l:dim_r]
+
+                    if debug:
+                        print('{}: {}'.format(src.path, var.doc.docstring))
+
+                    if not dim_str:
+                        vmiss.append(var)
+
+            for prog in unit.subprograms:
+                # Durr x2
+                for var in prog.variables:
+                    if var.type != 'real':
+                        continue
+
+                    # Weak test, but good enough for now
+                    dim_l = var.doc.docstring.find('[')
+                    dim_r = var.doc.docstring.find(']') + 1
+                    dim_str = var.doc.docstring[dim_l:dim_r]
+
+                    if debug:
+                        print('{}: {}'.format(src.path, var.doc.docstring))
+
+                    if not dim_str:
+                        vmiss.append(var)
 
         if vmiss:
             var_dim_missing[src] = vmiss
@@ -47,7 +80,7 @@ def main():
     for src in var_dim_missing:
         print(79 * '=')
         print(src.path)
-        print(len(src.path) * '=')
+        print(len(src.path) * '-')
 
         for var in var_dim_missing[src]:
             print(var.name)
