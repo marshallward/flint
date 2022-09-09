@@ -400,11 +400,17 @@ class Unit(object):
             for tok in tokens:
                 is_inline_array = False
                 if tok == '(':
-                    # TODO: This needs reference counting, as before ::
                     is_inline_array = True
 
-                    while tok != ')':
+                    #while tok != ')':
+                    #    tok = next(tokens)
+                    par_count = 1
+                    while par_count > 0:
                         tok = next(tokens)
+                        if tok == '(':
+                            par_count += 1
+                        elif tok == ')':
+                            par_count -= 1
 
                 # Skip over potential array assignments
                 if tok == '(/':
