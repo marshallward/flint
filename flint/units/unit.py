@@ -378,7 +378,6 @@ class Unit(object):
                         elif tok == ')':
                             par_count -= 1
 
-
                 tok = next(tokens)
 
             if tok == '::':
@@ -401,9 +400,15 @@ class Unit(object):
             for tok in tokens:
                 is_inline_array = False
                 if tok == '(':
+                    # TODO: This needs reference counting, as before ::
                     is_inline_array = True
 
                     while tok != ')':
+                        tok = next(tokens)
+
+                # Skip over potential array assignments
+                if tok == '(/':
+                    while tok != '/)':
                         tok = next(tokens)
 
                 # Second doc attempt: After the index right parenthesis
