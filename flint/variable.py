@@ -25,4 +25,5 @@ class Variable(object):
         self.attributes = []
         self.refs = 0
 
+        self.stmt = None
         self.doc = Document()

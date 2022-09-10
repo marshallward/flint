@@ -385,6 +385,8 @@ class Unit(object):
 
             var = Variable(tok, vtype)
             var.intent = var_intent
+            var.stmt = stmt
+
             if is_array:
                 self._arrays.add(var.name)
 
@@ -435,6 +437,8 @@ class Unit(object):
 
                     var = Variable(tok, vtype)
                     var.intent = var_intent
+                    var.stmt = stmt
+
                     if is_docstring(tok.tail):
                         var.doc.docstring = docstrip(tok.tail)
 
