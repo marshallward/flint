@@ -83,7 +83,7 @@ def main():
         print(len(src.path) * '-')
 
         for var in var_dim_missing[src]:
-            print(var.name)
+            print('L{}: {}'.format(var.stmt.line_number, var.name))
 
 if __name__ == '__main__':
     main()
