@@ -350,14 +350,16 @@ class Lexer(object):
                     for stmt in lexer:
                         self.includes.append(stmt)
             else:
-                print('f90lex: Include file {} not found; skipping.'
-                      ''.format(inc_fname), file=sys.stderr)
+                filename = getattr(self.source, 'name', '<unknown>')
+                print('flint: {}: Include file {} not found; skipping.'
+                      ''.format(filename, inc_fname), file=sys.stderr)
 
         # What else is there?  #pragma, #line, #error, ... ?
 
         else:
-            print('f90lex: unsupported preprocess directive: {}'
-                  ''.format(line).rstrip(), file=sys.stderr)
+            filename = getattr(self.source, 'name', '<unknown>')
+            print('flint: {}: unsupported preprocess directive: {}'
+                  ''.format(filename, line).rstrip(), file=sys.stderr)
 
 
 def is_liminal(lexeme):

@@ -69,8 +69,9 @@ class Project(object):
             try:
                 f90file.parse(fpath, graph=self.graph)
             except IOError:
-                print('Warning: Unable to open {}'.format(fpath),
+                print('flint: {}: Unable to open file; skipping.'.format(fpath),
                       file=sys.stderr)
+                continue
 
             self.sources.append(f90file)
 
