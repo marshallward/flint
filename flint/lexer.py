@@ -75,8 +75,8 @@ class Lexer(object):
         # If no self.includes, tokenize as usual
         prior_tail = self.prior_tail
 
-        statement = Statement()
-        statement.line_number = self.line_number
+        statement_tokens = []
+        line_number = self.line_number
 
         line_continue = True
         while line_continue:
@@ -116,7 +116,7 @@ class Lexer(object):
 
                 # If no separating whitespace, try to split via Scanner
                 if not lx_split:
-                    new_lx = resplit_tokens(statement[-1], lexemes[1])
+                    new_lx = resplit_tokens(statement_tokens[-1], lexemes[1])
                     lx_split = len(new_lx) > 1
 
                 # The token has been split, try to reconstruct it here.
@@ -124,19 +124,19 @@ class Lexer(object):
                     # XXX: Not sure why the [:2] slice is here...?
                     tok = PToken(''.join(new_lx[:2]))
 
-                    if isinstance(statement[-1], PToken):
-                        pp_toks = statement[-1].pp
+                    if isinstance(statement_tokens[-1], PToken):
+                        pp_toks = statement_tokens[-1].pp
                     else:
-                        pp_toks = [statement[-1]]
+                        pp_toks = [statement_tokens[-1]]
 
                     tok.pp = pp_toks + prior_tail + ['&', lexemes[1]]
                     prior_tail = []
 
-                    tok.head = statement[-1].head
+                    tok.head = statement_tokens[-1].head
                     tok.tail = prior_tail
 
                     # Assign the new reconstructed token
-                    statement[-1] = tok
+                    statement_tokens[-1] = tok
                     lexemes = lexemes[2:]
                 else:
                     # Store '&' as liminal and proceed as normal
@@ -179,19 +179,21 @@ class Lexer(object):
                             prior_tail = ptoks[-1].tail
                             ptoks[0].pp = [lx]
 
-                            statement.extend(ptoks)
+                            statement_tokens.extend(ptoks)
                     # TODO: elif lx in self.fn_macros?
                     else:
                         tok = Token(lx)
                         tok.head = prior_tail
 
-                        statement.append(tok)
+                        statement_tokens.append(tok)
                         prior_tail = tok.tail
 
         if not self.cache:
-            statement[-1].tail.extend(self.get_liminals())
-            self.prior_tail = statement[-1].tail
+            statement_tokens[-1].tail.extend(self.get_liminals())
+            self.prior_tail = statement_tokens[-1].tail
 
+        statement = Statement(statement_tokens)
+        statement.line_number = line_number
         self.current_line = statement
         return statement
 
