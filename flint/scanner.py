@@ -7,214 +7,316 @@ We use an object here because there is some "state" regarding line continuation
 of split strings.  But more modular design options are possible and could be
 used in the future.
 
-:copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
+:copyright: Copyright 2026 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
-import itertools
 import string
 
 class Scanner(object):
 
-    punctuation = '=+-*/\\()[]{},:;%&~<>?`|$#@'    # Unhandled Table 3.1 tokens
+    # The Fortran Alphabet
+    alpha = string.ascii_letters
+    digit = string.digits
+    alnum = alpha + digit + '_'
+    blank = string.whitespace.replace('\n', '')
+    special = '=+-*/\\()[]{},.:;!"%&~<>?\'`^|$#@\n'  # Special characters
+    charset = alnum + blank + special
+    
+    
+    # Function to remove characters from strings
+    def notchar(chars, ref=charset):
+        base = ref
+        for c in chars:
+            base = ''.join(base.split(c))
+        return base
 
-    # Token pairs (syntax and operators)
-    pairs = ('::', '=>', '**', '//', '==', '/=', '<=', '>=', '(/', '/)')
 
-    # Word token character set
-    # NOTE: First character cannot be _ or a digit
-    word_charset = string.ascii_letters + string.digits + '_'
+    # Quasi-DFA scanner
+    # (Still has some NFA bits to it, need to work them out...)
+    M = {
+        # Start state
+        'start': dict(
+            **{c: 'blank' for c in blank},
+            **{c: 'id' for c in alpha + '_'},
+            **{c: 'num' for c in digit},
+            **{'.': 'dec'},
+            **{"'": 'str_a'},
+            **{'"': 'str_q'},
+            **{'!': 'cmt'},
+            **{'#': 'cmt'},
+            **{':': 'op_colon'},
+            **{'=': 'op_equal'},
+            **{'*': 'op_star'},
+            **{'/': 'op_slash'},
+            **{'<': 'op_lt_gt'},
+            **{'>': 'op_lt_gt'},
+            **{'(': 'op_lpar'},
+            **{c: 'op' for c in notchar('."\'!#:=*/<>(', special)},
+        ),
+        # Identifiers (keywords, functions, variables, ...)
+        # NOTE: We permit identifiers to start with _ for preprocessor support
+        'id': dict(
+            **{c: 'id' for c in alnum},
+            **{c: 'end' for c in blank + special},
+        ),
+        # Blanks
+        # NOTE: Endlines are not handled as blanks, but as punctuation
+        'blank': dict(
+            **{c: 'blank' for c in blank},
+            **{c: 'end' for c in alnum + special},
+        ),
+        # NOTE: Strings can also accept unicode characters, may need defaultdict()
+        # Apostrophe string
+        'str_a': dict(
+            **{c: 'str_a' for c in notchar("'&")},
+            **{'&': 'str_a_lc'},
+            **{"'": 'str_a_esc'},
+        ),
+        # Apostrophe (escape)
+        'str_a_esc': dict(
+            **{"'": 'str_a'},
+            **{c: 'end' for c in notchar("'")},
+        ),
+        'str_a_lc': dict(
+            **{c: 'str_a_lc' for c in blank + '&'},
+            **{"'": 'str_a_esc'},
+            **{'\n': 'str_a_lc_end'},
+            **{c: 'str_a' for c in notchar(blank + "&'\n")},
+        ),
+        # Quote string
+        'str_q': dict(
+            **{c: 'str_q' for c in notchar('"&')},
+            **{'&': 'str_q_lc'},
+            **{'"': 'str_q_esc'},
+        ),
+        # Quote (escape)
+        'str_q_esc': dict(
+            **{'"': 'str_q'},
+            **{c: 'end' for c in notchar('"')},
+        ),
+        'str_q_lc': dict(
+            **{c: 'str_q_lc' for c in blank + '&'},
+            **{'"': 'str_q_esc'},
+            **{'\n': 'str_q_lc_end'},
+            **{c: 'str_q' for c in notchar(blank + '&"\n')},
+        ),
+        # Decimal mark
+        'dec': dict(
+            **{c: 'num_frac' for c in digit},
+            **{c: 'op_keyword' for c in alpha},
+            **{c: 'end' for c in notchar(digit + alpha)},
+        ),
+        # Numeric: Leading digit
+        'num': dict(
+            **{c: 'num' for c in digit},
+            **{'.': 'num_frac'},
+            **{c: 'num_float' for c in 'eEdD'},
+            **{'_': 'op_kind'},
+            **{c: 'end' for c in notchar(digit + '._eEdD')},
+        ),
+        # Kind delimiter
+        # NOTE: This binds the kind to the literal.
+        #   I may want to split them, but it will require a backreference.
+        'op_kind': dict(
+            **{c: 'id' for c in alpha},
+            **{c: 'num_int' for c in digit},
+        ),
+        'num_int': dict(
+            **{c: 'num_int' for c in digit},
+            **{c: 'end' for c in notchar(digit)},
+        ),
+        # Numeric: fractional digits
+        'num_frac': dict(
+            **{c: 'num_frac' for c in digit},
+            **{c: 'num_float' for c in 'eEdD'},
+            **{c: 'num_op_kw' for c in notchar('eEdD', alpha)},
+            **{'_': 'op_kind'},
+            **{c: 'end' for c in notchar(alnum)},
+        ),
+        # Numeric: Float exponent sign
+        'num_float': dict(
+            **{c: 'num_float_sign' for c in '+-'},
+            **{c: 'num_float_exp' for c in digit},
+            **{c: 'num_op_kw' for c in alpha + '_'},
+            **{c: 'end' for c in notchar(alnum + '+-')},
+        ),
+        # Numeric: Signed exponent lead
+        'num_float_sign': dict(
+            **{c: 'num_float_exp' for c in digit},
+            **{c: 'end' for c in notchar(digit)},
+        ),
+        # Numeric: Signed exponent lead
+        'num_float_exp': dict(
+            **{c: 'num_float_exp' for c in digit},
+            **{'_': 'op_kind'},
+            **{c: 'end' for c in notchar(digit + '_')},
+        ),
+        # Numeric: integer followed by a keyword operator (e.g. 1.and.)
+        # NOTE: This is a backreference
+        'num_op_kw': dict(
+            **{c: 'num_op_kw' for c in alpha},
+            **{'.': 'num_op_kw_end'},
+        ),
+        # Single-character tokens (operators, declaration, etc)
+        'op': dict(
+            **{c: 'end' for c in charset},
+        ),
+        # Two-character tokens
+        'op_colon': dict(
+            **{':': 'op'},
+            **{c: 'end' for c in notchar(':')},
+        ),
+        'op_equal': dict(
+            **{'>': 'op'},
+            **{'=': 'op'},
+            **{c: 'end' for c in notchar('>=')},
+        ),
+        'op_star': dict(
+            **{'*': 'op'},
+            **{c: 'end' for c in notchar('*')},
+        ),
+        'op_slash': dict(
+            **{'/': 'op'},
+            **{'=': 'op'},
+            **{')': 'op'},
+            **{c: 'end' for c in notchar('/=)')},
+        ),
+        'op_lt_gt': dict(
+            **{'=': 'op'},
+            **{c: 'end' for c in notchar('=')},
+        ),
+        # Backreference: (/1,2/) vs (/) vs (/=)
+        'op_lpar': dict(
+            **{'/': 'op_def_slash'},
+            **{c: 'end' for c in notchar('/')},
+        ),
+        'op_keyword': dict(
+            **{'.': 'op'},
+            **{c: 'op_keyword' for c in alpha},
+        ),
+        # This doesn't actually get used more than once, but it is correct.
+        'cmt': dict(
+            **{'\n': 'end'},
+            **{c: 'cmt' for c in notchar('\n')},
+        ),
+    }
 
     def __init__(self):
-        self.characters = None
-        self.char = None
-        self.idx = None
+        self.delim = None
 
-        self.prior_delim = None
+    @property
+    def prior_delim(self):
+        return self.delim
 
+    @prior_delim.setter
+    def prior_delim(self, value):
+        self.delim = value
+    
     def parse(self, line):
-        """Tokenize a line of Fortran source."""
-        tokens = []
-
-        self.idx = -1   # Bogus value to ensure idx = 0 after first iteration
-        self.characters = iter(line)
-        self.update_chars()
-
-        # String line continuation?
-        lc = True if self.prior_delim else False
-
-        while self.char != '\n':
-            word = ''
-            if self.char in ' \t':
-                while self.char in ' \t':
-                    word += self.char
-                    self.update_chars()
-            elif self.char in '"\'' or (self.prior_delim and not lc):
-                word = self.parse_string()
-                if self.prior_delim:
-                    lc = True
-
-            elif self.char.isalpha() or self.char == '_':
-                word = self.parse_name(line[self.idx:])
-
-            elif self.char.isdigit():
-                word = self.parse_numeric()
-
-            elif self.char in ('!', '#'):
-                # Abort the iteration and build the comment token
-                word = line[self.idx:].rstrip('\n')
-                self.char = '\n'
-
-            elif self.char == '.':
-                self.update_chars()
-                if self.char.isdigit():
-                    frac = self.parse_numeric()
-                    word = '.' + frac
-                else:
-                    word = '.'
-                    while self.char.isalpha():
-                        word += self.char
-                        self.update_chars()
-                    if self.char == '.':
-                        word += self.char
-                        self.update_chars()
-
-            elif self.char in Scanner.punctuation:
-                # Turn off leading line continuation
-                if self.char == '&':
-                    lc = False
-
-                word = self.char
-                self.update_chars()
-
-                # Test for a valid character pair
-                pair = word + self.char
-                try:
-                    if pair in self.pairs:
-                        if (
-                            pair == '(/' and tokens
-                            and tokens[-1] == 'operator'
-                        ):
-                            pass
-                        elif (
-                            pair == '/)' and tokens
-                            and tokens[-1] == '('
-                            and tokens[-2] == 'operator'
-                        ):
-                            pass
-                        else:
-                            tokens.append(pair)
-                            self.update_chars()
-                            continue
-                except IndexError:
-                    print(line)
-                    raise
-            else:
-                # This should never happen
-                raise ValueError
-
-            tokens.append(word)
-
-        # Append the final endline
-        if line[-1] == '\n':
-            tokens.append(self.char)
-
-        return tokens
-
-    def parse_name(self, segment):
-        end = len(segment) - len(segment.lstrip(Scanner.word_charset))
-        word = segment[:end]
-
-        # Update iterator, minus first character which was already read
-        self.characters = itertools.islice(self.characters, end - 1, None)
-        self.idx += end - 1
-        self.update_chars()
-
-        return word
-
-    def parse_string(self):
-        word = ''
-
-        if self.prior_delim:
-            delim = self.prior_delim
-            self.prior_delim = None
+        lexemes = []
+        ileft = 0
+    
+        # Determine if this is a line-continued string
+        if self.delim:
+            # NOTE: This code block is a bit deceptive.
+            #
+            # It does construct the lexeme preceding a line-continued string,
+            # but the DFA still iterates through these chars.  The updated
+            # ileft ensures that they are omitted frmo the string lexeme.
+            #
+            # It is probably not very efficient, but seems faster than yet
+            # another if-block inside of the DFA iteration.
+    
+            state = self.delim
+            self.delim = None
+    
+            ileft = len(line) - len(line.lstrip())
+            lexemes.append(line[:ileft])
+    
+            if line[ileft] == '&':
+                lexemes.append('&')
+                ileft += 1
         else:
-            delim = self.char
-            word += self.char
-            self.update_chars()
-
-        next_delim = None
-        while True:
-            if self.char == '&':
-                self.characters, lookahead = itertools.tee(self.characters)
-
-                # Skip any whitespace after '&'
-                # TODO: probably a better way here...
-                c = next(lookahead)
-                while c in ' \t':
-                    c = next(lookahead)
-
-                # If end of line, then this is a line continuation.
-                # Otherwise, it is part of the string (or a syntax error)
-                if c == '\n':
-                    next_delim = delim
-                    break
+            state = 'start'
+    
+        for idx, char in enumerate(line):
+            try:
+                state = Scanner.M[state][char]
+            except KeyError:
+                # Quoted strings may contain characters outside Fortran's
+                # lexical character set, such as unicode text in messages.
+                if state in ('str_a', 'str_q'):
+                    pass
+                elif state == 'str_a_lc':
+                    state = 'str_a'
+                elif state == 'str_q_lc':
+                    state = 'str_q'
                 else:
-                    word += '&'
+                    raise
 
-                self.update_chars()
+            # Traversing these if-blocks is actually quite expensive!
+            # By using this first "escape" block and by ordering these from
+            # most to least likely, we can improve the speed by ~20%.
 
-            elif self.char == delim:
-                # Check for escaped delimiters
-                # TODO: Use a lookahead
-                self.update_chars()
-                if self.char == delim:
-                    word += 2 * delim
-                    self.update_chars()
+            if state not in (
+                'end', 'cmt', 'op_def_slash', 'str_a_lc_end', 'str_q_lc_end', 'num_op_kw_end',
+            ):
+                continue
+
+            elif (state == 'end'):
+                lexemes.append(line[ileft:idx])
+                ileft = idx
+
+                # "Lookback" by re-evaluating char
+                state = Scanner.M['start'][char]
+
+            # Not a backtrack, but we can infer the lexeme immediately
+            elif (state == 'cmt'):
+                if line[-1] == '\n':
+                    lexemes.append(line[ileft:len(line)-1])
+                    ileft = len(line) - 1
                 else:
-                    word += delim
-                    break
-            else:
-                word += self.char
-                self.update_chars()
+                    lexemes.append(line[ileft:len(line)])
+                    ileft = len(line)
+                break
 
-        self.prior_delim = next_delim
+            # Backtracking cases
+            # (Actually a lookahead!  Rewrite as a backreference?)
+            elif state == 'op_def_slash':
+                lookahead = line[idx+1:].strip()
+                if lookahead and lookahead[0] == ')':
+                    lexemes.append(line[ileft:idx])
+                    ileft = idx
+                    state = 'op'
+                elif idx + 1 < len(line) and line[idx+1] in '=/':
+                    lexemes.append(line[ileft:idx])
+                    ileft = idx
+                    state = 'op_slash'
+                else:
+                    state = 'op'
 
-        return word
 
-    def parse_numeric(self):
-        word = ''
-        frac = False
+            elif state in ('str_a_lc_end', 'str_q_lc_end'):
+                lc_tok = line.rindex('&')
+                lexemes.append(line[ileft:lc_tok])
+                ileft = lc_tok
 
-        while self.char.isdigit() or (self.char == '.' and not frac):
-            # Only allow one decimal point
-            if self.char == '.':
-                frac = True
-            word += self.char
-            self.update_chars()
+                if (lc_tok + 1 < idx):
+                    lexemes.append(line[ileft:lc_tok+1])
+                    ileft = lc_tok + 1
 
-        # Check for float exponent
-        if self.char in 'eEdD':
-            word += self.char
-            self.update_chars()
-            if self.char in '+-':
-                word += self.char
-                self.update_chars()
-            while self.char.isdigit():
-                word += self.char
-                self.update_chars()
+                lexemes.append(line[ileft:idx])
+                ileft = idx
 
-        if self.char == '_':
-            word += self.char
-            self.update_chars()
-            named = self.char.isalpha()
+                # XXX: make this more explicit (e.g. dict)
+                self.delim = state[:5]
 
-            while (self.char.isdigit() or
-                   (self.char.isalpha() or self.char == '_' and named)):
-                word += self.char
-                self.update_chars()
-
-        return word
-
-    def update_chars(self):
-        self.char = next(self.characters)
-        self.idx += 1
+            elif state == 'num_op_kw_end':
+                dec_tok = line[:idx].rindex('.')
+                lexemes.append(line[ileft:dec_tok])
+                ileft = dec_tok
+                state = 'op'
+    
+        lexemes.append(line[ileft:])
+    
+        return lexemes
