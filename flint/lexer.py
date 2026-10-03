@@ -141,10 +141,6 @@ class Lexer(object):
             statement = Statement([PToken(tok, pp='') for tok in inc_stmt])
             statement.line_number = self.line_number
             statement.source_visible = False
-            statement.source_path = inc_stmt.source_path
-            statement.source_line_number = inc_stmt.source_line_number
-            statement.expansion_path = getattr(self.source, 'name', None)
-            statement.expansion_line_number = self.line_number
 
             self.current_line = statement
             return statement
@@ -271,8 +267,6 @@ class Lexer(object):
 
         statement = Statement(statement_tokens)
         statement.line_number = line_number
-        statement.source_path = getattr(self.source, 'name', None)
-        statement.source_line_number = line_number
         self.current_line = statement
         return statement
 

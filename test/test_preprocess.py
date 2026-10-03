@@ -134,10 +134,6 @@ z=3
             statement = next(lexer)
 
         self.assertFalse(statement.source_visible)
-        self.assertEqual(statement.source_path, str(include))
-        self.assertEqual(statement.source_line_number, 1)
-        self.assertIsNone(statement.expansion_path)
-        self.assertEqual(statement.expansion_line_number, 1)
 
 
 if __name__ == '__main__':

@@ -17,11 +17,7 @@ class Statement(list):
         #   issues ofc...
         self.tag = kwds.pop('tag') if 'tag' in kwds else None
         self.line_number = None
-        self.source_path = None
-        self.source_line_number = None
         self.source_visible = True
-        self.expansion_path = None
-        self.expansion_line_number = None
         self.label = None
         self._code_index = 0
         self.kind = 'other'
