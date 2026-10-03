@@ -87,7 +87,8 @@ class Unit(object):
         self.derived_types = []
         self.namelists = {}
 
-        # Internal set of array namespace, to rule out potential external functions
+        # Internal set of array namespace, to rule out potential external
+        # functions.
         self._arrays = set()
 
         # Call tree properties
@@ -400,11 +401,8 @@ class Unit(object):
             stmt_vars.append(var)
 
             for tok in tokens:
-                is_inline_array = False
                 if tok == '(':
-                    is_inline_array = True
-
-                    #while tok != ')':
+                    # while tok != ')':
                     #    tok = next(tokens)
                     par_count = 1
                     while par_count > 0:
@@ -413,6 +411,8 @@ class Unit(object):
                             par_count += 1
                         elif tok == ')':
                             par_count -= 1
+
+                    self._arrays.add(stmt_vars[-1].name)
 
                 # Skip over potential array assignments
                 if tok == '(/':
@@ -443,7 +443,7 @@ class Unit(object):
                         var.doc.docstring = docstrip(tok.tail)
 
                     stmt_vars.append(var)
-                    if is_array or is_inline_array:
+                    if is_array:
                         self._arrays.add(var.name)
 
             # Retroactively apply docstrings to any comma-separated variables
