@@ -10,11 +10,87 @@ from collections import deque
 from collections import OrderedDict
 import itertools
 import os
+import re
 import sys
 
 from flint.scanner import Scanner
 from flint.statement import Statement
 from flint.token import Token, PToken
+
+
+cpp_scanner = re.Scanner([
+    (r'defined', lambda scanner, token: token),
+    (r'[_A-Za-z][_0-9a-zA-Z]*', lambda scanner, token: token),
+    (r'[0-9]+', lambda scanner, token: token),
+    (r'\(', lambda scanner, token: token),
+    (r'\)', lambda scanner, token: token),
+    (r'\*', lambda scanner, token: token),
+    (r'/', lambda scanner, token: token),
+    (r'\+', lambda scanner, token: token),
+    (r'-', lambda scanner, token: token),
+    (r'!', lambda scanner, token: token),
+    (r'>>', lambda scanner, token: token),
+    (r'>=', lambda scanner, token: token),
+    (r'>', lambda scanner, token: token),
+    (r'<<', lambda scanner, token: token),
+    (r'<=', lambda scanner, token: token),
+    (r'<', lambda scanner, token: token),
+    (r'==', lambda scanner, token: token),
+    (r'&&', lambda scanner, token: token),
+    (r'&', lambda scanner, token: token),
+    (r'\|\|', lambda scanner, token: token),
+    (r'\|', lambda scanner, token: token),
+    (r'\s+', None),
+])
+
+
+cpp_operate = {
+    '(': lambda x: x,
+    '!': lambda x: not x,
+    'defined': lambda x, y: x in y,
+    '*': lambda x, y: x * y,
+    '/': lambda x, y: x // y,
+    '+': lambda x, y: x + y,
+    '-': lambda x, y: x - y,
+    '>>': lambda x, y: x >> y,
+    '<<': lambda x, y: x << y,
+    '==': lambda x, y: x == y,
+    '>': lambda x, y: x > y,
+    '>=': lambda x, y: x >= y,
+    '<': lambda x, y: x < y,
+    '<=': lambda x, y: x <= y,
+    '&': lambda x, y: x & y,
+    '^': lambda x, y: x ^ y,
+    '|': lambda x, y: x | y,
+    '&&': lambda x, y: x and y,
+    '||': lambda x, y: x or y,
+}
+
+
+cpp_op_rank = {
+    '(': 13,
+    '!': 12,
+    'defined': 12,
+    '*': 11,
+    '/': 11,
+    '+': 10,
+    '-': 10,
+    '>>': 9,
+    '<<': 9,
+    '>': 8,
+    '>=': 8,
+    '<': 8,
+    '<=': 8,
+    '==': 7,
+    '&': 6,
+    '^': 5,
+    '|': 4,
+    '&&': 2,
+    '||': 2,
+    ')': 1,
+    '$': 1,
+    None: 0,
+}
 
 
 class Lexer(object):
@@ -37,14 +113,10 @@ class Lexer(object):
         self.macros = OrderedDict()
         self.fn_macros = OrderedDict()
 
-        # Parser flow control
-        # XXX: This probably does not need to be an object property, and
-        #   could be returned from preprocess() to get_liminals()
+        # Preprocessor conditional state.  stop_parsing means the current
+        # conditional branch is inactive and its statements are liminal text.
         self.stop_parsing = False
-        # XXX: This is a "poor man's" solution to nested if-block control.
-        #   It is incremeneted/decremented when stop_parsing is True.
-        #   It would be better to handle recursively.
-        self.pp_depth = 0
+        self.pp_group_stack = []
 
         # TODO: Define as an input?  It will depend on the state of source.
         self.line_number = 0
@@ -235,6 +307,12 @@ class Lexer(object):
         words = line.strip().split(None, 1)
         directive = words[0]
 
+        conditional_directives = {
+            'if', 'ifdef', 'ifndef', 'elif', 'else', 'endif',
+        }
+        if self.stop_parsing and directive not in conditional_directives:
+            return
+
         # Macros
 
         if directive == 'define':
@@ -286,45 +364,27 @@ class Lexer(object):
 
         # Conditionals
 
-        # TODO (#if #elif)
-        elif directive in ('if', 'elif'):
-            if self.stop_parsing:
-                # Only 'if' should increase the depth
-                # NOTE: This if-block will make more sense once expression are
-                #   handled properly.
-                if directive == 'if':
-                    self.pp_depth += 1
-            else:
-                expr = line.strip().split(None, 1)[1]
-                # XXX: Always ignore these blocks for now
-                self.stop_parsing = True
+        elif directive == 'if':
+            expression = words[1] if len(words) > 1 else '0'
+            self.start_conditional(cpp_expr_eval(expression, self.macros))
 
         elif directive == 'ifdef':
-            if self.stop_parsing:
-                self.pp_depth += 1
-            else:
-                macro = line.split(None, 1)[1]
-                if macro not in self.macros:
-                    self.stop_parsing = True
+            macro = words[1].strip() if len(words) > 1 else ''
+            self.start_conditional(macro in self.macros)
 
         elif directive == 'ifndef':
-            if self.stop_parsing:
-                self.pp_depth += 1
-            else:
-                macro = line.split(None, 1)[1]
-                if macro in self.macros:
-                    self.stop_parsing = True
+            macro = words[1].strip() if len(words) > 1 else ''
+            self.start_conditional(macro not in self.macros)
+
+        elif directive == 'elif':
+            expression = words[1] if len(words) > 1 else '0'
+            self.continue_conditional(cpp_expr_eval(expression, self.macros))
 
         elif directive == 'else':
-            if self.pp_depth == 0:
-                self.stop_parsing = not self.stop_parsing
+            self.continue_conditional(True)
 
         elif directive == 'endif':
-            if self.pp_depth == 0:
-                self.stop_parsing = False
-
-            if self.stop_parsing:
-                self.pp_depth -= 1
+            self.end_conditional()
 
         # Headers (this can't possibly be working...)
 
@@ -368,9 +428,110 @@ class Lexer(object):
             print('flint: {}: unsupported preprocess directive: {}'
                   ''.format(filename, line).rstrip(), file=sys.stderr)
 
+    def start_conditional(self, active):
+        parent_inactive = self.stop_parsing
+        branch_taken = active and not parent_inactive
+        self.pp_group_stack.append({
+            'parent_inactive': parent_inactive,
+            'branch_taken': branch_taken,
+        })
+        self.stop_parsing = parent_inactive or not active
+
+    def continue_conditional(self, active):
+        if not self.pp_group_stack:
+            return
+
+        group = self.pp_group_stack[-1]
+        if group['parent_inactive'] or group['branch_taken']:
+            self.stop_parsing = True
+        else:
+            self.stop_parsing = not active
+            group['branch_taken'] = active
+
+    def end_conditional(self):
+        if not self.pp_group_stack:
+            self.stop_parsing = False
+            return
+
+        group = self.pp_group_stack.pop()
+        self.stop_parsing = group['parent_inactive']
+
 
 def is_liminal(lexeme):
     return lexeme.isspace() or lexeme[0] in '!#' or lexeme == ';'
+
+
+def cpp_macro_value(macros, token):
+    if token not in macros:
+        return '0'
+
+    values = macros[token]
+    if len(values) <= 1:
+        return '1'
+
+    value = ''.join(str(item) for item in values[1:])
+    return value if value.isdigit() else '1'
+
+
+def cpp_operand_value(macros, value):
+    if isinstance(value, str):
+        if value.isidentifier():
+            value = cpp_macro_value(macros, value)
+        if value.isdigit():
+            value = int(value)
+    return value
+
+
+def cpp_expr_eval(expr, macros=None):
+    if macros is None:
+        macros = {}
+
+    results, remainder = cpp_scanner.scan(expr.strip())
+    if remainder:
+        return False
+
+    results.append('$')
+
+    stack = []
+    prior_op = None
+    tokens = iter(results)
+
+    for tok in tokens:
+        if tok in cpp_op_rank.keys():
+            while cpp_op_rank[tok] <= cpp_op_rank[prior_op]:
+                if tok in ('!', 'defined', '('):
+                    break
+
+                second = stack.pop()
+                op = stack.pop()
+
+                if op == '(':
+                    value = second
+                elif op == '!':
+                    second = cpp_operand_value(macros, second)
+                    value = cpp_operate[op](second)
+                elif op == 'defined':
+                    value = cpp_operate[op](second, macros)
+                else:
+                    first = stack.pop()
+                    first = cpp_operand_value(macros, first)
+                    second = cpp_operand_value(macros, second)
+                    value = cpp_operate[op](first, second)
+
+                prior_op = stack[-1] if stack else None
+                stack.append(value)
+
+            if tok != ')':
+                stack.append(tok)
+                prior_op = tok
+        elif tok.isdigit() or tok.isidentifier():
+            stack.append(tok)
+        else:
+            return False
+
+    eol = stack.pop()
+    assert eol == '$'
+    return bool(cpp_operand_value(macros, stack.pop()))
 
 
 def resplit_tokens(first, second):
