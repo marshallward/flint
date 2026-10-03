@@ -17,6 +17,11 @@ class Statement(list):
         #   issues ofc...
         self.tag = kwds.pop('tag') if 'tag' in kwds else None
         self.line_number = None
+        self.source_path = None
+        self.source_line_number = None
+        self.source_visible = True
+        self.expansion_path = None
+        self.expansion_line_number = None
         self.label = None
         self._code_index = 0
         self.kind = 'other'
@@ -35,7 +40,10 @@ class Statement(list):
 
         self.kind = self._classify_kind()
         self._classify_token_roles()
-        if self.kind == 'other' and self.assignment_operator_index() is not None:
+        if (
+            self.kind == 'other'
+            and self.assignment_operator_index() is not None
+        ):
             self.kind = 'assignment'
 
     @property
@@ -131,7 +139,10 @@ class Statement(list):
         """Return true if token index is the equals in a do-loop control."""
         first = self.code_index
         variable = first + 1
-        if len(self) > variable and getattr(self[variable], 'is_number', False):
+        if (
+            len(self) > variable
+            and getattr(self[variable], 'is_number', False)
+        ):
             variable += 1
         return (
             self.is_do_statement()
@@ -159,7 +170,7 @@ class Statement(list):
         return False
 
     def assignment_operator_indices(self):
-        """Return indexes of equals tokens used as assignment-like operators."""
+        """Return indexes of assignment-like equals tokens."""
         return [
             idx for idx, tok in enumerate(self)
             if tok == '=' and tok.syntax_role == 'assignment'
