@@ -58,6 +58,7 @@ class Unit(object):
     ]
 
     declaration_types = Variable.intrinsic_types + attribute_specs + [
+        'class',
         'type',
         'enum',         # ENUM, BIND(C)
         'generic',
@@ -86,10 +87,6 @@ class Unit(object):
         self.interfaces = []
         self.derived_types = []
         self.namelists = {}
-
-        # Internal set of array namespace, to rule out potential external
-        # functions.
-        self._arrays = set()
 
         # Call tree properties
         self.used_modules = set()
@@ -156,6 +153,8 @@ class Unit(object):
         self.parse_specification(statements)
         self.parse_execution(statements)
         self.parse_subprogram(statements, graph=graph)
+
+        self.refresh_callees()
 
         # Remove intrinsic functions from the set of callables
         self.callees = self.callees - set(intrinsic_fns)
@@ -344,7 +343,7 @@ class Unit(object):
 
             # Set defaults
             var_intent = None
-            is_array = False
+            dimension = None
 
             while tok == ',':
                 tok = next(tokens)
@@ -367,29 +366,16 @@ class Unit(object):
 
                 # TODO: We mostly skip over this information
                 elif attr == 'dimension':
-                    is_array = True
-
                     tok = next(tokens)
                     assert tok == '('
-                    par_count = 1
-                    while par_count > 0:
-                        tok = next(tokens)
-                        if tok == '(':
-                            par_count += 1
-                        elif tok == ')':
-                            par_count -= 1
+                    dimension = Variable.dimension_from_tokens(tokens)
 
                 tok = next(tokens)
 
             if tok == '::':
                 tok = next(tokens)
 
-            var = Variable(tok, vtype)
-            var.intent = var_intent
-            var.stmt = stmt
-
-            if is_array:
-                self._arrays.add(var.name)
+            var = Variable.from_token(tok, vtype, var_intent, dimension, stmt)
 
             # First doc attempt: After the variable name
             #   Also, attempt to apply the group docstring if it's been set
@@ -404,15 +390,9 @@ class Unit(object):
                 if tok == '(':
                     # while tok != ')':
                     #    tok = next(tokens)
-                    par_count = 1
-                    while par_count > 0:
-                        tok = next(tokens)
-                        if tok == '(':
-                            par_count += 1
-                        elif tok == ')':
-                            par_count -= 1
-
-                    self._arrays.add(stmt_vars[-1].name)
+                    stmt_vars[-1].dimension = Variable.dimension_from_tokens(
+                        tokens
+                    )
 
                 # Skip over potential array assignments
                 if tok == '(/':
@@ -435,16 +415,14 @@ class Unit(object):
 
                     tok = next(tokens)
 
-                    var = Variable(tok, vtype)
-                    var.intent = var_intent
-                    var.stmt = stmt
+                    var = Variable.from_token(
+                        tok, vtype, var_intent, dimension, stmt
+                    )
 
                     if is_docstring(tok.tail):
                         var.doc.docstring = docstrip(tok.tail)
 
                     stmt_vars.append(var)
-                    if is_array:
-                        self._arrays.add(var.name)
 
             # Retroactively apply docstrings to any comma-separated variables
             stmt_docstring = stmt_vars[-1].doc.docstring
@@ -483,8 +461,17 @@ class Unit(object):
                 if tok == ',':
                     tok = next(tokens)
 
-        stmt.tag = 'N'
-        self.statements.append(stmt)
+            stmt.tag = 'N'
+            self.statements.append(stmt)
+
+    def refresh_callees(self):
+        """Collect callable symbols from executable statements."""
+        for stmt in self.statements:
+            if stmt.kind == 'declaration' or stmt.tag in ('D', 'U', 'I', 'i'):
+                continue
+            if self.end_statement(stmt) or Unit.statement(stmt):
+                continue
+            self.callees.update(get_callable_symbols(stmt, self.variables))
 
     # Execution
 
@@ -492,7 +479,7 @@ class Unit(object):
         stmt = statements.current_line
 
         # Gather up any callable symbols
-        self.callees.update(get_callable_symbols(stmt, self._arrays))
+        self.callees.update(get_callable_symbols(stmt, self.variables))
 
         # First parse the statement which terminated specification
         # TODO: How to merge with iteration below? Lookahead in parse_spec()?
@@ -509,7 +496,7 @@ class Unit(object):
 
         # Now iterate over the rest of the statements
         for stmt in statements:
-            self.callees.update(get_callable_symbols(stmt, self._arrays))
+            self.callees.update(get_callable_symbols(stmt, self.variables))
 
             # Execution constructs
             if Construct.construct_stmt(stmt):
@@ -546,6 +533,7 @@ class Unit(object):
         elif self.end_statement(stmt):
             return
         else:
+            self.callees.update(get_callable_symbols(stmt, self.variables))
             stmt.tag = self.utype[0].upper()
             self.statements.append(stmt)
 
@@ -559,5 +547,8 @@ class Unit(object):
                 # TODO: Use return?
                 break
             else:
+                self.callees.update(
+                    get_callable_symbols(stmt, self.variables)
+                )
                 stmt.tag = 'X'
                 self.statements.append(stmt)

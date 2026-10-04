@@ -104,7 +104,7 @@ class Construct(object):
 
         # Parse the contents of the construct
         for stmt in statements:
-            callables = get_callable_symbols(stmt, self.unit._arrays)
+            callables = get_callable_symbols(stmt, self.unit.variables)
             self.unit.callees.update(callables)
 
             if Construct.construct_stmt(stmt):
