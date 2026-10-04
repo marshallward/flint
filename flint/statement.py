@@ -98,6 +98,8 @@ class Statement(list):
                 continue
             if self.is_do_control_assignment(idx):
                 tok.syntax_role = 'do_control'
+            elif self.is_generic_assignment_spec(idx):
+                tok.syntax_role = 'generic_spec'
             elif self.is_named_argument_assignment(idx):
                 tok.syntax_role = 'name_value'
             else:
@@ -164,6 +166,16 @@ class Statement(list):
                     return True
                 depth -= 1
         return False
+
+    def is_generic_assignment_spec(self, index):
+        """Return true for the equals in generic spec assignment(=)."""
+        return (
+            index >= 2
+            and len(self) > index + 1
+            and self[index - 2] == 'assignment'
+            and self[index - 1] == '('
+            and self[index + 1] == ')'
+        )
 
     def assignment_operator_indices(self):
         """Return indexes of assignment-like equals tokens."""

@@ -3,7 +3,7 @@ import sys
 import unittest
 
 sys.path.insert(1, '../')
-from flint.lexer import Lexer
+from flint.lexer import Lexer  # noqa: E402
 
 
 def lex_one(line):
@@ -59,6 +59,15 @@ class TestStatementAssignments(unittest.TestCase):
         self.assertEqual(stmt.do_control_assignment_indices(), [2])
         self.assertEqual(labeled.do_control_assignment_indices(), [4])
         self.assertEqual(numbered.do_control_assignment_indices(), [3])
+
+    def test_generic_assignment_spec_is_not_assignment(self):
+        stmt = lex_one(
+            'use MOM_coms, only : EFP_type, assignment(=), EFP_sum\n'
+        )
+
+        self.assertEqual(self.assignment_roles(stmt), [(9, 'generic_spec')])
+        self.assertEqual(stmt.assignment_operator_indices(), [])
+        self.assertEqual(stmt.named_argument_indices(), [])
 
     def test_caller_can_check_token_liminals(self):
         stmt = lex_one('x=foo(a = 1)\n')
