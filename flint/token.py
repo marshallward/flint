@@ -103,6 +103,7 @@ class Token(str):
         tok.tail = []
         tok.kind = kind if kind is not None else classify_lexeme(value)
         tok.syntax_role = None
+        tok.operator_role = None
         return tok
 
     def __eq__(self, other):

@@ -4,10 +4,24 @@
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
 
+from flint.token import TokenKind
+
 
 DECLARATION_STARTERS = {
     'character', 'class', 'complex', 'double', 'integer', 'logical',
     'procedure', 'real', 'type',
+}
+
+GROUP_STARTERS = {'(', '[', '{', '(/'}
+GROUP_ENDERS = {')': '(', ']': '[', '}': '{', '/)': '(/'}
+NON_CALLABLE_GROUP_NAMES = {
+    'associate', 'do', 'else', 'elseif', 'forall', 'if', 'select', 'where',
+    'while',
+}
+UNARY_SIGN_CONTEXT = {
+    '(', '[', '{', '(/', ',', ':', '::', '=', '=>', '+', '-', '*', '/', '//',
+    '<', '>', '<=', '>=', '==', '/=', '.and.', '.or.', '.eqv.', '.neqv.',
+    '.not.',
 }
 
 
@@ -92,6 +106,7 @@ class Statement(list):
     def _classify_token_roles(self):
         for tok in self:
             tok.syntax_role = None
+            tok.operator_role = None
 
         for idx, tok in enumerate(self):
             if tok != '=':
@@ -104,6 +119,90 @@ class Statement(list):
                 tok.syntax_role = 'name_value'
             else:
                 tok.syntax_role = 'assignment'
+
+        self._classify_operator_roles()
+
+    def _classify_operator_roles(self):
+        group_stack = []
+        callable_or_subscript_depth = 0
+        operator_spec_depth = 0
+        try:
+            declaration_end = self.index('::')
+        except ValueError:
+            declaration_end = None
+
+        for idx, tok in enumerate(self):
+            if tok in GROUP_ENDERS and group_stack:
+                _, in_callable_or_subscript, in_operator_spec = group_stack.pop()
+                if in_callable_or_subscript:
+                    callable_or_subscript_depth -= 1
+                if in_operator_spec:
+                    operator_spec_depth -= 1
+
+            if getattr(tok, 'is_operator', False):
+                tok.operator_role = self._operator_role(
+                    idx,
+                    declaration_end,
+                    callable_or_subscript_depth,
+                    operator_spec_depth,
+                )
+
+            if tok in GROUP_STARTERS:
+                in_callable_or_subscript = self.opens_callable_or_subscript_group(idx)
+                in_operator_spec = (
+                    tok == '('
+                    and idx > 0
+                    and self[idx - 1] == 'operator'
+                )
+                group_stack.append((
+                    str(tok), in_callable_or_subscript, in_operator_spec,
+                ))
+                if in_callable_or_subscript:
+                    callable_or_subscript_depth += 1
+                if in_operator_spec:
+                    operator_spec_depth += 1
+
+    def _operator_role(
+        self,
+        index,
+        declaration_end,
+        callable_or_subscript_depth,
+        operator_spec_depth,
+    ):
+        tok = self[index]
+        if tok.kind == TokenKind.ASSIGNMENT:
+            return None
+        if self.in_declaration_prefix(index, declaration_end):
+            return 'declaration_specifier'
+        if operator_spec_depth > 0:
+            return 'generic_operator_specifier'
+        if self.is_print_format_star(index):
+            return 'format_specifier'
+        if tok == '**':
+            return 'exponentiation'
+        if tok == '//':
+            return 'concatenation'
+        if (
+            tok.kind == TokenKind.ARITHMETIC_OPERATOR
+            and self.in_do_control(index)
+        ):
+            return 'do_control_operator'
+        if (
+            tok.kind == TokenKind.ARITHMETIC_OPERATOR
+            and callable_or_subscript_depth > 0
+        ):
+            return 'callable_or_subscript_operator'
+        if tok == '.not.' or self.is_unary_sign(index):
+            return 'unary_operator'
+        if tok.kind in (
+            TokenKind.POINTER_ASSIGNMENT,
+            TokenKind.ARITHMETIC_OPERATOR,
+            TokenKind.RELATIONAL_OPERATOR,
+            TokenKind.LOGICAL_OPERATOR,
+            TokenKind.DEFINED_OPERATOR,
+        ):
+            return 'binary_operator'
+        return None
 
     # XXX: Dumb name... override __str__?
     def gen_stmt(self):
@@ -132,6 +231,57 @@ class Statement(list):
     def is_call_statement(self):
         """Return true if this statement is a call statement."""
         return self.kind == 'call'
+
+    def in_declaration_prefix(self, index, declaration_end=None):
+        """Return true for tokens before declaration declarators."""
+        if self.kind != 'declaration':
+            return False
+        if declaration_end is None:
+            try:
+                declaration_end = self.index('::')
+            except ValueError:
+                return True
+        return index < declaration_end
+
+    def opens_callable_or_subscript_group(self, index):
+        """Return true if a delimiter opens an argument/subscript group."""
+        token = self[index]
+        if token in ('[', '{', '(/'):
+            return True
+        if token != '(' or index == 0:
+            return False
+
+        prior = self[index - 1]
+        return (
+            getattr(prior, 'is_name', False)
+            and str(prior).lower() not in NON_CALLABLE_GROUP_NAMES
+        )
+
+    def in_do_control(self, index):
+        """Return true for tokens in a do-loop control clause."""
+        return self.is_do_statement() and index > self.code_index
+
+    def is_print_format_star(self, index):
+        """Return true for the star in print *, output statements."""
+        return (
+            index > self.code_index
+            and self[self.code_index] == 'print'
+            and self[index] == '*'
+            and getattr(self[index - 1], 'is_name', False)
+            and self[index - 1] == 'print'
+            and len(self) > index + 1
+            and self[index + 1] == ','
+        )
+
+    def is_unary_sign(self, index):
+        """Return true if plus or minus is acting as a unary sign."""
+        token = self[index]
+        if token not in ('+', '-'):
+            return False
+        if index <= self.code_index:
+            return True
+        prior = self[index - 1]
+        return prior in UNARY_SIGN_CONTEXT or prior.is_operator
 
     def is_do_control_assignment(self, index):
         """Return true if token index is the equals in a do-loop control."""
