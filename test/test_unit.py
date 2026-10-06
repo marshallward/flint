@@ -73,6 +73,17 @@ end subroutine demo
 
         self.assertEqual({str(name) for name in unit.callees}, {'custom_fn'})
 
+    def test_unknown_declaration_attribute_before_separator(self):
+        source = parse_source('''subroutine demo()
+  real ALLOCABLE_, dimension(NI,NJ,NK) :: field
+end subroutine demo
+''')
+
+        unit = source.units[0]
+        variables = {str(var.name): var.dimension for var in unit.variables}
+
+        self.assertEqual(variables, {'field': 3})
+
 
 if __name__ == '__main__':
     unittest.main()

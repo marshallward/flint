@@ -345,35 +345,48 @@ class Unit(object):
             var_intent = None
             dimension = None
 
-            while tok == ',':
+            remainder = [tok] + list(tokens)
+            if '::' in remainder:
+                split = remainder.index('::')
+                prefix = remainder[:split]
+                declarators = remainder[split + 1:]
+                var_intent, dimension = self.parse_declaration_attributes(
+                    prefix,
+                    var_intent,
+                    dimension,
+                )
+                tokens = iter(declarators[1:])
+                tok = declarators[0]
+            else:
+                tokens = iter(remainder)
                 tok = next(tokens)
-                attr = tok
 
-                if attr == 'intent':
+                while tok == ',':
                     tok = next(tokens)
-                    assert tok == '('
-                    var_intent = next(tokens)
-                    assert var_intent in ('in', 'out', 'inout')
-                    tok = next(tokens)
+                    attr = tok
 
-                    # Fortran permits a space between `inout`, so check the
-                    # next token.  (NOTE: `out in` is not allowed!)
-                    if var_intent == 'in' and tok == 'out':
-                        var_intent += tok
+                    if attr == 'intent':
+                        tok = next(tokens)
+                        assert tok == '('
+                        var_intent = next(tokens)
+                        assert var_intent in ('in', 'out', 'inout')
                         tok = next(tokens)
 
-                    assert tok == ')'
+                        # Fortran permits a space between `inout`, so check the
+                        # next token.  (NOTE: `out in` is not allowed!)
+                        if var_intent == 'in' and tok == 'out':
+                            var_intent += tok
+                            tok = next(tokens)
 
-                # TODO: We mostly skip over this information
-                elif attr == 'dimension':
+                        assert tok == ')'
+
+                    # TODO: We mostly skip over this information
+                    elif attr == 'dimension':
+                        tok = next(tokens)
+                        assert tok == '('
+                        dimension = Variable.dimension_from_tokens(tokens)
+
                     tok = next(tokens)
-                    assert tok == '('
-                    dimension = Variable.dimension_from_tokens(tokens)
-
-                tok = next(tokens)
-
-            if tok == '::':
-                tok = next(tokens)
 
             var = Variable.from_token(tok, vtype, var_intent, dimension, stmt)
 
@@ -439,6 +452,43 @@ class Unit(object):
 
             stmt.tag = 'D'
             self.statements.append(stmt)
+
+    def parse_declaration_attributes(self, tokens, var_intent=None, dimension=None):
+        """Parse known declaration attributes before ``::``.
+
+        Unknown tokens are tolerated as attribute/specifier syntax.  This is
+        useful for preprocessor-driven declarations such as MOM6's
+        ``real ALLOCABLE_, dimension(...) :: x``.
+        """
+        index = 0
+        while index < len(tokens):
+            token = tokens[index]
+            if token == 'intent' and index + 1 < len(tokens):
+                if tokens[index + 1] == '(':
+                    index += 2
+                    if index < len(tokens):
+                        var_intent = tokens[index]
+                        if var_intent == 'in' and index + 1 < len(tokens):
+                            if tokens[index + 1] == 'out':
+                                var_intent += tokens[index + 1]
+                                index += 1
+                    while index < len(tokens) and tokens[index] != ')':
+                        index += 1
+            elif token == 'dimension' and index + 1 < len(tokens):
+                if tokens[index + 1] == '(':
+                    dimension = Variable.dimension_from_tokens(
+                        iter(tokens[index + 2:])
+                    )
+                    index += 1
+                    depth = 1
+                    while index + 1 < len(tokens) and depth > 0:
+                        index += 1
+                        if tokens[index] == '(':
+                            depth += 1
+                        elif tokens[index] == ')':
+                            depth -= 1
+            index += 1
+        return var_intent, dimension
 
     def parse_namelist(self, stmt):
         assert stmt[0] == 'namelist'
