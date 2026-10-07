@@ -184,6 +184,29 @@ end subroutine demo
         self.assertEqual(len(issues), 1)
         self.assertEqual(issues[0].comments, ())
 
+    def test_indented_following_comment_with_units_is_accepted(self):
+        source = '''subroutine demo()
+  real :: x
+          ! Distance [m]
+end subroutine demo
+'''
+
+        issues = issues_for_source(source)
+
+        self.assertEqual(issues, [])
+
+    def test_indented_following_comment_without_units_is_reported(self):
+        source = '''subroutine demo()
+  real :: x
+          ! Distance
+end subroutine demo
+'''
+
+        issues = issues_for_source(source)
+
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].comments, ('! Distance',))
+
     def test_units_after_pointer_initialization_are_accepted(self):
         source = '''subroutine demo()
   real, pointer :: x => NULL() !< distance [m]
