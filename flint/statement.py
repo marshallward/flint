@@ -108,10 +108,11 @@ class Statement(list):
             tok.syntax_role = None
             tok.operator_role = None
 
+        implied_do_controls = self.implied_do_control_assignment_indices()
         for idx, tok in enumerate(self):
             if tok != '=':
                 continue
-            if self.is_do_control_assignment(idx):
+            if idx in implied_do_controls or self.is_do_control_assignment(idx):
                 tok.syntax_role = 'do_control'
             elif self.is_generic_assignment_spec(idx):
                 tok.syntax_role = 'generic_spec'
@@ -298,6 +299,56 @@ class Statement(list):
             and self[index] == '='
             and getattr(self[variable], 'is_name', False)
         )
+
+    def implied_do_control_assignment_indices(self):
+        """Return control equals indexes in parenthesized implied-do groups.
+
+        Only tokens at a group's own depth participate in its control clause:
+        ``(objects, variable = lower, upper [, stride])``. Callable groups
+        cannot be implied-do groups, even when their keyword arguments look
+        like a control clause.
+        """
+        controls = []
+        groups = []
+        for index, token in enumerate(self):
+            if token in GROUP_STARTERS:
+                if groups:
+                    groups[-1][1].append(index)
+                groups.append((index, []))
+            elif token in GROUP_ENDERS:
+                if not groups:
+                    continue
+                start, direct = groups.pop()
+                if self[start] != GROUP_ENDERS[str(token)]:
+                    continue
+                if self[start] != '(' or self.opens_callable_or_subscript_group(start):
+                    continue
+                for offset, candidate in enumerate(direct):
+                    if (
+                        self[candidate] != '='
+                        or offset < 3
+                        or not getattr(self[direct[offset - 1]], 'is_name', False)
+                        or self[direct[offset - 2]] != ','
+                    ):
+                        continue
+                    # The bounds must form two or three nonempty fields, with
+                    # no other equals at this depth. Nested calls and groups
+                    # were deliberately left opaque while collecting tokens.
+                    fields = [[]]
+                    for bound in direct[offset + 1:]:
+                        if self[bound] == ',':
+                            fields.append([])
+                        else:
+                            fields[-1].append(bound)
+                    if (
+                        len(fields) in (2, 3)
+                        and all(fields)
+                        and all(self[item] != '=' for field in fields for item in field)
+                    ):
+                        controls.append(candidate)
+            elif groups:
+                groups[-1][1].append(index)
+        return controls
 
     def is_named_argument_assignment(self, index):
         """Return true if token index is an equals for a named argument."""

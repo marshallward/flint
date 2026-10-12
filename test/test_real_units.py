@@ -171,10 +171,10 @@ end subroutine demo
         self.assertEqual(len(issues), 1)
         self.assertEqual(issues[0].comments, ('! first line', '! second line'))
 
-    def test_plain_following_comment_is_not_associated(self):
+    def test_plain_following_comment_without_units_is_reported(self):
         source = '''subroutine demo()
   real :: x
-  ! This is about the following declaration.
+  ! This describes x.
   integer :: n
 end subroutine demo
 '''
@@ -182,7 +182,66 @@ end subroutine demo
         issues = issues_for_source(source)
 
         self.assertEqual(len(issues), 1)
-        self.assertEqual(issues[0].comments, ())
+        self.assertEqual(issues[0].comments, ('! This describes x.',))
+
+    def test_forward_doxygen_comment_is_accepted(self):
+        source = '''subroutine demo()
+!> comment [unit]
+real :: x
+end subroutine demo
+'''
+
+        self.assertEqual(issues_for_source(source), [])
+
+    def test_following_backward_doxygen_comment_is_accepted(self):
+        source = '''subroutine demo()
+real :: x
+   !< comment [unit]
+end subroutine demo
+'''
+
+        self.assertEqual(issues_for_source(source), [])
+
+    def test_plain_inline_comment_is_accepted(self):
+        source = '''subroutine demo()
+real :: x   ! comment [unit]
+end subroutine demo
+'''
+
+        self.assertEqual(issues_for_source(source), [])
+
+    def test_plain_following_comment_with_units_is_accepted(self):
+        source = '''subroutine demo()
+real :: x
+! comment [unit]
+end subroutine demo
+'''
+
+        self.assertEqual(issues_for_source(source), [])
+
+    def test_competing_doxygen_comments_are_reported(self):
+        source = '''subroutine demo()
+!> head comment [m]
+real :: x !< tail comment [m]
+end subroutine demo
+'''
+
+        issues = issues_for_source(source)
+
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].name, 'x')
+        self.assertEqual(issues[0].message, 'competing Doxygen comments')
+
+    def test_doxygen_group_does_not_hide_inline_units(self):
+        source = '''module demo
+!>@{ Parameters in a polynomial equation of state
+real, parameter :: rdeltaS = 24. ! An offset to salinity [g kg-1]
+real, parameter :: r1_S0 = 0.875/35.16504 ! Inverse salinity range [kg g-1]
+!>@}
+end module demo
+'''
+
+        self.assertEqual(issues_for_source(source), [])
 
     def test_indented_following_comment_with_units_is_accepted(self):
         source = '''subroutine demo()
