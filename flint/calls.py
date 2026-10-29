@@ -5,8 +5,10 @@
 """
 
 
-def get_callable_symbols(line, variables):
-    variable_names = {str(var.name).lower() for var in variables}
+def get_callable_symbols(line, variables, *, variable_names=None):
+    """Find callables, optionally reusing normalized variable names for a scope."""
+    if variable_names is None:
+        variable_names = {str(var.name).lower() for var in variables}
     names = [
         b for a, b, c in zip(line, line[1:], line[2:])
         # TODO: Resolve derived-type components so type-bound procedures can be

@@ -26,6 +26,7 @@ class Unit(object):
         # presence here.  But it should not be here.
         'type',
     ]
+    _unit_type_names = frozenset(unit_types)
 
     # access-spec
     access_specs = [
@@ -104,7 +105,8 @@ class Unit(object):
     def statement(stmt):
         # TODO: If this ends up being a full type-statement parser, then it
         # needs to be moved into its own class
-        idx = next((i for i, w in enumerate(stmt) if w in Unit.unit_types), -1)
+        idx = next((i for i, w in enumerate(stmt)
+                    if w.lower() in Unit._unit_type_names), -1)
 
         if idx == 0:
             return True
@@ -184,8 +186,9 @@ class Unit(object):
         Each program unit has a different header format, so this method must be
         overridden by each subclass.
         """
-        if any(tok in Unit.unit_types for tok in stmt):
-            self.utype = next(w for w in stmt if w in Unit.unit_types)
+        if any(tok.lower() in Unit._unit_type_names for tok in stmt):
+            self.utype = next(w for w in stmt
+                              if w.lower() in Unit._unit_type_names)
             utype_idx = stmt.index(self.utype)
         else:
             # Assume anonymous main
@@ -516,12 +519,15 @@ class Unit(object):
 
     def refresh_callees(self):
         """Collect callable symbols from executable statements."""
+        variable_names = {str(var.name).lower() for var in self.variables}
         for stmt in self.statements:
             if stmt.kind == 'declaration' or stmt.tag in ('D', 'U', 'I', 'i'):
                 continue
             if self.end_statement(stmt) or Unit.statement(stmt):
                 continue
-            self.callees.update(get_callable_symbols(stmt, self.variables))
+            self.callees.update(get_callable_symbols(
+                stmt, self.variables, variable_names=variable_names,
+            ))
 
     # Execution
 

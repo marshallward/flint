@@ -1,3 +1,4 @@
+import io
 import sys
 import tempfile
 import unittest
@@ -5,6 +6,10 @@ from pathlib import Path
 
 sys.path.insert(1, '../')
 from flint.source import Source  # noqa: E402
+from flint.lexer import Lexer  # noqa: E402
+from flint.statement import Statement  # noqa: E402
+from flint.token import PToken, Token  # noqa: E402
+from flint.units.unit import Unit  # noqa: E402
 
 
 def parse_source(text):
@@ -19,6 +24,45 @@ def parse_source(text):
 
 
 class TestUnit(unittest.TestCase):
+    def test_case_insensitive_unit_keyword_lookup(self):
+        stmt = Statement([Token('PURE'), Token('REAL'), Token('FUNCTION'), Token('demo')])
+        self.assertTrue(Unit.statement(stmt))
+        unit = Unit()
+        unit.parse_header(stmt)
+        self.assertEqual(unit.utype, 'function')
+        self.assertEqual(unit.name, 'demo')
+
+    def test_preprocessed_unit_keyword_uses_semantic_value(self):
+        for display in ('', 'PROCEDURE_MACRO'):
+            with self.subTest(display=display):
+                stmt = Statement([PToken('SUBROUTINE', pp=display), Token('demo')])
+                self.assertTrue(Unit.statement(stmt))
+                unit = Unit()
+                unit.parse_header(stmt)
+                self.assertEqual(unit.utype, 'subroutine')
+                self.assertEqual(unit.name, 'demo')
+
+    def test_refresh_callees_builds_variable_names_once(self):
+        class Variable:
+            accesses = 0
+
+            @property
+            def name(self):
+                self.accesses += 1
+                return 'FIELD'
+
+        variable = Variable()
+        unit = Unit()
+        unit.utype = 'subroutine'
+        unit.variables = [variable]
+        unit.statements = list(Lexer(io.StringIO(
+            'x = field(i) + first(i)\n'
+            'x = field(j) + second(j)\n'
+        )))
+        unit.refresh_callees()
+        self.assertEqual(variable.accesses, 1)
+        self.assertEqual({str(name) for name in unit.callees}, {'first', 'second'})
+
     def test_inline_array_declarations_are_tracked(self):
         source = parse_source('''subroutine demo(i, j)
   integer :: i, j
