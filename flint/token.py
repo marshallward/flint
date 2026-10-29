@@ -18,6 +18,7 @@ parsing output.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
 from enum import Enum
+from functools import lru_cache
 
 
 class TokenKind(Enum):
@@ -53,6 +54,7 @@ DELIMITERS = {'(', ')', '[', ']', '{', '}'}
 SEPARATORS = {',', ':', '::'}
 
 
+@lru_cache(maxsize=4096)
 def classify_lexeme(value):
     """Return the coarse token kind for a Scanner lexeme."""
     if not value:

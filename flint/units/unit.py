@@ -78,6 +78,7 @@ class Unit(object):
         'pure',
         'recursive',
     ]
+    _unit_statement_starters = frozenset(unit_types + unit_prefix)
 
     def __init__(self):
         self.name = None
@@ -105,6 +106,8 @@ class Unit(object):
     def statement(stmt):
         # TODO: If this ends up being a full type-statement parser, then it
         # needs to be moved into its own class
+        if stmt and stmt[0].lower() not in Unit._unit_statement_starters:
+            return False
         idx = next((i for i, w in enumerate(stmt)
                     if w.lower() in Unit._unit_type_names), -1)
 

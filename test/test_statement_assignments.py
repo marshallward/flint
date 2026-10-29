@@ -1,9 +1,11 @@
 import io
 import sys
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(1, '../')
 from flint.lexer import Lexer  # noqa: E402
+from flint.statement import Statement  # noqa: E402
 
 
 def lex_one(line):
@@ -11,6 +13,25 @@ def lex_one(line):
 
 
 class TestStatementAssignments(unittest.TestCase):
+
+    def test_no_equals_skips_implied_do_scan(self):
+        with patch.object(Statement, 'implied_do_control_assignment_indices') as scan:
+            stmt = lex_one('call work(a + b)\n')
+        scan.assert_not_called()
+        self.assertIsNone(stmt.assignment_operator_index())
+        self.assertEqual(stmt.assignment_operator_indices(), [])
+
+    def test_only_named_argument_has_no_assignment_operator(self):
+        stmt = lex_one('call work(option=1)\n')
+        self.assertIsNone(stmt.assignment_operator_index())
+        self.assertEqual(stmt.named_argument_indices(), [4])
+
+    def test_first_assignment_does_not_build_all_indices(self):
+        stmt = lex_one('x = work(option=1)\n')
+        with patch.object(Statement, 'assignment_operator_indices') as collect:
+            self.assertEqual(stmt.assignment_operator_index(), 1)
+        collect.assert_not_called()
+
 
     def assignment_roles(self, stmt):
         return [

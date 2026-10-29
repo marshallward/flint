@@ -24,6 +24,23 @@ def parse_source(text):
 
 
 class TestUnit(unittest.TestCase):
+    def test_non_header_rejected_before_later_keyword(self):
+        for text in ('call work(function)\n', 'x = function(1)\n'):
+            with self.subTest(text=text):
+                stmt = next(Lexer(io.StringIO(text)))
+                self.assertFalse(Unit.statement(stmt))
+        self.assertFalse(Unit.statement([]))
+
+    def test_prefixed_unit_headers_pass_fast_rejection(self):
+        for text in (
+            'PURE REAL FUNCTION demo(x)\n',
+            'recursive subroutine demo(x)\n',
+            'character(len=20) function demo(x)\n',
+        ):
+            with self.subTest(text=text):
+                stmt = next(Lexer(io.StringIO(text)))
+                self.assertTrue(Unit.statement(stmt))
+
     def test_case_insensitive_unit_keyword_lookup(self):
         stmt = Statement([Token('PURE'), Token('REAL'), Token('FUNCTION'), Token('demo')])
         self.assertTrue(Unit.statement(stmt))

@@ -4,7 +4,7 @@
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
 
-from flint.token import TokenKind
+from flint.token import Token, TokenKind
 
 
 DECLARATION_STARTERS = {
@@ -104,22 +104,26 @@ class Statement(list):
         return 'other'
 
     def _classify_token_roles(self):
-        for tok in self:
+        assignments = []
+        for idx, tok in enumerate(self):
             tok.syntax_role = None
             tok.operator_role = None
-
-        implied_do_controls = self.implied_do_control_assignment_indices()
-        for idx, tok in enumerate(self):
             if tok != '=':
                 continue
-            if idx in implied_do_controls or self.is_do_control_assignment(idx):
-                tok.syntax_role = 'do_control'
-            elif self.is_generic_assignment_spec(idx):
-                tok.syntax_role = 'generic_spec'
-            elif self.is_named_argument_assignment(idx):
-                tok.syntax_role = 'name_value'
-            else:
-                tok.syntax_role = 'assignment'
+            assignments.append(idx)
+
+        if assignments:
+            implied_do_controls = self.implied_do_control_assignment_indices()
+            for idx in assignments:
+                tok = self[idx]
+                if idx in implied_do_controls or self.is_do_control_assignment(idx):
+                    tok.syntax_role = 'do_control'
+                elif self.is_generic_assignment_spec(idx):
+                    tok.syntax_role = 'generic_spec'
+                elif self.is_named_argument_assignment(idx):
+                    tok.syntax_role = 'name_value'
+                else:
+                    tok.syntax_role = 'assignment'
 
         self._classify_operator_roles()
 
@@ -133,7 +137,10 @@ class Statement(list):
             declaration_end = None
 
         for idx, tok in enumerate(self):
-            if tok in GROUP_ENDERS and group_stack:
+            # Plain tokens can use string hashing; subclasses retain their
+            # own equality/hash behavior (notably preprocessed tokens).
+            value = str(tok) if type(tok) is Token else tok
+            if value in GROUP_ENDERS and group_stack:
                 _, in_callable_or_subscript, in_operator_spec = group_stack.pop()
                 if in_callable_or_subscript:
                     callable_or_subscript_depth -= 1
@@ -148,7 +155,7 @@ class Statement(list):
                     operator_spec_depth,
                 )
 
-            if tok in GROUP_STARTERS:
+            if value in GROUP_STARTERS:
                 in_callable_or_subscript = self.opens_callable_or_subscript_group(idx)
                 in_operator_spec = (
                     tok == '('
@@ -311,11 +318,12 @@ class Statement(list):
         controls = []
         groups = []
         for index, token in enumerate(self):
-            if token in GROUP_STARTERS:
+            value = str(token) if type(token) is Token else token
+            if value in GROUP_STARTERS:
                 if groups:
                     groups[-1][1].append(index)
                 groups.append((index, []))
-            elif token in GROUP_ENDERS:
+            elif value in GROUP_ENDERS:
                 if not groups:
                     continue
                 start, direct = groups.pop()
@@ -387,10 +395,10 @@ class Statement(list):
 
     def assignment_operator_index(self):
         """Return the first assignment-like equals token index, if any."""
-        try:
-            return self.assignment_operator_indices()[0]
-        except IndexError:
-            return None
+        for idx, tok in enumerate(self):
+            if tok == '=' and tok.syntax_role == 'assignment':
+                return idx
+        return None
 
     def named_argument_indices(self):
         """Return indexes of equals tokens used for named arguments."""
