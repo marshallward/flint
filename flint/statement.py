@@ -104,6 +104,92 @@ class Statement(list):
         return 'other'
 
     def _classify_token_roles(self):
+        """Share temporary group state across assignment and operator analysis."""
+        # Subclasses may customize equality, hashing, or source rendering.
+        # Keep their existing behavior rather than interpreting string views.
+        if any(type(tok) is not Token for tok in self):
+            return self._classify_token_roles_generic()
+
+        words = [str(tok) for tok in self]
+        has_assignments = '=' in words
+        for tok in self:
+            tok.syntax_role = None
+            tok.operator_role = None
+        try:
+            declaration_end = words.index('::')
+        except ValueError:
+            declaration_end = None
+
+        # Each group holds its opener, direct children, and context flags.
+        # Direct children leave nested expressions opaque for implied DOs.
+        groups = []
+        parens = []
+        callable_depth = 0
+        operator_depth = 0
+        for index, tok in enumerate(self):
+            value = words[index]
+            closed = None
+            if value in GROUP_ENDERS and groups:
+                closed = groups.pop()
+                callable_depth -= closed[2]
+                operator_depth -= closed[3]
+            # Named arguments follow parentheses specifically, whereas the
+            # operator/implied-DO group stack also tracks array constructors.
+            if value == ')' and parens:
+                parens.pop()
+
+            if value == '=':
+                if self.is_do_control_assignment(index):
+                    tok.syntax_role = 'do_control'
+                elif self.is_generic_assignment_spec(index):
+                    tok.syntax_role = 'generic_spec'
+                elif index > 0 and self[index - 1].is_name and parens:
+                    tok.syntax_role = 'name_value'
+                else:
+                    tok.syntax_role = 'assignment'
+
+            if tok.is_operator:
+                tok.operator_role = self._operator_role(
+                    index, declaration_end, callable_depth, operator_depth,
+                )
+
+            if value in GROUP_STARTERS:
+                if has_assignments and groups:
+                    groups[-1][1].append(index)
+                is_callable = self.opens_callable_or_subscript_group(index)
+                is_operator = value == '(' and index > 0 and self[index - 1] == 'operator'
+                groups.append((index, [], is_callable, is_operator))
+                callable_depth += is_callable
+                operator_depth += is_operator
+            elif value not in GROUP_ENDERS and has_assignments and groups:
+                groups[-1][1].append(index)
+            if value == '(':
+                parens.append(index)
+
+            if closed is None or not has_assignments:
+                continue
+            start, direct, is_callable, _ = closed
+            if words[start] != GROUP_ENDERS[value] or words[start] != '(' or is_callable:
+                continue
+            # Once the whole group is known, implied-DO control takes
+            # precedence over the provisional assignment/name-value role.
+            for offset, candidate in enumerate(direct):
+                if (words[candidate] != '=' or offset < 3
+                        or not self[direct[offset - 1]].is_name
+                        or words[direct[offset - 2]] != ','):
+                    continue
+                fields = [[]]
+                for bound in direct[offset + 1:]:
+                    if words[bound] == ',':
+                        fields.append([])
+                    else:
+                        fields[-1].append(bound)
+                if (len(fields) in (2, 3) and all(fields)
+                        and all(words[item] != '=' for field in fields for item in field)):
+                    self[candidate].syntax_role = 'do_control'
+
+    def _classify_token_roles_generic(self):
+        """Classify roles while respecting custom token subclass behavior."""
         assignments = []
         for idx, tok in enumerate(self):
             tok.syntax_role = None
