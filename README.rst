@@ -187,6 +187,40 @@ Flint is broken into three stages, which closely resemble compiler frontends.
    say to watch this space for future work.
 
 
+Shared spacing runner
+=====================
+
+``flint.formatting.runner`` separates checking from reporting and writing.
+A check is a function that receives a source and returns a statement edit
+collector. This permits scope-dependent checks to prepare context once per file.
+Several checks can share one parse and propose edits against the same unchanged
+tokens::
+
+   import flint
+   from flint.formatting.runner import check_spacing, report_spacing
+   from flint.formatting.spacing import spacing_edits
+
+   def assignment_check(source):
+       def collect(statement):
+           for token in statement:
+               if token.syntax_role == 'assignment':
+                   yield from spacing_edits(token, ' ', ' ')
+       return collect
+
+   project = flint.parse('src')
+   results = list(check_spacing(project, [assignment_check]))
+   status = report_spacing(results, diff=True)
+
+``FileChange`` results expose the path, original text, proposed text, and changed
+lines. ``report_spacing`` supports ``report``, ``diff``, and ``write``; a dry run
+returns 1 when changes are proposed, otherwise 0. ``run_spacing`` is a convenience
+wrapper accepting paths and excludes, or an existing ``project``. Source files
+must remain unchanged between parsing and checking. After writing edits, reparse
+before another run. Identical gap edits coalesce; conflicting edits raise an
+error. Checks retain their own policies and options, for example via
+``functools.partial``.
+
+
 Experimental declaration grammar
 ================================
 
