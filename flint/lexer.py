@@ -15,7 +15,7 @@ import sys
 
 from flint.scanner import Scanner
 from flint.statement import Statement
-from flint.token import Token, PToken
+from flint.token import PToken, _token_from_lexeme
 
 
 cpp_scanner = re.Scanner([
@@ -255,8 +255,7 @@ class Lexer(object):
                             statement_tokens.extend(ptoks)
                     # TODO: elif lx in self.fn_macros?
                     else:
-                        tok = Token(lx)
-                        tok.head = prior_tail
+                        tok = _token_from_lexeme(lx, prior_tail)
 
                         statement_tokens.append(tok)
                         prior_tail = tok.tail

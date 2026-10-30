@@ -151,6 +151,22 @@ class Token(str):
         return self.kind == TokenKind.LOGICAL_LITERAL
 
 
+def _token_from_lexeme(value, head):
+    """Build a plain lexer token with its existing leading whitespace list.
+
+    The lexer supplies a scanned string and shares adjacent token liminals.
+    Avoid constructing and immediately discarding an empty head list, and
+    avoid the general constructor's argument handling on this hot path.
+    """
+    token = str.__new__(Token, value)
+    token.head = head
+    token.tail = []
+    token.kind = classify_lexeme(value)
+    token.syntax_role = None
+    token.operator_role = None
+    return token
+
+
 class PToken(Token):
     """Preprocessed Token which prints its origin macro."""
     def __init__(self, value='', pp=''):

@@ -4,7 +4,7 @@ import unittest
 
 sys.path.insert(1, '../')
 from flint.lexer import Lexer
-from flint.token import Token, TokenKind, classify_lexeme
+from flint.token import Token, TokenKind, classify_lexeme, _token_from_lexeme
 
 
 def lex_one(line):
@@ -12,6 +12,35 @@ def lex_one(line):
 
 
 class TestToken(unittest.TestCase):
+
+    def test_lexer_factory_matches_public_constructor(self):
+        for value in ('FIELD', '1', '3.14', "'text'", '+', '=', '(', '.AND.', ''):
+            with self.subTest(value=value):
+                head = ['  ', '! comment', '\n']
+                token = _token_from_lexeme(value, head)
+                reference = Token(value)
+                reference.head = head
+                self.assertIs(type(token), Token)
+                self.assertEqual(str(token), str(reference))
+                self.assertEqual(vars(token), vars(reference))
+                self.assertIs(token.head, head)
+
+    def test_lexer_factory_keeps_per_token_state_independent(self):
+        first = _token_from_lexeme('x', [])
+        second = _token_from_lexeme('x', [])
+        first.tail.append(' ')
+        first.syntax_role = 'assignment'
+        first.operator_role = 'binary_operator'
+        self.assertEqual(second.tail, [])
+        self.assertIsNone(second.syntax_role)
+        self.assertIsNone(second.operator_role)
+
+    def test_lexer_factory_preserves_shared_liminals(self):
+        text = 'x = f(a=1) ! comment\n'
+        stmt = lex_one(text)
+        for left, right in zip(stmt, stmt[1:]):
+            self.assertIs(left.tail, right.head)
+        self.assertEqual(stmt.source_text(), text)
 
     def test_lexeme_classification_cache_is_bounded(self):
         classify_lexeme.cache_clear()
