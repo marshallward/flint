@@ -413,7 +413,7 @@ class Statement(list):
                 if not groups:
                     continue
                 start, direct = groups.pop()
-                if self[start] != GROUP_ENDERS[str(token)]:
+                if self[start] != GROUP_ENDERS[value]:
                     continue
                 if self[start] != '(' or self.opens_callable_or_subscript_group(start):
                     continue

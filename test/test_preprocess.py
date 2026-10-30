@@ -135,6 +135,19 @@ z=3
 
         self.assertFalse(statement.source_visible)
 
+    def test_include_delimiters_use_semantics_not_empty_display(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            include = Path(tmpdir) / 'defs.h'
+            include.write_text('Field = Func(Arg=1)\n')
+            statement = next(Lexer(
+                io.StringIO('#include "defs.h"\n'),
+                include_paths=[tmpdir],
+            ))
+        self.assertFalse(statement.source_visible)
+        self.assertEqual(statement[0], 'field')
+        self.assertEqual(str(statement[0]), '')
+        self.assertEqual(statement.named_argument_indices(), [5])
+
 
 if __name__ == '__main__':
     unittest.main()

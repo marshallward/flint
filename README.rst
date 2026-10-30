@@ -140,9 +140,18 @@ Flint is broken into three stages, which closely resemble compiler frontends.
    Each ``Token`` contains a ``head`` and ``tail``, which point to lists of the
    "liminals" inbetween the semantic lexemes.  This includes whitespace
    (including endlines), line breaks (``&``), statement terminators (``;``),
-   and comments.  Each ``Token`` preserves its original case, but uses
-   lowercase for general operations, such as comparison tests or dictionary
-   keys.
+   and comments. Each ``Token`` stores lowercase semantic text as its string
+   value, except that quoted string literals retain their case. The original
+   spelling is retained in ``token.original`` and returned by ``str(token)``.
+   Equality and hashing use ordinary string operations: compare names with
+   lowercase strings, such as ``token == 'field'``, not ``token == 'FIELD'``.
+   Token-to-token comparisons normalize both names at construction time.
+
+   Slicing, joining, and other inherited string operations use semantic text.
+   For source output use ``str(token)`` or ``Statement.source_text()``; for
+   example, use ``''.join(map(str, tokens))`` to preserve spelling. Literal
+   contents are case-sensitive. Preprocessed tokens compare and hash by their
+   semantic value while ``str(token)`` returns their macro source text.
 
    There is also a ``PToken`` subclass from preprocessed content.  These tokens
    display as the original unprocessed lexemes, but are evaluated as the

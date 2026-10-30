@@ -1,12 +1,14 @@
 """flint Token and PToken classes.
 
 ``Token`` is a representation of the Fortran token, designed as a subclass of
-the Python string.  The usual (string) value corresponds to the original
-lexeme, but it also contains a ``head`` and ``tail`` which contain the adjacent
+the Python string.  The underlying string is normalized to lowercase, except
+for string literals. ``original`` retains the original lexeme for ``str()``
+output. It also contains a ``head`` and ``tail`` which contain the adjacent
 "liminal" tokens.
 
-Equality and hash tests use the case-insensitive forms, like good little
-Fortran tokens.
+Equality and hashing are inherited from ``str``; compare with normalized
+strings. Slicing and joining operate on the semantic string, not its original
+spelling. Use ``str(token)`` for source output.
 
 (By "liminal" I mean the whitespace tokens between the semantic tokens.)
 
@@ -100,19 +102,20 @@ class Token(str):
     #   (At least that is my understanding...)
     def __new__(cls, value='', *args, **kwargs):
         kind = kwargs.pop('kind', None)
-        tok = str.__new__(cls, value, *args)
+        original = str.__new__(str, value, *args)
+        kind = kind if kind is not None else classify_lexeme(original)
+        normalized = original if kind is TokenKind.STRING else original.lower()
+        tok = str.__new__(cls, normalized)
+        tok.original = original
         tok.head = []
         tok.tail = []
-        tok.kind = kind if kind is not None else classify_lexeme(value)
+        tok.kind = kind
         tok.syntax_role = None
         tok.operator_role = None
         return tok
 
-    def __eq__(self, other):
-        return self.lower() == other.lower()
-
-    def __hash__(self):
-        return hash(str(self).lower())
+    def __str__(self):
+        return self.original
 
     @property
     def is_name(self):
@@ -158,10 +161,13 @@ def _token_from_lexeme(value, head):
     Avoid constructing and immediately discarding an empty head list, and
     avoid the general constructor's argument handling on this hot path.
     """
-    token = str.__new__(Token, value)
+    kind = classify_lexeme(value)
+    normalized = value if kind is TokenKind.STRING else value.lower()
+    token = str.__new__(Token, normalized)
+    token.original = value
     token.head = head
     token.tail = []
-    token.kind = classify_lexeme(value)
+    token.kind = kind
     token.syntax_role = None
     token.operator_role = None
     return token
