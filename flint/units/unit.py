@@ -106,10 +106,10 @@ class Unit(object):
     def statement(stmt):
         # TODO: If this ends up being a full type-statement parser, then it
         # needs to be moved into its own class
-        if stmt and stmt[0].lower() not in Unit._unit_statement_starters:
+        if stmt and stmt[0] not in Unit._unit_statement_starters:
             return False
         idx = next((i for i, w in enumerate(stmt)
-                    if w.lower() in Unit._unit_type_names), -1)
+                    if w in Unit._unit_type_names), -1)
 
         if idx == 0:
             return True
@@ -189,9 +189,9 @@ class Unit(object):
         Each program unit has a different header format, so this method must be
         overridden by each subclass.
         """
-        if any(tok.lower() in Unit._unit_type_names for tok in stmt):
+        if any(tok in Unit._unit_type_names for tok in stmt):
             self.utype = next(w for w in stmt
-                              if w.lower() in Unit._unit_type_names)
+                              if w in Unit._unit_type_names)
             utype_idx = stmt.index(self.utype)
         else:
             # Assume anonymous main
@@ -522,7 +522,7 @@ class Unit(object):
 
     def refresh_callees(self):
         """Collect callable symbols from executable statements."""
-        variable_names = {str(var.name).lower() for var in self.variables}
+        variable_names = {var.name.lower() for var in self.variables}
         for stmt in self.statements:
             if stmt.kind == 'declaration' or stmt.tag in ('D', 'U', 'I', 'i'):
                 continue

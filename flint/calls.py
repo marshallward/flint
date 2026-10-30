@@ -16,5 +16,5 @@ def get_callable_symbols(line, variables, *, variable_names=None):
     if not candidates:
         return []
     if variable_names is None:
-        variable_names = {str(var.name).lower() for var in variables}
-    return [name for name in candidates if str(name).lower() not in variable_names]
+        variable_names = {var.name.lower() for var in variables}
+    return [name for name in candidates if name not in variable_names]

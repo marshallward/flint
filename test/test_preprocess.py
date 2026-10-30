@@ -135,6 +135,25 @@ z=3
 
         self.assertFalse(statement.source_visible)
 
+    def test_included_declaration_matches_direct_semantics(self):
+        text = "CHARACTER(LEN=*), PARAMETER :: version = 'UnKnown'\n"
+        direct = next(Lexer(io.StringIO(text)))
+        with tempfile.TemporaryDirectory() as tmpdir:
+            include = Path(tmpdir) / 'defs.h'
+            include.write_text(text)
+            included = next(Lexer(
+                io.StringIO('#include "defs.h"\n'),
+                include_paths=[tmpdir],
+            ))
+        self.assertFalse(included.source_visible)
+        self.assertEqual(str(included[0]), '')
+        self.assertEqual(included.kind, 'declaration')
+        self.assertEqual(included[4].operator_role, 'declaration_specifier')
+        self.assertEqual(
+            [(t[:], t.kind, t.syntax_role, t.operator_role) for t in included],
+            [(t[:], t.kind, t.syntax_role, t.operator_role) for t in direct],
+        )
+
     def test_include_delimiters_use_semantics_not_empty_display(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             include = Path(tmpdir) / 'defs.h'

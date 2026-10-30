@@ -99,7 +99,9 @@ class Statement(list):
             return 'call'
         if first == 'do':
             return 'do'
-        if str(first).lower() in DECLARATION_STARTERS:
+        # Preprocessed tokens may display a macro name or nothing at all.
+        # Declaration detection must use the expanded semantic text.
+        if first in DECLARATION_STARTERS:
             return 'declaration'
         return 'other'
 
@@ -110,7 +112,7 @@ class Statement(list):
         if any(type(tok) is not Token for tok in self):
             return self._classify_token_roles_generic()
 
-        words = [str(tok) for tok in self]
+        words = self
         has_assignments = '=' in words
         for tok in self:
             tok.syntax_role = None
@@ -348,7 +350,7 @@ class Statement(list):
         prior = self[index - 1]
         return (
             getattr(prior, 'is_name', False)
-            and str(prior).lower() not in NON_CALLABLE_GROUP_NAMES
+            and prior not in NON_CALLABLE_GROUP_NAMES
         )
 
     def in_do_control(self, index):
