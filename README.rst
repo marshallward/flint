@@ -187,6 +187,35 @@ Flint is broken into three stages, which closely resemble compiler frontends.
    say to watch this space for future work.
 
 
+Experimental declaration grammar
+================================
+
+``flint.declarations.parse_declaration(statement)`` recognizes the structure of
+a type declaration using an explicit grammar tree. It returns a ``Declaration``
+with half-open token spans for the type specifier, attributes, entities, and
+initializers, plus the index of ``::`` when present. Slice the original statement
+with these spans to retain token identity, original spelling, and whitespace::
+
+   from flint.declarations import parse_declaration
+
+   declaration = parse_declaration(statement)
+   if declaration is not None:
+       for start, end in declaration.entities:
+           entity_tokens = statement[start:end]
+
+The grammar covers intrinsic, derived, and polymorphic type declarations,
+including nested selectors, array/coarray shapes, and initialization. Expressions
+inside these regions remain opaque; recognition is not full Fortran validation.
+Attribute compatibility and scope constraints are not checked. Unsupported forms
+(including procedure declarations and nonstandard type-size syntax) return
+``None`` so callers can retain their existing analysis path.
+
+This API is opt-in while the grammar is evaluated as a replacement for existing
+declaration analysis. It does not mutate or cache statements. Recompute spans
+after inserting, removing, or replacing tokens. The rule descriptions follow
+J3/24-007 R703 and R801-R805.
+
+
 Unimplemented Features
 ======================
 
