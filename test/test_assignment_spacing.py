@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 from flint.lexer import Lexer
-from report_assignment_spacing import format_statements
+from flint.formatting.assignment import format_statements
 
 
 def format_source(text, **options):

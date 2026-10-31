@@ -61,14 +61,70 @@ with limited features.
    Currently follows the Doxygen convention.
 
 ``flint format``
-   In principle, this will provide a formatted version of an input source code.
-   Currently, it returns each statement with whitespace and comments removed.
+   Report spacing issues with file, line, rule name, and original source text.
+   Use ``--diff`` to preview fixes or ``--write`` to apply them.
 
 ``flint tag``
    Return the input files, with statements tagged based on type.  For example,
    a ``module`` statement is tagged with the letter ``M``.
 
    This is primarily a debugging tool, but might be of interest to users.
+
+
+Spacing rules
+-------------
+
+Formatting is one application of Flint's parsing and source-analysis API.
+All selected rules share one project parse::
+
+   flint format src/
+   flint format --diff src/
+   flint format --write src/
+   flint format --only assignment-spacing,operator-spacing src/
+   flint format --skip callable-comma-spacing src/
+   flint format --list-rules
+
+``python -m flint`` also invokes the CLI. Source paths may be files or
+directories. ``--only`` and ``--skip`` accept repeatable, comma-separated rule
+names. All three rules run by default; skipping takes precedence over selection.
+Unknown names are errors.
+
+* ``assignment-spacing`` spaces assignments and removes spaces around named
+  argument equals signs. ``--do-controls`` also normalizes DO-control spacing.
+* ``operator-spacing`` spaces binary operators and normalizes unary spacing,
+  preserving existing exceptions for exponentiation, concatenation, DO controls,
+  and arithmetic inside callable or subscript groups.
+* ``callable-comma-spacing`` spaces commas in known callable argument lists,
+  preserving array subscripts. Repeat ``--exclude-function NAME`` to exempt
+  particular callables (case-insensitive).
+
+Default spacing is a minimum, preserving extra alignment spaces. ``--strict``
+requests exact spacing. These retain the policies of the original spacing
+scripts; configuration files and indentation fixes are future work.
+
+Report and diff modes return 1 when changes are needed, otherwise 0. Successful
+writes return 0. ``--diff --write`` both previews and applies the changes.
+The default never writes source files.
+
+Python callers can reuse a parsed project and obtain proposals without output
+or writes:
+
+.. code:: python
+
+   from flint.formatting.rules import select_rules
+   from flint.formatting.runner import check_spacing, report_spacing
+
+   project = flint.parse('src')
+   rules = select_rules(only=['assignment-spacing', 'operator-spacing'])
+   changes = list(check_spacing(project, rules.values()))
+   for change in changes:
+       print(change.path, change.formatted)
+   report_spacing(changes, diff=True)
+
+``select_rules`` also accepts ``skip``, ``strict``, ``do_controls``, and
+``excluded_functions``. Individual rule modules expose ``prepare_check`` for
+callers needing different options for each rule. Keep source files unchanged
+between parsing and checking; reparse after applying edits.
 
 
 Development API
@@ -185,6 +241,27 @@ Flint is broken into three stages, which closely resemble compiler frontends.
 
    This is also the least developed part of flint, so at this point I will just
    say to watch this space for future work.
+
+
+Streaming source locations
+==========================
+
+``flint.locations.source_locations(source)`` yields ``(statement, location)``
+pairs without adding token fields or storing an index. Each location includes
+the token, its index within the statement, and one-based ``line``, ``column``,
+``end_line``, and ``end_column`` coordinates. Ends are exclusive; columns count
+characters, not bytes or expanded tabs. Consume the iterator directly to keep
+memory bounded; collecting all results into a list naturally retains them.
+
+``statement_locations(statement)`` provides the same locations for an isolated
+statement. Columns are ``None`` until an absolute column can be determined from
+a newline or the optional ``column=`` argument. This matters for statements
+following a semicolon. Whole-source traversal provides exact columns.
+
+Positions describe the current rendered source and must be recomputed after
+edits. A continued token can span several lines. Macro tokens that display an
+invocation point to that invocation; invisible expansion tokens have no separate
+span and are omitted. This API does not reconstruct included-file origins.
 
 
 Shared spacing runner

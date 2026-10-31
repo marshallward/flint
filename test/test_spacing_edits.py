@@ -11,9 +11,9 @@ from flint.formatting.spacing import (
     LineChange, SpacingEdit, edit_replacements, format_spacing, render,
     spacing_edits,
 )
-import report_assignment_spacing as assignments
-import report_callable_comma_spacing as commas
-import report_operator_spacing as operators
+from flint.formatting import assignment as assignments
+from flint.formatting import callables as commas
+from flint.formatting import operators
 
 
 def snapshot(statements):
@@ -85,9 +85,9 @@ end subroutine demo
 
     def test_reports_diffs_and_writes_do_not_mutate_tokens(self):
         reporters = [
-            assignments.report_assignment_spacing,
-            operators.report_operator_spacing,
-            commas.report_callable_comma_spacing,
+            assignments.run,
+            operators.run,
+            commas.run,
         ]
         for reporter in reporters:
             for mode in ('report', 'diff', 'write'):

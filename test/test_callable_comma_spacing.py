@@ -8,9 +8,9 @@ from unittest.mock import patch
 
 sys.path.insert(1, '../')
 import flint  # noqa: E402
-from report_callable_comma_spacing import (  # noqa: E402
+from flint.cli import parse as main
+from flint.formatting.callables import (  # noqa: E402
     format_statements,
-    main,
     statement_contexts,
 )
 
@@ -243,7 +243,7 @@ end subroutine demo
             path = Path(tmpdir) / 'test.F90'
             path.write_text(source)
             arguments = [
-                'report_callable_comma_spacing.py', str(path), '--strict',
+                'flint', 'format', str(path), '--only', 'callable-comma-spacing', '--strict',
                 '--exclude-function=max', '--exclude-function', 'mod', '--write',
             ]
             with patch.object(sys, 'argv', arguments):

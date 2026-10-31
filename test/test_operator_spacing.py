@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(1, '../')
 import flint  # noqa: E402
-from report_operator_spacing import format_statements  # noqa: E402
+from flint.formatting.operators import format_statements  # noqa: E402
 
 
 def format_source(text, strict=False):

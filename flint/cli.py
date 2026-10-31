@@ -78,9 +78,18 @@ def parse():
     # reformat
     format_cmd = subparsers.add_parser('format')
     format_cmd.set_defaults(run_cmd=flint.tools.format.format_statements)
-    format_cmd.add_argument(*arg_srcdirs['flags'], **arg_srcdirs['parameters'])
+    format_cmd.add_argument('srcdirs', nargs='*', metavar='path', help='Source files or directories')
     format_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
     format_cmd.add_argument(*arg_exclude['flags'], **arg_exclude['parameters'])
+    format_cmd.add_argument('--only', action='append', help='Comma-separated rule names; repeatable')
+    format_cmd.add_argument('--skip', action='append', default=[], help='Rule names to skip; repeatable')
+    format_cmd.add_argument('--list-rules', action='store_true', help='List available formatting rules')
+    format_cmd.add_argument('--write', action='store_true', help='Apply spacing fixes in place')
+    format_cmd.add_argument('--diff', action='store_true', help='Print proposed unified diffs')
+    format_cmd.add_argument('--strict', action='store_true', help='Require exact rather than minimum spacing')
+    format_cmd.add_argument('--do-controls', action='store_true', help='Also normalize DO-control spacing')
+    format_cmd.add_argument('--exclude-function', dest='excluded_functions', action='append', default=[],
+                            metavar='NAME', help='Skip comma spacing for this callable; repeatable')
 
     # gendoc
     gendoc_cmd = subparsers.add_parser('gendoc')
@@ -115,4 +124,9 @@ def parse():
 
     run_args = vars(args)
     run_args.pop('run_cmd')
-    run_cmd(**run_args)
+    if run_cmd is flint.tools.format.format_statements:
+        try:
+            return run_cmd(**run_args)
+        except ValueError as error:
+            format_cmd.error(str(error))
+    return run_cmd(**run_args)
