@@ -2,11 +2,41 @@
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import flint
+from flint.documentation import documentation_pass, _analyze_declaration
 
 
 class VariableSourceTests(unittest.TestCase):
+    def test_documentation_pass_reuses_only_latest_declaration(self):
+        source = self.parse('subroutine demo()\nreal :: x, y !< Length [m]\n'
+                            'real :: z !< Time [s]\nend subroutine demo\n')
+        x, y, z = source.units[0].variables
+        expected = [v.documentation for v in (x, y, z)]
+        with patch('flint.documentation._analyze_declaration', wraps=_analyze_declaration) as analyze:
+            with documentation_pass():
+                self.assertEqual([v.documentation for v in (x, y, z)], expected)
+                self.assertEqual(analyze.call_count, 2)
+                self.assertEqual(x.documentation, expected[0])
+                self.assertEqual(analyze.call_count, 3)
+                with documentation_pass():
+                    self.assertEqual(y.documentation, expected[1])
+                self.assertEqual(x.documentation, expected[0])
+                self.assertEqual(analyze.call_count, 4)
+
+    def test_documentation_pass_releases_snapshot_after_exception_and_edits(self):
+        source = self.parse('subroutine demo()\nreal :: x !< Length [m]\nend subroutine demo\n')
+        x = source.units[0].variables[0]
+        with self.assertRaisesRegex(ValueError, 'stop'):
+            with documentation_pass():
+                self.assertEqual(x.documentation[0].comments, ('!< Length [m]',))
+                raise ValueError('stop')
+        x.stmt[-1].tail[:] = [' ', '!< Time [s]', '\n']
+        self.assertEqual(x.documentation[0].comments, ('!< Time [s]',))
+        with documentation_pass():
+            self.assertEqual(x.documentation[0].comments, ('!< Time [s]',))
+
     def parse(self, text):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'demo.F90'

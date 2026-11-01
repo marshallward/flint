@@ -1,8 +1,33 @@
 """Source-level declaration comment associations, without documentation policy."""
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 
 from flint.declarations import declared_entities
 from flint.locations import statement_locations
+
+
+_active_pass = ContextVar('flint_documentation_pass', default=None)
+
+
+@contextmanager
+def documentation_pass():
+    """Reuse the latest declaration analysis during a read-only checking pass.
+
+    Use as a context manager or decorator around code inspecting
+    ``variable.documentation``. Do not edit source tokens or statement metadata
+    inside the pass. Only one declaration is retained, independent of project
+    size; leaving the pass (including on exceptions) discards that snapshot.
+    Nested passes have independent snapshots. Outside a pass, lookups always
+    analyze current source, so edits are reflected immediately.
+    """
+    snapshot = []
+    token = _active_pass.set(snapshot)
+    try:
+        yield
+    finally:
+        _active_pass.reset(token)
+        snapshot.clear()
 
 
 @dataclass(frozen=True)
@@ -57,6 +82,17 @@ def declaration_comments(statement, entities=None):
 
 
 def _declaration_documentation(statement, entities=None):
+    snapshot = _active_pass.get()
+    if snapshot is None or entities is not None:
+        return _analyze_declaration(statement, entities)
+    if snapshot and snapshot[0] is statement:
+        return snapshot[1]
+    result = _analyze_declaration(statement)
+    snapshot[:] = [statement, result]
+    return result
+
+
+def _analyze_declaration(statement, entities=None):
     """Build entities and comment evidence with one coordinate walk."""
     if entities is None and getattr(statement, 'kind', None) != 'declaration':
         return None, None
