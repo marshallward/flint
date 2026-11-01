@@ -114,9 +114,6 @@ class Statement(list):
 
         words = self
         has_assignments = '=' in words
-        for tok in self:
-            tok.syntax_role = None
-            tok.operator_role = None
         try:
             declaration_end = words.index('::')
         except ValueError:
@@ -129,6 +126,8 @@ class Statement(list):
         callable_depth = 0
         operator_depth = 0
         for index, tok in enumerate(self):
+            tok.syntax_role = None
+            tok.operator_role = None
             value = words[index]
             closed = None
             if value in GROUP_ENDERS and groups:

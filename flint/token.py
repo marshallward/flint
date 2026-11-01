@@ -48,6 +48,14 @@ class TokenKind(Enum):
     UNKNOWN = 'unknown'
 
 
+_OPERATOR_KINDS = frozenset((
+    TokenKind.ASSIGNMENT, TokenKind.POINTER_ASSIGNMENT,
+    TokenKind.ARITHMETIC_OPERATOR, TokenKind.CONCATENATION_OPERATOR,
+    TokenKind.RELATIONAL_OPERATOR, TokenKind.LOGICAL_OPERATOR,
+    TokenKind.DEFINED_OPERATOR,
+))
+
+
 ARITHMETIC_OPERATORS = {'+', '-', '*', '/', '**'}
 RELATIONAL_OPERATORS = {'==', '/=', '<', '>', '<=', '>='}
 LOGICAL_OPERATORS = {'.and.', '.or.', '.eqv.', '.neqv.', '.not.'}
@@ -131,15 +139,7 @@ class Token(str):
 
     @property
     def is_operator(self):
-        return self.kind in (
-            TokenKind.ASSIGNMENT,
-            TokenKind.POINTER_ASSIGNMENT,
-            TokenKind.ARITHMETIC_OPERATOR,
-            TokenKind.CONCATENATION_OPERATOR,
-            TokenKind.RELATIONAL_OPERATOR,
-            TokenKind.LOGICAL_OPERATOR,
-            TokenKind.DEFINED_OPERATOR,
-        )
+        return self.kind in _OPERATOR_KINDS
 
     @property
     def is_punctuation(self):

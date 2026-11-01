@@ -46,9 +46,9 @@ TYPE_SPEC = choice(
     seq(choice('type', 'class'), PARENS),
 )
 ATTRIBUTE = choice(
-    'public', 'private', 'allocatable', 'asynchronous', 'contiguous', 'external',
-    'intrinsic', 'optional', 'parameter', 'pointer', 'protected', 'save',
-    'target', 'value', 'volatile',
+    choice('public', 'private', 'allocatable', 'asynchronous', 'contiguous', 'external',
+           'intrinsic', 'optional', 'parameter', 'pointer', 'protected', 'save',
+           'target', 'value', 'volatile'),
     seq(choice('dimension', 'intent', 'bind', 'rank'), PARENS),
     seq('codimension', BRACKETS),
 )
@@ -106,6 +106,24 @@ def _group_end(tokens, start):
     return -1
 
 
+def _first_literals(rule):
+    """Return known nonempty starting literals, or None for a general rule."""
+    if isinstance(rule, str):
+        return {rule}
+    tag, value = rule
+    if tag == 'group':
+        return {value}
+    if tag == 'sequence':
+        return _first_literals(value[0]) if value else None
+    if tag == 'capture':
+        return _first_literals(value[1])
+    if tag == 'choice':
+        starts = [_first_literals(child) for child in value]
+        if all(start is not None for start in starts):
+            return set().union(*starts)
+    return None
+
+
 def _compile(rule):
     """Compile a grammar node once; failed matches leave no captures behind.
 
@@ -161,6 +179,20 @@ def _compile(rule):
                 start + 1 if start < len(tokens) and tokens[start] in literals else -1
             )
         children = tuple(_compile(child) for child in value)
+        starts = [_first_literals(child) for child in value]
+        if all(start is not None for start in starts):
+            dispatch = {}
+            for literals, child in zip(starts, children):
+                if dispatch.keys() & literals:
+                    break
+                dispatch.update((literal, child) for literal in literals)
+            else:
+                def dispatched(tokens, start, captures):
+                    if start >= len(tokens):
+                        return -1
+                    child = dispatch.get(tokens[start])
+                    return -1 if child is None else child(tokens, start, captures)
+                return dispatched
         def choose(tokens, start, captures):
             for child in children:
                 end = child(tokens, start, captures)

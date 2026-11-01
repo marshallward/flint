@@ -13,6 +13,9 @@ used in the future.
 import string
 
 class Scanner(object):
+    _escape_states = frozenset((
+        'end', 'cmt', 'op_def_slash', 'str_a_lc_end', 'str_q_lc_end', 'num_op_kw_end',
+    ))
 
     # The Fortran Alphabet
     alpha = string.ascii_letters
@@ -215,6 +218,9 @@ class Scanner(object):
     def parse(self, line):
         lexemes = []
         ileft = 0
+        transitions = Scanner.M
+        start_transitions = transitions['start']
+        escapes = Scanner._escape_states
     
         # Determine if this is a line-continued string
         if self.delim:
@@ -241,7 +247,7 @@ class Scanner(object):
     
         for idx, char in enumerate(line):
             try:
-                state = Scanner.M[state][char]
+                state = transitions[state][char]
             except KeyError:
                 # Quoted strings may contain characters outside Fortran's
                 # lexical character set, such as unicode text in messages.
@@ -258,9 +264,7 @@ class Scanner(object):
             # By using this first "escape" block and by ordering these from
             # most to least likely, we can improve the speed by ~20%.
 
-            if state not in (
-                'end', 'cmt', 'op_def_slash', 'str_a_lc_end', 'str_q_lc_end', 'num_op_kw_end',
-            ):
+            if state not in escapes:
                 continue
 
             elif (state == 'end'):
@@ -268,7 +272,7 @@ class Scanner(object):
                 ileft = idx
 
                 # "Lookback" by re-evaluating char
-                state = Scanner.M['start'][char]
+                state = start_transitions[char]
 
             # Not a backtrack, but we can infer the lexeme immediately
             elif (state == 'cmt'):

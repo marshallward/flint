@@ -8,7 +8,6 @@ file) and each iteration returns the next complete Fortran statement.
 """
 from collections import deque
 from collections import OrderedDict
-import itertools
 import os
 import re
 import sys
@@ -282,7 +281,10 @@ class Lexer(object):
             self.line_number += 1
             lexemes = self.scanner.parse(line)
 
-            new_lims = list(itertools.takewhile(is_liminal, lexemes))
+            split = 0
+            while split < len(lexemes) and is_liminal(lexemes[split]):
+                split += 1
+            new_lims = lexemes[:split]
             lims += new_lims
 
             # Apply preprocessing to set up subsequent statements
@@ -290,7 +292,7 @@ class Lexer(object):
                 self.preprocess(new_lims[0])
 
             # Statements are liminals if preprocessing has suspended parsing
-            stmt = list(itertools.dropwhile(is_liminal, lexemes))
+            stmt = lexemes[split:]
             if self.stop_parsing:
                 lims += stmt
             else:
