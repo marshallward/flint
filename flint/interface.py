@@ -14,22 +14,28 @@ class Interface(object):
         # Contents could be stored here...
         self.abstract = None
         self.procedures = []
+        self.subprograms = []
 
         # Code data
         self.statements = []
         self.doc = Document()
 
     def parse(self, statements):
+        # Unit owns interfaces too; defer this import to avoid a module cycle.
+        from flint.units.unit import Unit
+
         self.parse_header(statements.current_line)
 
         for stmt in statements:
             if self.procedure_stmt(stmt):
                 self.parse_procedure_stmt(stmt)
-            elif stmt[0] in ('function', 'subroutine'):
-                stmt.tag = 'S'
-                self.statements.append(stmt)
             elif self.end_interface_stmt(stmt):
                 break
+            elif (index := Unit.header_index(stmt)) is not None and stmt[index] in ('function', 'subroutine'):
+                body = Unit()
+                body.parse(statements)
+                self.subprograms.append(body)
+                self.statements.extend(body.statements)
             else:
                 stmt.tag = 'I'
                 self.statements.append(stmt)
@@ -59,28 +65,16 @@ class Interface(object):
 
     def procedure_stmt(self, stmt):
         # XXX: Assert self.name is set?
-        return stmt[0] == 'procedure' or stmt[:2] == ('module', 'procedure')
+        return stmt[0] == 'procedure' or stmt[:2] == ['module', 'procedure']
 
     def parse_procedure_stmt(self, stmt):
         stmt.tag = 'P'
         self.statements.append(stmt)
 
-        tokens = iter(stmt)
-        tok = next(tokens)
-
-        # TODO: Check if procedure belongs to a module
-        if tok == 'module':
-            tok = next(tokens)
-
-        assert tok == 'procedure'
-        next(tokens)
-
-        if tok == '::':
-            tok = next(tokens)
-
-        # TODO: List of procedures; this just takes the first one!
-        # TODO: Validate the name
-        self.procedures.append(tok)
+        start = 2 if stmt[0] == 'module' else 1
+        if stmt[start:start + 1] == ['::']:
+            start += 1
+        self.procedures.extend(token for token in stmt[start:] if token != ',')
 
     def end_interface_stmt(self, stmt):
         if stmt[0].startswith('end'):

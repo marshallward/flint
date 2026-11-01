@@ -251,14 +251,18 @@ Custom checks can iterate a unit's declared variables directly:
                continue  # Unsupported declaration; choose a reporting policy.
            for block in documentation:
                print(variable.name, location, block.comments)
-       for child in (*unit.derived_types, *unit.subprograms):
-           inspect(child)
-
    for source in project.sources:
-       for unit in source.units:
-           inspect(unit)
+       for root in source.units:
+           for unit in root.walk():
+               inspect(unit)
 
 ``unit.variables`` contains that unit's declarations, not those of nested units.
+``unit.walk()`` traverses nested derived types, implementation procedures, and
+explicit interface bodies. Interface bodies are exposed separately through
+``unit.interfaces[i].subprograms``; generic procedure references remain names in
+``interface.procedures``. Use ``walk(include_interfaces=False)`` for analyses
+that want implementation scopes only. Interface arguments have the same variable
+source/documentation API as implementation arguments, with distinct scopes.
 Standard type declarations are extracted using grammar spans so shapes and
 initializer expressions cannot introduce spurious variables. ``double
 precision`` variables have ``type == 'real'``; their full type syntax remains

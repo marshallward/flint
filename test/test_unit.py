@@ -10,6 +10,7 @@ from flint.lexer import Lexer  # noqa: E402
 from flint.statement import Statement  # noqa: E402
 from flint.token import PToken, Token  # noqa: E402
 from flint.units.unit import Unit  # noqa: E402
+from flint.formatting.spacing import render
 
 
 def parse_source(text):
@@ -58,6 +59,95 @@ class TestUnit(unittest.TestCase):
                 unit.parse_header(stmt)
                 self.assertEqual(unit.utype, 'subroutine')
                 self.assertEqual(unit.name, 'demo')
+
+    def test_function_header_skips_return_type_selectors(self):
+        for text in ('type(time_type) function demo(x)',
+                     'pure type(box(k=kind(1))) function demo(x) result(value)',
+                     'class(box) function demo(x)',
+                     'real(kind=selected_real_kind(12)) function demo(x)',
+                     'module pure real function demo(x)'):
+            with self.subTest(text=text):
+                statement = next(Lexer(io.StringIO(text + '\n')))
+                self.assertTrue(Unit.statement(statement))
+                unit = Unit()
+                unit.parse_header(statement)
+                self.assertEqual(unit.utype, 'function')
+                self.assertEqual(unit.name, 'demo')
+        for text in ('type(time_type) :: value', 'class(box) :: value',
+                     'real :: function', 'real function(2)', 'module procedure demo'):
+            with self.subTest(text=text):
+                self.assertFalse(Unit.statement(next(Lexer(io.StringIO(text + '\n')))))
+
+    def test_derived_return_function_does_not_swallow_siblings(self):
+        source = parse_source('''module demo
+contains
+type(time_type) function real_to_time(x) result(value)
+  real :: x
+end function real_to_time
+real function time_to_real(t)
+  type(time_type) :: t
+  real :: scale
+end function time_to_real
+end module demo
+''')
+        module = source.units[0]
+        self.assertEqual([str(u.name) for u in module.subprograms], ['real_to_time', 'time_to_real'])
+        self.assertEqual([str(v.name) for v in module.subprograms[1].variables], ['t', 'scale'])
+
+    def test_unit_names_can_be_procedure_keywords(self):
+        for text, kind in [('module function', 'module'), ('type function', 'type'),
+                           ('program subroutine', 'program')]:
+            with self.subTest(text=text):
+                unit = Unit()
+                unit.parse_header(next(Lexer(io.StringIO(text + '\n'))))
+                self.assertEqual(unit.utype, kind)
+                self.assertEqual(unit.name, text.split()[1])
+
+    def test_interface_bodies_have_scoped_variables_and_roundtrip_source(self):
+        text = '''module demo
+abstract interface
+  type(box) function first(x) result(value)
+    import :: box
+    real :: x !< Position [m]
+  end function first
+  subroutine second(x)
+    real :: x !< Velocity [m s-1]
+  end subroutine second
+end interface
+real :: outside
+contains
+subroutine implementation()
+  real :: local
+end subroutine implementation
+end module demo
+'''
+        source = parse_source(text)
+        module = source.units[0]
+        interface = module.interfaces[0]
+        self.assertTrue(interface.abstract)
+        self.assertEqual([str(u.name) for u in interface.subprograms], ['first', 'second'])
+        first, second = [u.variables[0] for u in interface.subprograms]
+        self.assertEqual(first.documentation[0].comments, ('!< Position [m]',))
+        self.assertEqual(second.documentation[0].comments, ('!< Velocity [m s-1]',))
+        self.assertEqual((first.location.line, second.location.line), (5, 8))
+        self.assertEqual([str(v.name) for v in module.variables], ['outside'])
+        self.assertEqual([str(u.name) for u in module.subprograms], ['implementation'])
+        self.assertEqual([str(u.name) for u in module.walk()], ['demo', 'implementation', 'first', 'second'])
+        self.assertEqual([str(u.name) for u in module.walk(include_interfaces=False)], ['demo', 'implementation'])
+        self.assertEqual(render(source.statements), text)
+
+    def test_generic_procedure_references_are_not_interface_bodies(self):
+        source = parse_source('''module demo
+interface generic
+  module procedure first, second
+  procedure :: external_one, external_two
+end interface generic
+end module demo
+''')
+        interface = source.units[0].interfaces[0]
+        self.assertEqual([str(name) for name in interface.procedures],
+                         ['first', 'second', 'external_one', 'external_two'])
+        self.assertEqual(interface.subprograms, [])
 
     def test_refresh_callees_builds_variable_names_once(self):
         class Variable:

@@ -66,6 +66,7 @@ class Unit(object):
         'enum',         # ENUM, BIND(C)
         'generic',
         'interface',
+        'abstract',
         'parameter',
         'procedure',
         'data',
@@ -74,6 +75,7 @@ class Unit(object):
     ]
 
     unit_prefix = Variable.intrinsic_types + [
+        'type', 'class', 'module',
         'elemental',
         'impure',
         'non_recursive',
@@ -105,38 +107,56 @@ class Unit(object):
         self.statements = []
 
     @staticmethod
-    def statement(stmt):
-        # TODO: If this ends up being a full type-statement parser, then it
-        # needs to be moved into its own class
-        if stmt and stmt[0] not in Unit._unit_statement_starters:
-            return False
-        idx = next((i for i, w in enumerate(stmt)
-                    if w in Unit._unit_type_names), -1)
-
-        if idx == 0:
-            return True
-        elif idx > 0:
-            words = iter(stmt[:idx])
-
-            word = next(words)
-            while True:
-                try:
-                    if word in Variable.intrinsic_types:
-                        word = next(words)
-                        if word == '(':
-                            # TODO: Parse this more formally
-                            while word != ')':
-                                word = next(words)
-                    elif word not in Unit.unit_prefix:
-                        return False
-
-                    word = next(words)
-                except StopIteration:
+    def header_index(stmt):
+        """Locate a unit keyword outside a procedure's return-type selector."""
+        if not stmt or stmt[0] not in Unit._unit_statement_starters:
+            return None
+        if len(stmt) > 1 and stmt[1] in ('=', '=>', '%'):
+            return None
+        # Fortran keywords can also be unit names. Do not interpret a module
+        # or derived type named FUNCTION as a procedure prefix.
+        if stmt[0] in ('module', 'program') and len(stmt) == 2:
+            return 0
+        if stmt[0] == 'type' and stmt[1:2] not in (['('], ['is']):
+            return 0
+        depth = 0
+        for index, token in enumerate(stmt):
+            if token == '(':
+                depth += 1
+            elif token == ')':
+                depth -= 1
+            elif depth == 0:
+                if token in ('::', '=', '=>', '%'):
                     break
-            return True
+                if token in ('function', 'subroutine'):
+                    if index + 1 < len(stmt) and getattr(stmt[index + 1], 'is_name', False):
+                        return index
+                    return None
+        if stmt[0] not in Unit._unit_type_names:
+            return None
+        if stmt[0] == 'type' and stmt[1:2] in (['('], ['is']):
+            return None
+        if stmt[0] == 'module' and stmt[1:2] == ['procedure']:
+            return None
+        return 0
 
-        else:
-            return False
+    @staticmethod
+    def statement(stmt):
+        return Unit.header_index(stmt) is not None
+
+    def walk(self, *, include_interfaces=True):
+        """Yield this scope and nested types/procedures, including interface bodies.
+
+        Interface bodies remain distinct from executable subprograms. Set
+        include_interfaces=False for analyses that only want implementations.
+        """
+        yield self
+        for child in (*self.derived_types, *self.subprograms):
+            yield from child.walk(include_interfaces=include_interfaces)
+        if include_interfaces:
+            for interface in self.interfaces:
+                for body in interface.subprograms:
+                    yield from body.walk(include_interfaces=True)
 
     def end_statement(self, stmt):
         assert self.utype
@@ -191,10 +211,9 @@ class Unit(object):
         Each program unit has a different header format, so this method must be
         overridden by each subclass.
         """
-        if any(tok in Unit._unit_type_names for tok in stmt):
-            self.utype = next(w for w in stmt
-                              if w in Unit._unit_type_names)
-            utype_idx = stmt.index(self.utype)
+        utype_idx = Unit.header_index(stmt)
+        if utype_idx is not None:
+            self.utype = stmt[utype_idx]
         else:
             # Assume anonymous main
             self.utype = 'program'
@@ -277,7 +296,7 @@ class Unit(object):
 
     def parse_declaration_construct(self, statements, stmt):
         if stmt[0] == 'interface' or (
-                len(stmt) > 1 and stmt[:2] == ('abstract', 'interface')
+                len(stmt) > 1 and stmt[:2] == ['abstract', 'interface']
         ):
             block = Interface()
             block.parse(statements)
