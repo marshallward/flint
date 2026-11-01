@@ -95,7 +95,7 @@ cpp_op_rank = {
 
 class Lexer(object):
     """An iterator which returns the lexemes from an input stream."""
-    def __init__(self, source, include_paths=None):
+    def __init__(self, source, include_paths=None, *, macros=None, fn_macros=None):
         self.source = source
         self.include_paths = include_paths if include_paths else []
 
@@ -110,8 +110,8 @@ class Lexer(object):
 
         # Preprocessor macros
         # NOTE: Macros are applied in order of #define, so use OrderedDict
-        self.macros = OrderedDict()
-        self.fn_macros = OrderedDict()
+        self.macros = OrderedDict() if macros is None else macros
+        self.fn_macros = OrderedDict() if fn_macros is None else fn_macros
 
         # Preprocessor conditional state.  stop_parsing means the current
         # conditional branch is inactive and its statements are liminal text.
@@ -138,7 +138,10 @@ class Lexer(object):
         if self.includes:
             inc_stmt = self.includes.popleft()
             # Strip the statement of liminals and display strings
-            statement = Statement([PToken(tok, pp='') for tok in inc_stmt])
+            statement = Statement([
+                PToken(tok[:], pp='', is_macro_anchor=getattr(tok, 'is_macro_anchor', False))
+                for tok in inc_stmt
+            ])
             statement.line_number = self.line_number
             statement.source_visible = False
 
@@ -248,6 +251,10 @@ class Lexer(object):
                     if lx in self.macros:
                         ptoks = [PToken(lxm) for lxm in self.macros[lx]]
                         if ptoks:
+                            # The macro table retains the name before its
+                            # replacement. Keep that source anchor out of
+                            # grammatical analysis, but retain it for rendering.
+                            ptoks[0].is_macro_anchor = True
                             ptoks[0].head = prior_tail
                             prior_tail = ptoks[-1].tail
                             ptoks[0].pp = [lx]
@@ -403,9 +410,11 @@ class Lexer(object):
 
             if inc_path:
                 with open(inc_path) as inc:
-                    lexer = Lexer(inc, self.include_paths)
-                    lexer.macros = self.macros
-                    lexer.fn_macros = self.fn_macros
+                    # Share the macro environment before leading directives are
+                    # processed by the constructor, not after their definitions
+                    # and conditional results have already been consumed.
+                    lexer = Lexer(inc, self.include_paths, macros=self.macros,
+                                  fn_macros=self.fn_macros)
                     self.includes = deque()
                     for stmt in lexer:
                         self.includes.append(stmt)

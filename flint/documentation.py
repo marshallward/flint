@@ -34,7 +34,8 @@ def _comments(gap, line):
 def _groups(comments):
     group = []
     for line, text in comments:
-        if group and (line > group[-1][0] + 1 or text.startswith(('!>', '!<'))):
+        if group and (line > group[-1][0] + 1 or text.startswith('!>')
+                      or (text.startswith('!<') and group[0][1].startswith('!>'))):
             yield group
             group = []
         group.append((line, text))
@@ -82,7 +83,7 @@ def declaration_comments(statement, entities=None):
             if text.startswith('!>') or line > location.end_line + 1:
                 break
             placement = 'trailing' if line == location.end_line else 'following'
-            kind = 'backward' if text.startswith('!<') else 'plain'
+            kind = 'backward' if any(text.startswith('!<') for _, text in group) else 'plain'
             # Following blocks only apply after the final code token; comments
             # within a continued entity list retain the preceding entity owner.
             shared = index == len(statement) - 1 and (

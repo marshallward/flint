@@ -73,6 +73,46 @@ class DeclarationCommentTests(unittest.TestCase):
         self.assertEqual(blocks[0].kind, 'plain')
         self.assertEqual(blocks[0].line, 2)
 
+    def test_repeated_backward_markers_form_one_block(self):
+        entities, blocks = self.associate(
+            'real :: p !< Pressure of overlying ice\n'
+            '          !< and atmosphere\n'
+            '          !! acting on the surface\n'
+            '          !< [Pa]\n'
+        )
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(blocks[0].comments, ('!< Pressure of overlying ice',
+                                            '!< and atmosphere',
+                                            '!! acting on the surface', '!< [Pa]'))
+        self.assertEqual((blocks[0].line, blocks[0].end_line), (1, 4))
+        self.assertEqual(blocks[0].placement, 'trailing')
+        self.assertEqual(blocks[0].kind, 'backward')
+        self.assertEqual(entity_comments(entities[0], blocks), blocks)
+
+    def test_repeated_backward_comments_do_not_cross_blank_or_forward_block(self):
+        for separator in ('\n', '!> Next declaration\n'):
+            with self.subTest(separator=separator):
+                _, blocks = self.associate('real :: p !< Pressure\n' + separator + '!< [Pa]\n')
+                self.assertEqual(len(blocks), 1)
+                self.assertEqual(blocks[0].comments, ('!< Pressure',))
+
+    def test_backward_marker_can_follow_continuation_comment(self):
+        _, blocks = self.associate('real :: p !! Pressure of atmosphere\n!< [Pa]\n')
+        self.assertEqual(len(blocks), 1)
+        self.assertEqual(blocks[0].comments, ('!! Pressure of atmosphere', '!< [Pa]'))
+        self.assertEqual(blocks[0].kind, 'backward')
+        self.assertEqual(blocks[0].placement, 'trailing')
+
+    def test_repeated_backward_blocks_stay_with_each_continued_entity(self):
+        entities, blocks = self.associate(
+            'real :: a, & !< Length\n'
+            '             !< [m]\n'
+            '  b !< Time\n'
+            '    !< [s]\n'
+        )
+        self.assertEqual(entity_comments(entities[0], blocks)[0].comments, ('!< Length', '!< [m]'))
+        self.assertEqual(entity_comments(entities[1], blocks)[0].comments, ('!< Time', '!< [s]'))
+
     def test_blank_line_and_forward_marker_end_association(self):
         for text in ('real :: a\n\n! Unrelated [m]\n',
                      'real :: a\n!> Next variable [m]\nreal :: b\n'):

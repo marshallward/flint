@@ -3,7 +3,7 @@ import unittest
 
 from flint.declarations import parse_declaration
 from flint.lexer import Lexer
-from flint.token import PToken, Token
+from flint.token import PToken, Token, semantic_tokens
 
 
 def tokens(text):
@@ -71,6 +71,32 @@ class TestDeclarationGrammar(unittest.TestCase):
         expanded = [PToken(t.original, pp='') for t in statement]
         self.assertEqual(parse_declaration(statement), parse_declaration(expanded))
         self.assertEqual(''.join(map(str, expanded)), '')
+
+    def test_macro_anchors_are_skipped_with_original_span_mapping(self):
+        text = ('#define ATTR , allocatable\n#define EXTENT :\n'
+                'real ATTR, dimension(EXTENT,EXTENT) :: a, b\n')
+        statement = next(Lexer(io.StringIO(text)))
+        original = statement.source_text()
+        gaps = [(id(t.head), tuple(t.head), id(t.tail), tuple(t.tail)) for t in statement]
+        result = parse_declaration(statement)
+        self.assertIsNotNone(result)
+        self.assertEqual([str(statement[start]) for start, end in result.entities], ['a', 'b'])
+        self.assertEqual(statement[result.separator], '::')
+        self.assertEqual([''.join(semantic_tokens(statement[start:end]))
+                          for start, end in result.attributes], ['allocatable', 'dimension(:,:)'])
+        self.assertEqual(statement.source_text(), original)
+        self.assertEqual(gaps, [(id(t.head), tuple(t.head), id(t.tail), tuple(t.tail)) for t in statement])
+
+    def test_empty_macro_and_macro_type(self):
+        for text in ('#define EMPTY\nreal EMPTY :: a\n',
+                     '#define TYPE real\nTYPE :: a\n'):
+            with self.subTest(text=text):
+                statement = next(Lexer(io.StringIO(text)))
+                result = parse_declaration(statement)
+                self.assertIsNotNone(result)
+                self.assertEqual(statement[result.type_spec[0]], 'real')
+                self.assertEqual(statement[result.entities[0][0]], 'a')
+                self.assertEqual(statement.source_text(), text)
 
     def test_spans_after_label(self):
         statement = [Token('100'), *tokens('integer :: i')]

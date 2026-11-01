@@ -175,8 +175,21 @@ def _token_from_lexeme(value, head):
 
 class PToken(Token):
     """Preprocessed Token which prints its origin macro."""
-    def __init__(self, value='', pp=''):
+    is_macro_anchor = False
+
+    def __init__(self, value='', pp='', *, is_macro_anchor=False):
         self.pp = pp
+        if is_macro_anchor or getattr(value, 'is_macro_anchor', False):
+            self.is_macro_anchor = True
 
     def __str__(self):
         return ''.join(self.pp)
+
+
+def semantic_tokens(tokens):
+    """Yield Fortran tokens, excluding source-only macro-name anchors.
+
+    Expansion and included-file tokens remain, even when their display is empty.
+    Original tokens and their source gaps are never modified.
+    """
+    return (token for token in tokens if not getattr(token, 'is_macro_anchor', False))

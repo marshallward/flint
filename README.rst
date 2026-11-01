@@ -299,6 +299,12 @@ declarations and compiler extensions may return ``None``. Locations are absent
 for tokens with no displayed span. These are syntactic source views, not
 scope-resolved symbols; recompute them after token edits.
 
+Object-like macro expansions are matched using their semantic tokens, excluding
+the source-only macro-name anchors. Returned declaration spans still index the
+original statement, preserving source spelling and whitespace. Use
+``flint.token.semantic_tokens(tokens)`` to inspect such a span without its
+anchors; hidden expansion and included-file tokens remain in that view.
+
 Comment associations are exposed separately, without imposing documentation
 requirements:
 
@@ -330,6 +336,11 @@ and new forward-documentation markers terminate trailing/following association.
 Conflicting forward and backward blocks are retained as evidence, not resolved
 by Flint. The caller decides whether they are an error and what constitutes
 valid documentation. Unsupported declarations return ``None`` for fallback.
+
+Consecutive trailing comment lines remain one block, including repeated ``!<``
+markers and mixtures of ``!!`` and ``!<``. A backward marker anywhere in such a
+block identifies it as backward documentation. Blank lines, intervening code,
+and new forward blocks prevent these associations from being merged.
 
 Flint provides an interface to the details of the source code, which can be
 used to develop tools which are customized to your project.

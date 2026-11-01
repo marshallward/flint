@@ -13,6 +13,7 @@ from flint.interface import Interface
 from flint.intrinsics import intrinsic_fns
 from flint.statement import Statement
 from flint.variable import Variable
+from flint.token import semantic_tokens
 
 
 class Unit(object):
@@ -467,12 +468,13 @@ class Unit(object):
     def parse_standard_declaration(self, stmt, declaration):
         """Extract variables from grammar spans without scanning initializers."""
         type_start, type_end = declaration.type_spec
-        vtype = stmt[type_start]
+        type_tokens = tuple(semantic_tokens(stmt[type_start:type_end]))
+        vtype = type_tokens[0]
         if vtype in ('type', 'class'):
-            vtype = stmt[type_start + 2]
+            vtype = type_tokens[2]
         elif vtype == 'double':
             vtype = 'real'
-        attributes = [tuple(stmt[start:end]) for start, end in declaration.attributes]
+        attributes = [tuple(semantic_tokens(stmt[start:end])) for start, end in declaration.attributes]
         intent = None
         dimension = None
         for attribute in attributes:
@@ -485,8 +487,10 @@ class Unit(object):
         stmt_vars = []
         for start, end in declaration.entities:
             rank = dimension
-            if start + 1 < end and stmt[start + 1] == '(':
-                rank = Variable.dimension_from_tokens(iter(stmt[start + 2:end]))
+            entity_tokens = iter(semantic_tokens(stmt[start:end]))
+            next(entity_tokens)  # Name token.
+            if next(entity_tokens, None) == '(':
+                rank = Variable.dimension_from_tokens(entity_tokens)
             var = Variable.from_token(stmt[start], vtype, intent, rank, stmt)
             var.attributes = attributes.copy()
             # Preserve the legacy docstring interface. Detailed comment evidence

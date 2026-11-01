@@ -176,9 +176,18 @@ def parse_declaration(tokens, start=0):
     """Recognize a complete type declaration, or return None for fallback.
 
     ``tokens`` must contain semantic Token objects. ``start`` can skip a label;
-    returned spans still refer to the full original token sequence.
+    returned spans still refer to the full original token sequence. Source-only
+    macro anchors are skipped during matching, not removed from the statement.
     """
-    if start < 0 or start >= len(tokens) or tokens[start] not in _STARTERS:
+    if start < 0 or start >= len(tokens):
+        return None
+    source_indices = None
+    if any(getattr(token, 'is_macro_anchor', False) for token in tokens):
+        source_indices = [index for index, token in enumerate(tokens)
+                          if not getattr(token, 'is_macro_anchor', False)]
+        start = sum(index < start for index in source_indices)
+        tokens = [tokens[index] for index in source_indices]
+    if start >= len(tokens) or tokens[start] not in _STARTERS:
         return None
     captures = []
     if _match(TYPE_DECLARATION, tokens, start, captures) != len(tokens):
@@ -186,6 +195,8 @@ def parse_declaration(tokens, start=0):
     parts = {'type': [], 'attribute': [], 'entity': [], 'initialization': [],
              'separator': []}
     for name, span in captures:
+        if source_indices is not None:
+            span = (source_indices[span[0]], source_indices[span[1] - 1] + 1)
         parts[name].append(span)
     if parts['initialization'] and not parts['separator']:
         return None  # R801 constraint C806.

@@ -42,6 +42,53 @@ end subroutine demo
         self.assertEqual(y.documentation[0].comments, ('!< No units',))
         self.assertIs(x.declaration.name, x.name)
 
+    def test_macro_attributes_shapes_and_documentation(self):
+        source = self.parse('''#define ATTR , allocatable
+#define EXTENT :
+#define SHAPE (2,3)
+subroutine demo()
+  real ATTR, dimension(EXTENT,EXTENT) :: &
+    x, & !< Length [m]
+    y !< Time [s]
+  real :: z SHAPE
+end subroutine demo
+''')
+        x, y, z = source.units[0].variables
+        self.assertEqual([v.dimension for v in (x, y, z)], [2, 2, 2])
+        self.assertEqual((x.location.line, y.location.line), (6, 7))
+        self.assertEqual(x.documentation[0].comments, ('!< Length [m]',))
+        self.assertEqual(y.documentation[0].comments, ('!< Time [s]',))
+
+    def test_included_macro_declaration_retains_anchor_flags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'decl.h').write_text('real ATTR :: x\n')
+            path = root / 'demo.F90'
+            path.write_text('#define ATTR , allocatable\nsubroutine demo()\n'
+                            '#include "decl.h"\nend subroutine demo\n')
+            source = flint.parse(str(path), includes=[str(root)]).sources[0]
+            variable = source.units[0].variables[0]
+            self.assertIsNotNone(variable.declaration)
+            self.assertEqual(variable.type, 'real')
+            self.assertIsNone(variable.location)
+            self.assertFalse(variable.stmt.source_visible)
+
+    def test_header_definitions_and_leading_conditionals_share_environment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'decl.h').write_text('#ifdef ENABLED\n#define ATTR , allocatable\n'
+                                       'real ATTR :: x\n#endif\n')
+            path = root / 'demo.F90'
+            path.write_text('#define ENABLED 1\nsubroutine demo()\n#include "decl.h"\n'
+                            'real ATTR :: y !< Length [m]\nend subroutine demo\n')
+            source = flint.parse(str(path), includes=[str(root)]).sources[0]
+            x, y = source.units[0].variables
+            self.assertEqual([str(v.name) for v in (x, y)], ['', 'y'])
+            self.assertEqual(x.name, 'x')
+            self.assertIsNotNone(x.declaration)
+            self.assertIsNotNone(y.declaration)
+            self.assertEqual(y.documentation[0].comments, ('!< Length [m]',))
+
     def test_nested_procedures_and_type_components(self):
         source = self.parse('''module demo
 type :: item
