@@ -1,7 +1,7 @@
 import io
 import unittest
 
-from flint.declarations import parse_declaration
+from flint.declarations import parse_declaration, _compile, capture, choice, optional, repeat, seq
 from flint.lexer import Lexer
 from flint.token import PToken, Token, semantic_tokens
 
@@ -15,6 +15,17 @@ def spelling(statement, span):
 
 
 class TestDeclarationGrammar(unittest.TestCase):
+    def test_compiled_backtracking_does_not_leak_captures(self):
+        rule = seq(
+            optional(seq(capture('discarded_optional', 'real'), 'missing')),
+            choice(seq(capture('discarded_choice', 'real'), 'missing'), capture('type', 'real')),
+            repeat(seq(',', capture('attribute', 'pointer'), '::')),
+        )
+        captures = []
+        statement = tokens('real, pointer, target')
+        self.assertEqual(_compile(rule)(statement, 0, captures), 1)
+        self.assertEqual(captures, [('type', (0, 1))])
+
     def test_nested_selectors_attributes_and_entities(self):
         text = 'REAL(KIND=selected_real_kind(12, 200)), DIMENSION(0:n), INTENT(IN) :: A, B'
         statement = tokens(text)

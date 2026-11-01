@@ -53,12 +53,20 @@ def declaration_comments(statement, entities=None):
     Blank lines and a new !> block end a
     trailing/following association. No files are read or tokens changed.
     """
+    return _declaration_documentation(statement, entities)[1]
+
+
+def _declaration_documentation(statement, entities=None):
+    """Build entities and comment evidence with one coordinate walk."""
+    if entities is None and getattr(statement, 'kind', None) != 'declaration':
+        return None, None
+    locations = {loc.index: loc for loc in statement_locations(statement)}
     if entities is None:
-        entities = declared_entities(statement)
+        entities = declared_entities(statement, locations=locations)
     if entities is None:
-        return None
+        return None, None
     if not entities or not getattr(statement, 'source_visible', True):
-        return ()
+        return entities, ()
     result = []
     head = statement[0].head
     first_line = statement.line_number
@@ -68,17 +76,16 @@ def declaration_comments(statement, entities=None):
             result.append(CommentBlock(tuple(text for _, text in group), group[0][0],
                                        group[-1][0], 'leading', 'forward', None))
             break
-    locations = {loc.index: loc for loc in statement_locations(statement)}
     names = [entity.name_index for entity in entities]
     ends = {entity.name_index: entity.span[1] for entity in entities}
     for index, token in enumerate(statement):
         location = locations.get(index)
         if location is None:
             continue
-        owner = next((name for name in reversed(names) if name <= index), None)
-        if owner is None:
-            continue
         for group in _groups(_comments(token.tail, location.end_line)):
+            owner = next((name for name in reversed(names) if name <= index), None)
+            if owner is None:
+                break
             line, text = group[0]
             if text.startswith('!>') or line > location.end_line + 1:
                 break
@@ -104,7 +111,7 @@ def declaration_comments(statement, entities=None):
             for entity_index in owners:
                 result.append(CommentBlock(tuple(text for _, text in group), line,
                                            group[-1][0], placement, kind, entity_index))
-    return tuple(result)
+    return entities, tuple(result)
 
 
 def entity_comments(entity, blocks):

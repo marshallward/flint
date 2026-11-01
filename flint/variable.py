@@ -5,7 +5,7 @@
 """
 from flint.document import Document
 from flint.declarations import declared_entities
-from flint.documentation import declaration_comments, entity_comments
+from flint.documentation import _declaration_documentation, entity_comments
 from flint.locations import statement_locations
 
 
@@ -99,10 +99,10 @@ class Variable(object):
         """
         if self.stmt is None:
             return None
-        entities = declared_entities(self.stmt)
+        entities, blocks = _declaration_documentation(self.stmt)
         if entities is None:
             return None
         entity = next((entity for entity in entities if entity.name is self.name), None)
         if entity is None:
             return None
-        return entity_comments(entity, declaration_comments(self.stmt, entities))
+        return entity_comments(entity, blocks)

@@ -106,70 +106,99 @@ def _group_end(tokens, start):
     return -1
 
 
-def _match(rule, tokens, start, captures):
-    """Interpret a grammar node; failed branches leave no captures behind."""
-    mark = len(captures)
-    end = _match_node(rule, tokens, start, captures)
-    if end < 0:
-        del captures[mark:]
-    return end
+def _compile(rule):
+    """Compile a grammar node once; failed matches leave no captures behind.
 
-
-def _match_node(rule, tokens, start, captures):
+    Only sequences need rollback: leaves cannot capture, and other combinators
+    delegate failure to children. Matchers retain grammar, never parsed tokens.
+    """
     if isinstance(rule, str):
-        return start + 1 if start < len(tokens) and tokens[start] == rule else -1
+        return lambda tokens, start, captures: (
+            start + 1 if start < len(tokens) and tokens[start] == rule else -1
+        )
     tag, value = rule
     if tag == 'kind':
-        return start + 1 if start < len(tokens) and tokens[start].kind is value else -1
+        return lambda tokens, start, captures: (
+            start + 1 if start < len(tokens) and tokens[start].kind is value else -1
+        )
     if tag == 'group':
-        if start < len(tokens) and tokens[start] == value:
-            end = _group_end(tokens, start)
-            return end if end > start + 2 else -1
-        return -1
+        def group(tokens, start, captures):
+            if start < len(tokens) and tokens[start] == value:
+                end = _group_end(tokens, start)
+                return end if end > start + 2 else -1
+            return -1
+        return group
     if tag == 'expression':
-        end = start
-        while end < len(tokens) and tokens[end] != ',':
-            if tokens[end] in _CLOSERS:
-                end = _group_end(tokens, end)
-                if end < 0:
+        def expression(tokens, start, captures):
+            end = start
+            while end < len(tokens) and tokens[end] != ',':
+                if tokens[end] in _CLOSERS:
+                    end = _group_end(tokens, end)
+                    if end < 0:
+                        return -1
+                elif tokens[end] in _ENDS:
                     return -1
-            elif tokens[end] in _ENDS:
-                return -1
-            else:
-                end += 1
-        return end if end > start else -1
+                else:
+                    end += 1
+            return end if end > start else -1
+        return expression
     if tag == 'sequence':
-        end = start
-        for child in value:
-            end = _match(child, tokens, end, captures)
-            if end < 0:
-                return -1
-        return end
+        children = tuple(_compile(child) for child in value)
+        def sequence(tokens, start, captures):
+            mark = len(captures)
+            end = start
+            for child in children:
+                end = child(tokens, end, captures)
+                if end < 0:
+                    del captures[mark:]
+                    return -1
+            return end
+        return sequence
     if tag == 'choice':
-        for child in value:
-            end = _match(child, tokens, start, captures)
-            if end >= 0:
-                return end
-        return -1
+        if all(isinstance(child, str) for child in value):
+            literals = frozenset(value)
+            return lambda tokens, start, captures: (
+                start + 1 if start < len(tokens) and tokens[start] in literals else -1
+            )
+        children = tuple(_compile(child) for child in value)
+        def choose(tokens, start, captures):
+            for child in children:
+                end = child(tokens, start, captures)
+                if end >= 0:
+                    return end
+            return -1
+        return choose
     if tag == 'optional':
-        end = _match(value, tokens, start, captures)
-        return start if end < 0 else end
+        child = _compile(value)
+        def optional_match(tokens, start, captures):
+            end = child(tokens, start, captures)
+            return start if end < 0 else end
+        return optional_match
     if tag == 'repeat':
-        end = start
-        while True:
-            next_end = _match(value, tokens, end, captures)
-            if next_end < 0:
-                return end
-            if next_end == end:
-                raise ValueError('Repeated grammar node must consume a token')
-            end = next_end
+        child = _compile(value)
+        def repeated(tokens, start, captures):
+            end = start
+            while True:
+                next_end = child(tokens, end, captures)
+                if next_end < 0:
+                    return end
+                if next_end == end:
+                    raise ValueError('Repeated grammar node must consume a token')
+                end = next_end
+        return repeated
     if tag == 'capture':
         name, child = value
-        end = _match(child, tokens, start, captures)
-        if end >= 0:
-            captures.append((name, (start, end)))
-        return end
+        child = _compile(child)
+        def captured(tokens, start, captures):
+            end = child(tokens, start, captures)
+            if end >= 0:
+                captures.append((name, (start, end)))
+            return end
+        return captured
     raise ValueError(f'Unknown grammar node: {tag}')
+
+
+_match_declaration = _compile(TYPE_DECLARATION)
 
 
 def parse_declaration(tokens, start=0):
@@ -190,7 +219,7 @@ def parse_declaration(tokens, start=0):
     if start >= len(tokens) or tokens[start] not in _STARTERS:
         return None
     captures = []
-    if _match(TYPE_DECLARATION, tokens, start, captures) != len(tokens):
+    if _match_declaration(tokens, start, captures) != len(tokens):
         return None
     parts = {'type': [], 'attribute': [], 'entity': [], 'initialization': [],
              'separator': []}
@@ -241,14 +270,15 @@ class DeclaredEntity:
                      for start, end in self.declaration.attributes)
 
 
-def declared_entities(statement):
+def declared_entities(statement, *, locations=None):
     """Return declared entity views, or None for an unrecognized declaration.
 
     Supports the same standard type declarations as parse_declaration, with or
     without ``::``. Procedure declarations and extensions require caller fallback.
     Locations use displayed statement coordinates, not inferred include origins.
     Recompute views after token insertion/removal and locations after whitespace
-    edits. No parsing, file I/O, scope traversal, or token mutation is performed.
+    edits. ``locations`` may supply a current index-to-TokenLocation mapping to
+    share an existing coordinate walk. No file I/O or token mutation is performed.
     """
     if getattr(statement, 'kind', None) != 'declaration':
         return None
@@ -256,7 +286,8 @@ def declared_entities(statement):
     if declaration is None:
         return None
     names = {start for start, end in declaration.entities}
-    locations = {location.index: location for location in statement_locations(statement)
-                 if location.index in names}
+    if locations is None:
+        locations = {location.index: location for location in statement_locations(statement)
+                     if location.index in names}
     return tuple(DeclaredEntity(statement, declaration, span, locations.get(span[0]))
                  for span in declaration.entities)
