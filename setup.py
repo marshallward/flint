@@ -33,6 +33,7 @@ setup(
     url = 'http://github.com/marshallward/flint',
 
     packages = project_pkgs,
+    install_requires=['tomli; python_version < "3.11"'],
 
     entry_points={
         'console_scripts': [

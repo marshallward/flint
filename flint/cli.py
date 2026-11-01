@@ -84,11 +84,14 @@ def parse():
     format_cmd.add_argument('--only', action='append', help='Comma-separated rule names; repeatable')
     format_cmd.add_argument('--skip', action='append', default=[], help='Rule names to skip; repeatable')
     format_cmd.add_argument('--list-rules', action='store_true', help='List available formatting rules')
+    format_cmd.add_argument('--config', metavar='PATH', help='Use this TOML file instead of discovering flint.toml')
     format_cmd.add_argument('--write', action='store_true', help='Apply spacing fixes in place')
     format_cmd.add_argument('--diff', action='store_true', help='Print proposed unified diffs')
-    format_cmd.add_argument('--strict', action='store_true', help='Require exact rather than minimum spacing')
-    format_cmd.add_argument('--do-controls', action='store_true', help='Also normalize DO-control spacing')
-    format_cmd.add_argument('--exclude-function', dest='excluded_functions', action='append', default=[],
+    format_cmd.add_argument('--strict', action=argparse.BooleanOptionalAction, default=None,
+                            help='Require exact spacing and two extra indent levels for declaration continuations')
+    format_cmd.add_argument('--do-controls', action=argparse.BooleanOptionalAction, default=None,
+                            help='Also normalize DO-control spacing')
+    format_cmd.add_argument('--exclude-function', dest='excluded_functions', action='append', default=None,
                             metavar='NAME', help='Skip comma spacing for this callable; repeatable')
 
     # gendoc

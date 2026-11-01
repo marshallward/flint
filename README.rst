@@ -61,8 +61,8 @@ with limited features.
    Currently follows the Doxygen convention.
 
 ``flint format``
-   Report spacing issues with file, line, rule name, and original source text.
-   Use ``--diff`` to preview fixes or ``--write`` to apply them.
+   Report spacing and indentation issues with file, line, and rule name.
+   Use ``--diff`` to preview spacing fixes or ``--write`` to apply them.
 
 ``flint tag``
    Return the input files, with statements tagged based on type.  For example,
@@ -71,8 +71,8 @@ with limited features.
    This is primarily a debugging tool, but might be of interest to users.
 
 
-Spacing rules
--------------
+Formatting rules
+----------------
 
 Formatting is one application of Flint's parsing and source-analysis API.
 All selected rules share one project parse::
@@ -82,11 +82,12 @@ All selected rules share one project parse::
    flint format --write src/
    flint format --only assignment-spacing,operator-spacing src/
    flint format --skip callable-comma-spacing src/
+   flint format --only indentation src/
    flint format --list-rules
 
 ``python -m flint`` also invokes the CLI. Source paths may be files or
 directories. ``--only`` and ``--skip`` accept repeatable, comma-separated rule
-names. All three rules run by default; skipping takes precedence over selection.
+names. All four rules run by default; skipping takes precedence over selection.
 Unknown names are errors.
 
 * ``assignment-spacing`` spaces assignments and removes spaces around named
@@ -97,13 +98,27 @@ Unknown names are errors.
 * ``callable-comma-spacing`` spaces commas in known callable argument lists,
   preserving array subscripts. Repeat ``--exclude-function NAME`` to exempt
   particular callables (case-insensitive).
+* ``indentation`` checks four-space block bodies, with unindented module contents.
+  The configuration setting ``format.indentation.width`` sets a positive number
+  of spaces per level (default 4).
+  Continuations require at least eight extra spaces, except declarations (four)
+  and continued single-line IF actions (four). ``--strict`` requires eight extra
+  spaces for declarations too, while retaining manual continuation alignment.
+  Comments, preprocessor directives, and inactive branches are skipped.
+  Legacy label-terminated DO loops are not supported.
+  With a custom width, continuation minima scale to two levels, or one level
+  for the declaration and IF-action exceptions.
 
 Default spacing is a minimum, preserving extra alignment spaces. ``--strict``
-requests exact spacing. These retain the policies of the original spacing
-scripts; configuration files and indentation fixes are future work.
+requests exact spacing. These retain the policies of the original scripts;
+indentation fixes are future work.
 
 Report and diff modes return 1 when changes are needed, otherwise 0. Successful
-writes return 0. ``--diff --write`` both previews and applies the changes.
+writes return 0 unless selected diagnostic-only rules still find issues.
+Indentation is diagnostic-only: it reports issues in every mode, including
+``--diff`` and ``--write``, and returns 1 when they remain. Spacing fixes can
+still be applied in the same invocation. ``--diff --write`` both previews and
+applies the spacing changes.
 The default never writes source files.
 
 Python callers can reuse a parsed project and obtain proposals without output
@@ -125,6 +140,98 @@ or writes:
 ``excluded_functions``. Individual rule modules expose ``prepare_check`` for
 callers needing different options for each rule. Keep source files unchanged
 between parsing and checking; reparse after applying edits.
+
+Diagnostic-only rules use ``select_diagnostic_rules`` with the same rule names,
+``only``, ``skip``, and ``strict`` options, plus ``indent=4`` for the width.
+``select_rules`` returns spacing
+checks; ``select_diagnostic_rules`` returns source-to-issues callables:
+
+.. code:: python
+
+   from flint.formatting.rules import select_diagnostic_rules
+
+   for name, check in select_diagnostic_rules(only=['indentation']).items():
+       for source in project.sources:
+           for issue in check(source):
+               print(issue.path, issue.line_number, name, issue.message)
+
+The direct API is ``flint.formatting.indentation.indentation_issues(source,
+strict=False, indent=4)``. Both APIs reuse the caller's project without reparsing
+or writing.
+
+
+Project formatting configuration
+--------------------------------
+
+``flint format`` discovers the nearest ``flint.toml`` in the current working
+directory or its parents. Only that file is loaded; files are not merged.
+Discovery starts from the working directory, not each source path.
+``--config PATH`` selects an explicit file instead. An empty configuration file
+can be used to bypass project settings. Missing explicit files, invalid TOML,
+unknown settings, and invalid values are errors before source parsing.
+
+For example:
+
+.. code:: toml
+
+   [format]
+   rules = ["assignment-spacing", "operator-spacing", "callable-comma-spacing", "indentation"]
+   exclude = ["vendor"]
+
+   [format.assignment-spacing]
+   strict = false
+   do-controls = false
+
+   [format.operator-spacing]
+   strict = false
+
+   [format.callable-comma-spacing]
+   strict = false
+   excluded-functions = ["min", "max"]
+
+   [format.indentation]
+   width = 2
+   module-contents = false
+   continuation-width = 4
+   declaration-continuation-width = 2
+   strict = false
+
+Precedence is explicit CLI options, then project settings, then Flint defaults.
+``--only`` replaces the configured rule list; ``--skip`` removes rules from the
+selection. CLI exclusion lists replace their configured lists rather than
+appending. Configured excluded directories are relative to the configuration
+file; CLI paths remain relative to the working directory. Omitting ``rules``
+enables all built-ins; ``rules = []`` enables none.
+
+``--strict`` and ``--no-strict`` override strictness for every selected rule.
+``--do-controls`` and ``--no-do-controls`` override assignment DO-control policy.
+Block width is set by ``format.indentation.width``. Explicit continuation widths remain
+independent; when omitted, they default to twice the block width (ordinary
+continuations) and once the block width (declarations). Strict indentation uses
+the ordinary continuation width for declarations too. The IF-action exception
+always uses one block width. Module headers and ``contains`` remain aligned;
+``module-contents = true`` indents module bodies by one level.
+
+Python scripts use the same configuration and override machinery:
+
+.. code:: python
+
+   from flint.formatting.config import load_config, configured_rules
+   from flint.formatting.runner import check_spacing
+
+   settings = load_config('flint.toml')
+   checks, diagnostics = configured_rules(settings, only=['indentation'])
+   project = flint.parse('src', excludes=settings.get('exclude'))
+   for name, check in diagnostics.items():
+       for source in project.sources:
+           for issue in check(source):
+               print(issue.path, issue.line_number, name, issue.message)
+   changes = list(check_spacing(project, checks.values()))
+
+``configured_rules`` also accepts a plain Python mapping shaped like the TOML
+``format`` table. Explicit ``False`` and empty lists override settings; ``None``
+means omitted. No configuration is discovered by this function itself.
+Python 3.11+ uses ``tomllib``; older supported Python versions install ``tomli``.
 
 
 Development API
