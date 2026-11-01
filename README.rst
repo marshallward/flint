@@ -320,8 +320,11 @@ or ``None`` for declaration-wide documentation.
 
 Leading forward documentation is declaration-wide. Comments within an entity
 or after its separating comma belong to that entity. A final trailing comment
-on a single-line entity list is shared by the declaration; comments on separate
-continuation entities are kept separate. Adjacent following plain comments are
+on a single-line entity list is shared by the declaration. Within a continued
+declaration, a comment after several names on one physical line is shared by
+those names, with one association per entity; it does not apply to other lines.
+Comments inside unfinished shapes or initializers remain entity-specific.
+Adjacent following plain comments are
 exposed as candidates so callers can decide whether to accept them. Blank lines
 and new forward-documentation markers terminate trailing/following association.
 Conflicting forward and backward blocks are retained as evidence, not resolved

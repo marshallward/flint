@@ -11,7 +11,8 @@ class CommentBlock:
 
     ``entity_index=None`` denotes declaration-wide documentation; otherwise it
     is the entity's name-token index. ``placement`` is leading, trailing, or
-    following. Following plain comments are candidates, not semantic ownership.
+    following. A block shared by a subset of entities has one association per
+    entity. Following plain comments are candidates, not semantic ownership.
     ``kind`` is forward (!>), backward (!<), or plain. Lines are one-based.
     """
 
@@ -45,9 +46,10 @@ def declaration_comments(statement, entities=None):
     """Return comment blocks for a recognized declaration, or None.
 
     Leading !> blocks are shared by all entities. Comments inside an entity or
-    after its separating comma belong to that entity. A trailing comment on a
-    single-line entity list is declaration-wide. Comments attached to another
-    entity are never used as fallback. Blank lines and a new !> block end a
+    after its separating comma belong to that entity. A comment after a group
+    of entities on one physical line is shared by that group, including within
+    continued declarations. Comments on other lines are not used as fallback.
+    Blank lines and a new !> block end a
     trailing/following association. No files are read or tokens changed.
     """
     if entities is None:
@@ -67,6 +69,7 @@ def declaration_comments(statement, entities=None):
             break
     locations = {loc.index: loc for loc in statement_locations(statement)}
     names = [entity.name_index for entity in entities]
+    ends = {entity.name_index: entity.span[1] for entity in entities}
     for index, token in enumerate(statement):
         location = locations.get(index)
         if location is None:
@@ -88,9 +91,18 @@ def declaration_comments(statement, entities=None):
                     for entity in entities
                 )
             )
-            result.append(CommentBlock(tuple(text for _, text in group), line,
-                                       group[-1][0], placement, kind,
-                                       None if shared else owner))
+            owners = [None] if shared else [owner]
+            if not shared and index >= ends[owner] - 1:
+                # Once an entity is complete, a comment after it (or its comma)
+                # also documents earlier names on that physical code line.
+                # Comments inside an unfinished initializer/shape stay local.
+                owners = [name for name in names if name == owner or (
+                    name <= index and name in locations
+                    and locations[name].line == location.end_line
+                )]
+            for entity_index in owners:
+                result.append(CommentBlock(tuple(text for _, text in group), line,
+                                           group[-1][0], placement, kind, entity_index))
     return tuple(result)
 
 

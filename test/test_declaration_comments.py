@@ -29,6 +29,38 @@ class DeclarationCommentTests(unittest.TestCase):
         self.assertIsNone(blocks[0].entity_index)
         self.assertEqual(entity_comments(entities[0], blocks), entity_comments(entities[1], blocks))
 
+    def test_groups_on_continuation_lines_share_only_their_own_comments(self):
+        entities, blocks = self.associate(
+            'real :: &\n'
+            '  a, b, & ! Velocities [m s-1]\n'
+            '  c, d, & !< Lengths [m]\n'
+            '  e ! No units\n'
+        )
+        expected = ['! Velocities [m s-1]', '! Velocities [m s-1]',
+                    '!< Lengths [m]', '!< Lengths [m]', '! No units']
+        for entity, text in zip(entities, expected):
+            associated = entity_comments(entity, blocks)
+            self.assertEqual(len(associated), 1)
+            self.assertEqual(associated[0].comments, (text,))
+
+    def test_group_comment_on_following_line(self):
+        entities, blocks = self.associate(
+            'real :: &\n  a, b, &\n  ! Lengths [m]\n  c ! No units\n'
+        )
+        for entity in entities[:2]:
+            associated = entity_comments(entity, blocks)
+            self.assertEqual(associated[0].comments, ('! Lengths [m]',))
+            self.assertEqual(associated[0].placement, 'following')
+        self.assertEqual(entity_comments(entities[2], blocks)[0].comments, ('! No units',))
+
+    def test_comment_inside_initializer_does_not_document_preceding_name(self):
+        entities, blocks = self.associate(
+            'real :: a, b = max(1, & ! Only b\n  2), c\n'
+        )
+        self.assertEqual(entity_comments(entities[0], blocks), ())
+        self.assertEqual(entity_comments(entities[1], blocks)[0].comments, ('! Only b',))
+        self.assertEqual(entity_comments(entities[2], blocks), ())
+
     def test_forward_and_backward_evidence_remain_distinct(self):
         entities, blocks = self.associate('!> Shared description\nreal :: a, &\n  b !< B [m]\n')
         a, b = [entity_comments(entity, blocks) for entity in entities]
