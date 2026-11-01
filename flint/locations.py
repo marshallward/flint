@@ -45,6 +45,23 @@ def statement_locations(statement, *, column=None):
     yield from _locations(statement, line, column)
 
 
+def _statement_line_locations(statement):
+    """Internal line-only positions for comment association; columns are unset."""
+    if not statement or not getattr(statement, 'source_visible', True):
+        return
+    line = statement.line_number
+    if line is None:
+        raise ValueError('Statement has no source line number')
+    for index, token in enumerate(statement):
+        text = str(token)
+        end_line = line + text.count('\n')
+        if text:
+            yield TokenLocation(index, token, line, None, end_line, None)
+        line = end_line
+        for gap in token.tail:
+            line += gap.count('\n')
+
+
 def _locations(statement, line, column):
     for index, token in enumerate(statement):
         text = str(token)

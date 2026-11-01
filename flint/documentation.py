@@ -4,7 +4,7 @@ from contextvars import ContextVar
 from dataclasses import dataclass
 
 from flint.declarations import declared_entities
-from flint.locations import statement_locations
+from flint.locations import _statement_line_locations
 
 
 _active_pass = ContextVar('flint_documentation_pass', default=None)
@@ -93,10 +93,10 @@ def _declaration_documentation(statement, entities=None):
 
 
 def _analyze_declaration(statement, entities=None):
-    """Build entities and comment evidence with one coordinate walk."""
+    """Build internal entity views and comment evidence using only line numbers."""
     if entities is None and getattr(statement, 'kind', None) != 'declaration':
         return None, None
-    locations = {loc.index: loc for loc in statement_locations(statement)}
+    locations = {loc.index: loc for loc in _statement_line_locations(statement)}
     if entities is None:
         entities = declared_entities(statement, locations=locations)
     if entities is None:

@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 
 from flint.lexer import Lexer
-from flint.locations import source_locations, statement_locations
+from flint.locations import source_locations, statement_locations, _statement_line_locations
 
 
 def source(text):
@@ -32,6 +32,10 @@ class TestLocations(unittest.TestCase):
                     end = offsets[location.end_line - 1] + location.end_column - 1
                     self.assertEqual(text[start:end], str(location.token))
                     self.assertIs(statement[location.index], location.token)
+                for statement in parsed.statements:
+                    expected = [loc._replace(column=None, end_column=None)
+                                for loc in statement_locations(statement)]
+                    self.assertEqual(list(_statement_line_locations(statement)), expected)
                 self.assertEqual(before, [[vars(t).copy() for t in s] for s in parsed.statements])
 
     def test_semicolon_columns_and_isolated_unknown_column(self):
