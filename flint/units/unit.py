@@ -7,6 +7,7 @@ import itertools
 
 from flint.calls import get_callable_symbols
 from flint.construct import Construct
+from flint.declarations import parse_declaration
 from flint.document import is_docstring, is_docgroup, docstrip, Document
 from flint.interface import Interface
 from flint.intrinsics import intrinsic_fns
@@ -308,6 +309,10 @@ class Unit(object):
             self.statements.append(stmt)
 
         else:
+            declaration = parse_declaration(stmt.tokens, start=stmt.code_index)
+            if declaration is not None:
+                self.parse_standard_declaration(stmt, declaration)
+                return
             stmt_vars = []
             tokens = iter(stmt)
 
@@ -458,6 +463,53 @@ class Unit(object):
 
             stmt.tag = 'D'
             self.statements.append(stmt)
+
+    def parse_standard_declaration(self, stmt, declaration):
+        """Extract variables from grammar spans without scanning initializers."""
+        type_start, type_end = declaration.type_spec
+        vtype = stmt[type_start]
+        if vtype in ('type', 'class'):
+            vtype = stmt[type_start + 2]
+        elif vtype == 'double':
+            vtype = 'real'
+        attributes = [tuple(stmt[start:end]) for start, end in declaration.attributes]
+        intent = None
+        dimension = None
+        for attribute in attributes:
+            if attribute[0] == 'intent':
+                intent = ''.join(str(token) for token in attribute[2:-1])
+            elif attribute[0] == 'dimension':
+                dimension = Variable.dimension_from_tokens(iter(attribute[2:]))
+        if is_docstring(stmt[0].head) and is_docgroup(stmt[0].head):
+            self.grp_docstr = docstrip(stmt[0].head)[2:]
+        stmt_vars = []
+        for start, end in declaration.entities:
+            rank = dimension
+            if start + 1 < end and stmt[start + 1] == '(':
+                rank = Variable.dimension_from_tokens(iter(stmt[start + 2:end]))
+            var = Variable.from_token(stmt[start], vtype, intent, rank, stmt)
+            var.attributes = attributes.copy()
+            # Preserve the legacy docstring interface. Detailed comment evidence
+            # is available separately through Variable.documentation on demand.
+            comments = [item for token in stmt[start:end] for item in token.tail]
+            if end < len(stmt) and stmt[end] == ',':
+                comments.extend(stmt[end].tail)
+            if is_docstring(comments) and not is_docgroup(comments):
+                var.doc.docstring = docstrip(comments)
+            elif self.grp_docstr:
+                var.doc.docstring = self.grp_docstr
+            stmt_vars.append(var)
+        # Keep the historical docstring interface for existing documentation
+        # clients; the documentation property exposes precise source evidence.
+        shared_docstring = stmt_vars[-1].doc.docstring
+        for variable in stmt_vars[:-1]:
+            if shared_docstring and not variable.doc.docstring:
+                variable.doc.docstring = shared_docstring
+        self.variables.extend(stmt_vars)
+        if is_docstring(stmt[-1].tail) and is_docgroup(stmt[-1].tail):
+            self.grp_docstr = None
+        stmt.tag = 'D'
+        self.statements.append(stmt)
 
     def parse_declaration_attributes(self, tokens, var_intent=None, dimension=None):
         """Parse known declaration attributes before ``::``.

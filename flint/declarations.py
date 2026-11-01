@@ -9,6 +9,7 @@ No tokens or source whitespace are copied or modified.
 from dataclasses import dataclass
 
 from flint.token import TokenKind
+from flint.locations import statement_locations
 
 
 def seq(*children):
@@ -193,3 +194,58 @@ def parse_declaration(tokens, start=0):
         tuple(parts['initialization']),
         parts['separator'][0][0] if parts['separator'] else None,
     )
+
+
+@dataclass(frozen=True)
+class DeclaredEntity:
+    """One entity in a syntactic declaration, referencing original tokens.
+
+    ``span`` is half-open; ``name_index`` is its first token. ``location`` is
+    a TokenLocation or None for a token without a displayed source span.
+    This is a source view, not a scope-resolved Variable or a symbol table entry.
+    """
+
+    statement: object
+    declaration: Declaration
+    span: tuple
+    location: object
+
+    @property
+    def name_index(self):
+        return self.span[0]
+
+    @property
+    def name(self):
+        """Original name token (use str() for source spelling)."""
+        return self.statement[self.name_index]
+
+    @property
+    def type_tokens(self):
+        start, end = self.declaration.type_spec
+        return tuple(self.statement[start:end])
+
+    @property
+    def attribute_tokens(self):
+        return tuple(tuple(self.statement[start:end])
+                     for start, end in self.declaration.attributes)
+
+
+def declared_entities(statement):
+    """Return declared entity views, or None for an unrecognized declaration.
+
+    Supports the same standard type declarations as parse_declaration, with or
+    without ``::``. Procedure declarations and extensions require caller fallback.
+    Locations use displayed statement coordinates, not inferred include origins.
+    Recompute views after token insertion/removal and locations after whitespace
+    edits. No parsing, file I/O, scope traversal, or token mutation is performed.
+    """
+    if getattr(statement, 'kind', None) != 'declaration':
+        return None
+    declaration = parse_declaration(statement.tokens, start=statement.code_index)
+    if declaration is None:
+        return None
+    names = {start for start, end in declaration.entities}
+    locations = {location.index: location for location in statement_locations(statement)
+                 if location.index in names}
+    return tuple(DeclaredEntity(statement, declaration, span, locations.get(span[0]))
+                 for span in declaration.entities)

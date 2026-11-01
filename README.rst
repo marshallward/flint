@@ -237,6 +237,97 @@ Python 3.11+ uses ``tomllib``; older supported Python versions install ``tomli``
 Development API
 ---------------
 
+Custom checks can iterate a unit's declared variables directly:
+
+.. code:: python
+
+   def inspect(unit):
+       for variable in unit.variables:
+           if variable.type != 'real':
+               continue
+           location = variable.location
+           documentation = variable.documentation
+           if documentation is None:
+               continue  # Unsupported declaration; choose a reporting policy.
+           for block in documentation:
+               print(variable.name, location, block.comments)
+       for child in (*unit.derived_types, *unit.subprograms):
+           inspect(child)
+
+   for source in project.sources:
+       for unit in source.units:
+           inspect(unit)
+
+``unit.variables`` contains that unit's declarations, not those of nested units.
+Standard type declarations are extracted using grammar spans so shapes and
+initializer expressions cannot introduce spurious variables. ``double
+precision`` variables have ``type == 'real'``; their full type syntax remains
+available from ``variable.declaration.type_tokens``. Entity shapes override
+declaration-wide DIMENSION attributes.
+
+``variable.declaration`` is a source entity view, ``declaration_tokens`` exposes
+its original tokens and whitespace tails, ``location`` locates the name token,
+and ``documentation`` provides associated comment blocks. These source views
+are computed on demand without retained caches. Unsupported declarations return
+``None`` for declaration/documentation views; recognized declarations without
+comments return an empty tuple. Locations may be absent for undisplayed tokens.
+The historical ``variable.doc`` interface remains available for existing clients;
+new policy checks should use ``documentation`` for explicit association evidence.
+
+Custom declaration checks can inspect source entities without reconstructing
+the declaration's comma nesting or searching for names by spelling:
+
+.. code:: python
+
+   from flint.declarations import declared_entities
+
+   for source in project.sources:
+       for statement in source.statements:
+           entities = declared_entities(statement)
+           if entities is None:
+               continue  # Unrecognized declaration; callers may supply fallback.
+           for entity in entities:
+               print(entity.name, entity.type_tokens, entity.attribute_tokens)
+               if entity.location is not None:
+                   print(source.path, entity.location.line)
+
+Each entity references the original statement, its parsed declaration, and a
+half-open entity token span. ``name_index`` identifies the actual declaration
+token even if the same name occurs earlier in a selector or dimension attribute.
+Standard type declarations with and without ``::`` are supported; procedure
+declarations and compiler extensions may return ``None``. Locations are absent
+for tokens with no displayed span. These are syntactic source views, not
+scope-resolved symbols; recompute them after token edits.
+
+Comment associations are exposed separately, without imposing documentation
+requirements:
+
+.. code:: python
+
+   from flint.documentation import declaration_comments, entity_comments
+
+   entities = declared_entities(statement)
+   if entities is not None:
+       blocks = declaration_comments(statement, entities)
+       for entity in entities:
+           for block in entity_comments(entity, blocks):
+               print(entity.name, block.placement, block.kind, block.comments)
+
+``CommentBlock`` records comment text, first and last physical lines, placement
+(``leading``, ``trailing``, or ``following``), and kind (``forward`` for ``!>``,
+``backward`` for ``!<``, or ``plain``). ``entity_index`` is the name-token index,
+or ``None`` for declaration-wide documentation.
+
+Leading forward documentation is declaration-wide. Comments within an entity
+or after its separating comma belong to that entity. A final trailing comment
+on a single-line entity list is shared by the declaration; comments on separate
+continuation entities are kept separate. Adjacent following plain comments are
+exposed as candidates so callers can decide whether to accept them. Blank lines
+and new forward-documentation markers terminate trailing/following association.
+Conflicting forward and backward blocks are retained as evidence, not resolved
+by Flint. The caller decides whether they are an error and what constitutes
+valid documentation. Unsupported declarations return ``None`` for fallback.
+
 Flint provides an interface to the details of the source code, which can be
 used to develop tools which are customized to your project.
 
