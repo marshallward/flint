@@ -89,14 +89,14 @@ Functions/Subroutines
 =====================
 .. list-table::
 
-   * - |update|_
+   * - `update <flint-demo-1update_>`__
      - Update a value.
 
 
 Functions/Subroutine Documentation
 ==================================
 
-.. _update:
+.. _flint-demo-1update:
 
 subroutine update ( x )
   Update a value.
@@ -104,10 +104,6 @@ subroutine update ( x )
   Parameters
     - **x** :: [inout] Value \[m\]
 
-
-.. Subprogram labels
-
-.. |update| replace:: ``update``
 ''')
 
     def test_command_writes_module_and_external_pages(self):

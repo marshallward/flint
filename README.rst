@@ -116,6 +116,32 @@ documentation model. Unit summaries retain their original paragraph breaks
 during extraction; legacy variable docstrings may already have been flattened
 by the parser.
 
+Cross-module documentation links
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To prepare independently rendered HTML pages::
+
+    flint gendoc src --output reference --link-format html
+
+Render each resulting ``.rst`` file with Docutils, Pandoc, or another reST
+renderer, using the same basename and an ``.html`` extension in one directory.
+Flint does not run the renderer. Its output uses standard reST links and
+explicit targets, with qualified anchors to distinguish same-named procedures.
+
+``flint.docgen.references.ReferenceIndex`` resolves ordinary procedure names
+using local and host scopes, ``USE`` imports (including ``ONLY`` and renames),
+public module re-exports, and external procedures. Reverse caller lists are
+built from these resolved calls, rather than from the parser's unqualified
+graph. Unknown or ambiguous names are rendered as plain text and diagnosed on
+stderr by the command. Missing modules, generic interfaces, and unsupported
+bindings are not guessed from similarly named procedures elsewhere.
+
+``HtmlDestinations`` is a separate policy mapping resolved identities to HTML
+page URLs. Without ``--link-format html``, only same-page references become
+links; other references are plain text. No Sphinx extensions are required.
+A later combined-document policy can reuse symbol resolution while supplying
+different destinations.
+
 
 Formatting rules
 ----------------

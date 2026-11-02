@@ -101,6 +101,8 @@ def parse():
     gendoc_cmd.add_argument(*arg_docdir['flags'], **arg_docdir['parameters'])
     gendoc_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
     gendoc_cmd.add_argument(*arg_exclude['flags'], **arg_exclude['parameters'])
+    gendoc_cmd.add_argument('--link-format', choices=('html',), default=None,
+                            help='Target format for cross-module links (default: local links only)')
 
     # tag
     tag_cmd = subparsers.add_parser('tag')

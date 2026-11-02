@@ -6,6 +6,8 @@ tokens, traverse a parsed project, or resolve names in the parser's call graph.
 import re
 import string
 
+from flint.docgen.references import Reference, ReferenceIndex, anchor
+
 
 def _prose(text):
     """Render plain prose, preserving paragraphs rather than source indentation.
@@ -34,8 +36,22 @@ def _indented(text, indent):
     return '\n'.join(indent + line if line else '' for line in text.split('\n'))
 
 
-def write_module(doc, module):
+def _link(reference, references, current, destinations):
+    if reference.target is None:
+        return '``' + reference.label + '``'
+    if destinations is not None:
+        target = destinations.destination(reference.target, current)
+    elif references.pages[reference.target] == references.pages[current]:
+        target = anchor(reference.target) + '_'
+    else:
+        return '``' + reference.label + '``'
+    return f'`{_prose(reference.label)} <{target}>`__'
+
+
+def write_module(doc, module, *, references=None, destinations=None):
     """Write a module reference to a text stream using the legacy layout."""
+    if references is None:
+        references = ReferenceIndex((module,))
     title = module.name + ' module reference'
     doc.write('=' * len(title) + '\n' + title + '\n' + '=' * len(title) + '\n')
     doc.write(_prose(module.summary) + '\n\n')
@@ -48,7 +64,9 @@ def write_module(doc, module):
             for entry in entries:
                 name = (entry.display_name or entry.name) if title == 'Data Types' else entry.name
                 summary = _prose(entry.summary).replace('\n', '\n       ')
-                doc.write(f'   * - |{name}|_\n     - {summary}\n\n\n')
+                link = _link(Reference(name, entry.qualified_name), references,
+                             module.qualified_name, destinations)
+                doc.write(f'   * - {link}\n     - {summary}\n\n\n')
 
     if module.description:
         doc.write('Detailed Description\n====================\n')
@@ -57,31 +75,23 @@ def write_module(doc, module):
     if module.derived_types:
         doc.write('Type Documentation\n==================\n')
         for entry in module.derived_types:
-            write_unit(doc, entry, show_callers=False)
+            write_unit(doc, entry, show_callers=False, references=references, destinations=destinations)
 
     if module.procedures:
         doc.write('Functions/Subroutine Documentation\n==================================\n\n')
         for entry in module.procedures:
-            write_unit(doc, entry)
-
-    for label, entries in (('Type/Interface', module.derived_types),
-                           ('Subprogram', module.procedures)):
-        if entries:
-            doc.write(f'\n.. {label} labels\n\n')
-            for entry in entries:
-                name = entry.display_name or entry.name
-                doc.write(f'.. |{name}| replace:: ``{name}``\n')
+            write_unit(doc, entry, references=references, destinations=destinations)
 
 
-def write_unit(doc, unit, depth=0, *, show_callers=True):
+def write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destinations=None):
     """Write a unit record and its nested types and procedures."""
     indent = depth * ' '
-    doc.write(indent + '.. _' + unit.name + ':\n\n')
+    doc.write(indent + '.. _' + anchor(unit.qualified_name) + ':\n\n')
     doc.write(indent + unit.signature + '\n')
     doc.write(_indented(_prose(unit.summary), indent + '  ') + '\n')
     doc.write('\n')
 
-    if unit.variables:
+    if any(variable.description for variable in unit.variables):
         doc.write(indent + '  Parameters\n')
     for variable in unit.variables:
         if variable.description:
@@ -91,13 +101,20 @@ def write_unit(doc, unit, depth=0, *, show_callers=True):
             description = _prose(variable.description).replace('\n', '\n' + indent + '      ')
             doc.write(description + '\n\n')
 
-    for title, names in (('Calls into', unit.callees),
-                         ('Called by', unit.callers if show_callers else ())):
-        if names:
+    calls = (references.calls[unit.qualified_name] if references is not None else
+             tuple(Reference(name, None) for name in unit.callees))
+    callers = references.callers.get(unit.qualified_name, ()) if references is not None else ()
+    for title, links in (('Calls into', calls), ('Called by', callers if show_callers else ())):
+        if links:
             doc.write('\n' + indent + title + '\n')
-            doc.write(indent + '  ' + ' '.join(f'|{name}|_' for name in names) + '\n\n')
+            for ref in links:
+                doc.write(indent + '  ' +
+                          _link(ref, references, unit.qualified_name, destinations) + '\n')
+            doc.write('\n')
 
     for child in unit.derived_types:
-        write_unit(doc, child, depth + 2, show_callers=False)
+        write_unit(doc, child, depth + 2, show_callers=False,
+                   references=references, destinations=destinations)
     for child in unit.procedures:
-        write_unit(doc, child, depth + 2, show_callers=show_callers)
+        write_unit(doc, child, depth + 2, show_callers=show_callers,
+                   references=references, destinations=destinations)
