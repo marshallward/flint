@@ -13,6 +13,49 @@ from flint.docgen.rst import write_module
 
 
 SOURCES = {
+    'generic_library': '''module generic_library
+private
+public :: dispatch
+!> Dispatch a scalar or an array.
+interface dispatch
+  module procedure dispatch, dispatch_array
+end interface dispatch
+interface hidden
+  module procedure dispatch_array
+end interface hidden
+interface operator(+)
+  module procedure combine
+end interface
+interface operator(-)
+  module procedure combine
+end interface
+contains
+function combine(x, y) result(z)
+real :: x, y, z
+z = x + y
+end function combine
+subroutine dispatch(x)
+real :: x
+end subroutine dispatch
+subroutine dispatch_array(x)
+real :: x(:)
+end subroutine dispatch_array
+end module generic_library
+''',
+    'generic_facade': '''module generic_facade
+use generic_library, only: forwarded => dispatch
+end module generic_facade
+''',
+    'generic_client': '''module generic_client
+use generic_facade, only: work => forwarded
+use generic_library, only: hidden
+contains
+subroutine run()
+call work(1.)
+call hidden(1.)
+end subroutine run
+end module generic_client
+''',
     'alpha': '''module alpha
 private
 public :: helper, invoke
@@ -101,6 +144,23 @@ class ReferenceTests(unittest.TestCase):
                 (Path(tmp) / (name + '.F90')).write_text(text)
             self.modules = tuple(iter_module_documentation(flint.parse(tmp)))
         self.index = ReferenceIndex(self.modules)
+
+    def test_generic_interfaces_link_without_selecting_an_overload(self):
+        target = 'generic_library::interface::dispatch'
+        self.assertEqual(self.index.resolve('generic_client::run', 'work').target, target)
+        self.assertIsNone(self.index.resolve('generic_client::run', 'hidden').target)
+        self.assertEqual(self.index.units[target].summary, 'Dispatch a scalar or an array.')
+        self.assertEqual([ref.target for ref in self.index.implementations[target]],
+                         ['generic_library::dispatch', 'generic_library::dispatch_array'])
+        self.assertEqual([ref.target for ref in self.index.callers[target]], ['generic_client::run'])
+        self.assertFalse(self.index.callers['generic_library::dispatch'])
+        module = next(m for m in self.modules if m.name == 'generic_library')
+        self.assertEqual({entry.name for entry in module.interfaces}, {'dispatch', 'hidden'})
+        output = io.StringIO()
+        write_module(output, module, references=self.index)
+        self.assertIn('Generic Interfaces', output.getvalue())
+        self.assertIn('Implementations', output.getvalue())
+        self.assertIn(anchor(target), output.getvalue())
 
     def test_renames_host_scopes_and_reexports(self):
         expected = {

@@ -42,6 +42,8 @@ class UnitDocumentation:
     default_public: bool = True
     access: tuple[tuple[str, bool], ...] = ()
     opaque_names: tuple[str, ...] = ()
+    interfaces: tuple['UnitDocumentation', ...] = ()
+    implementations: tuple[str, ...] = ()
 
 
 def _text(value):
@@ -111,6 +113,22 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
     name = _text(unit.name) or 'External'
     path = (*scope, name)
     uses, default_public, access = _scope_metadata(unit)
+    interfaces = tuple(
+        UnitDocumentation(
+            name=_text(interface.name),
+            qualified_name='::'.join((*path, 'interface', _text(interface.name))),
+            kind='interface',
+            signature='interface ' + _text(interface.name),
+            summary=docstrip(interface.statements[0][0].head, oneline=False),
+            description='',
+            implementations=tuple(_text(name) for name in interface.procedures),
+        )
+        for interface in unit.interfaces
+        if (interface.name is not None and _text(interface.name).isidentifier()
+            and len(interface.statements[0]) == 2
+            and not interface.abstract and interface.procedures and not interface.subprograms)
+    )
+    documented_interfaces = {interface.name.lower() for interface in interfaces}
     return UnitDocumentation(
         name=name,
         qualified_name='::'.join(path),
@@ -134,7 +152,9 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
         default_public=default_public,
         access=access,
         opaque_names=tuple(_text(interface.name).lower() for interface in unit.interfaces
-                           if getattr(interface, 'name', None)),
+                           if getattr(interface, 'name', None)
+                           and _text(interface.name).lower() not in documented_interfaces),
+        interfaces=interfaces,
     )
 
 

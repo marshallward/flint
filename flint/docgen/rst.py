@@ -57,6 +57,7 @@ def write_module(doc, module, *, references=None, destinations=None):
     doc.write(_prose(module.summary) + '\n\n')
 
     for title, entries in (('Data Types', module.derived_types),
+                           ('Generic Interfaces', module.interfaces),
                            ('Functions/Subroutines', module.procedures)):
         if entries:
             doc.write(title + '\n' + '=' * len(title) + '\n')
@@ -76,6 +77,11 @@ def write_module(doc, module, *, references=None, destinations=None):
         doc.write('Type Documentation\n==================\n')
         for entry in module.derived_types:
             write_unit(doc, entry, show_callers=False, references=references, destinations=destinations)
+
+    if module.interfaces:
+        doc.write('Generic Interface Documentation\n===============================\n\n')
+        for entry in module.interfaces:
+            write_unit(doc, entry, references=references, destinations=destinations)
 
     if module.procedures:
         doc.write('Functions/Subroutine Documentation\n==================================\n\n')
@@ -104,7 +110,10 @@ def write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destin
     calls = (references.calls[unit.qualified_name] if references is not None else
              tuple(Reference(name, None) for name in unit.callees))
     callers = references.callers.get(unit.qualified_name, ()) if references is not None else ()
-    for title, links in (('Calls into', calls), ('Called by', callers if show_callers else ())):
+    implementations = (references.implementations[unit.qualified_name] if references is not None else
+                       tuple(Reference(name, None) for name in unit.implementations))
+    for title, links in (('Implementations', implementations), ('Calls into', calls),
+                         ('Called by', callers if show_callers else ())):
         if links:
             doc.write('\n' + indent + title + '\n')
             for ref in links:
@@ -115,6 +124,6 @@ def write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destin
     for child in unit.derived_types:
         write_unit(doc, child, depth + 2, show_callers=False,
                    references=references, destinations=destinations)
-    for child in unit.procedures:
+    for child in (*unit.interfaces, *unit.procedures):
         write_unit(doc, child, depth + 2, show_callers=show_callers,
                    references=references, destinations=destinations)

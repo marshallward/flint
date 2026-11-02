@@ -1,7 +1,7 @@
 """Scope-aware documentation references, independent of output format.
 
-This resolves ordinary procedures, host association, and USE imports. Generic
-interfaces and other unsupported bindings remain unresolved, rather than being
+This resolves ordinary procedures, named procedure-list interfaces, host
+association, and USE imports. Other unsupported bindings remain unresolved, rather than being
 guessed from a globally matching name.
 """
 from collections import defaultdict
@@ -23,6 +23,7 @@ class ReferenceIndex:
         self.modules = defaultdict(list)
         self.children = defaultdict(lambda: defaultdict(list))
         self.calls = {}
+        self.implementations = {}
         self.callers = defaultdict(list)
         self.diagnostics = []
         self.externals = defaultdict(list)
@@ -35,6 +36,8 @@ class ReferenceIndex:
                     if procedure.kind in ('function', 'subroutine'):
                         self.externals[procedure.name.lower()].append(procedure.qualified_name)
         for key, unit in self.units.items():
+            self.implementations[key] = tuple(
+                self._implementation(key, name) for name in unit.implementations)
             calls = tuple(self.resolve(key, name) for name in unit.callees)
             self.calls[key] = calls
             for reference in calls:
@@ -54,8 +57,20 @@ class ReferenceIndex:
         self.pages[key] = page
         if parent is not None:
             self.children[parent][unit.name.lower()].append(key)
-        for child in (*unit.derived_types, *unit.procedures):
+        for child in (*unit.derived_types, *unit.procedures, *unit.interfaces):
             self._add(child, key, page)
+
+    def _implementation(self, interface, name):
+        scope = self.parents[interface]
+        # A generic may legally share its name with one of its specifics.
+        specifics = [key for key in self.children[scope].get(name.lower(), ())
+                     if self.units[key].kind in ('function', 'subroutine')]
+        if len(specifics) == 1:
+            return Reference(name, specifics[0])
+        reference = self.resolve(scope, name)
+        if reference.target is not None and self.units[reference.target].kind == 'interface':
+            return Reference(name, None, 'unresolved implementation')
+        return reference
 
     def _local(self, scope, name, visiting):
         """Return (targets, uncertain, bound) at one lexical scope."""
@@ -64,6 +79,9 @@ class ReferenceIndex:
             return set(), True, True
         children = self.children[scope].get(name, ())
         if children:
+            interfaces = {key for key in children if self.units[key].kind == 'interface'}
+            if interfaces:
+                return interfaces, len(interfaces) != 1, True
             targets = {key for key in children
                        if self.units[key].kind in ('function', 'subroutine')}
             return targets, len(targets) != len(children), True
