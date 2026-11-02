@@ -5,13 +5,48 @@
 """
 
 
+_IO_STATEMENTS = frozenset((
+    'read', 'write', 'open', 'close', 'inquire', 'backspace', 'rewind',
+    'endfile', 'flush', 'wait',
+))
+
+
+def _statement_keyword_indices(line):
+    """Locate IF and I/O keywords, including a logical IF's action.
+
+    Fortran keywords are not reserved: only exclude the keyword at the action
+    position, never a same-named procedure inside an expression or CALL.
+    """
+    start = getattr(line, 'code_index', 0)
+    keywords = ()
+    if start < len(line) and line[start].isdigit():
+        start += 1
+    if line[start:start + 2] == ['if', '(']:
+        keywords = (start,)
+        depth = 0
+        for index in range(start + 1, len(line)):
+            if line[index] == '(':
+                depth += 1
+            elif line[index] == ')':
+                depth -= 1
+                if depth == 0:
+                    start = index + 1
+                    break
+        else:
+            return keywords
+    if start < len(line) and line[start] in _IO_STATEMENTS:
+        return (*keywords, start)
+    return keywords
+
+
 def get_callable_symbols(line, variables, *, variable_names=None):
     """Find callables, optionally reusing normalized variable names for a scope."""
+    keyword_indices = _statement_keyword_indices(line)
     candidates = [
-        b for a, b, c in zip(line, line[1:], line[2:])
+        b for index, (a, b, c) in enumerate(zip(line, line[1:], line[2:]), 1)
         # TODO: Resolve derived-type components so type-bound procedures can be
         # distinguished from array/data components like obj%field(i,j).
-        if c == '(' and a != '%' and b[0].isalpha()
+        if c == '(' and a != '%' and b[0].isalpha() and index not in keyword_indices
     ]
     if not candidates:
         return []

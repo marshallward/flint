@@ -12,6 +12,31 @@ def statement(text):
 
 
 class TestCallableSymbols(unittest.TestCase):
+    def test_io_statements_are_not_calls(self):
+        for text, expected in (
+            ('write(unit,*) value()', ['value']),
+            ('if (ready(check())) write(unit,*) value()', ['ready', 'check', 'value']),
+            ('100 if (ready()) write(unit,*) value()', ['ready', 'value']),
+            ('if (ready()) read(unit,fmt=format_for()) x', ['ready', 'format_for']),
+            ('if (ready()) open(unit=unit, file=filename())', ['ready', 'filename']),
+            ('if (ready()) close(unit)', ['ready']),
+            ('if (ready()) inquire(unit, opened=opened)', ['ready']),
+            ('if (ready()) flush(unit)', ['ready']),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(get_callable_symbols(statement(text), []), expected)
+
+    def test_io_names_remain_callable_in_expressions_and_calls(self):
+        for text, expected in (
+            ('x = write(value)', ['write']),
+            ('call write(value)', ['write']),
+            ('if (ready()) call write(value)', ['ready', 'write']),
+            ('if (write(value)) x = read(value)', ['write', 'read']),
+            ('if (ready()) write(unit,*) write(value)', ['ready', 'write']),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(get_callable_symbols(statement(text), []), expected)
+
     def test_no_candidates_does_not_inspect_variables(self):
         def unavailable_variables():
             raise AssertionError('Variable names are unnecessary without candidates')
