@@ -68,7 +68,53 @@ with limited features.
    Return the input files, with statements tagged based on type.  For example,
    a ``module`` statement is tagged with the letter ``M``.
 
-   This is primarily a debugging tool, but might be of interest to users.
+    This is primarily a debugging tool, but might be of interest to users.
+
+
+Documentation generation
+------------------------
+
+``flint gendoc`` separates source extraction from reStructuredText rendering:
+
+* ``flint.docgen.model.iter_module_documentation(project)`` yields immutable
+  module snapshots, one at a time. Each record contains plain strings and
+  tuples: signatures, descriptions, variables, nested units, and call names.
+  Qualified names distinguish entries in different scopes; ``display_name``
+  preserves the source spelling. Snapshots retain no parser objects and must
+  be rebuilt after source edits.
+* ``flint.docgen.rst.write_module(stream, module)`` renders a snapshot to a text
+  stream. It can also render records constructed without parsing Fortran.
+* ``flint.tools.gendoc`` connects parsing, extraction, and output files for the
+  command line.
+
+For example::
+
+    import flint
+    from flint.docgen.model import iter_module_documentation
+    from flint.docgen.rst import write_module
+
+    project = flint.parse('example.F90')
+    for module in iter_module_documentation(project):
+        with open(module.name + '.rst', 'w', encoding='utf-8') as output:
+            write_module(output, module)
+
+The initial model preserves the existing generator's coverage and legacy
+docstrings. It does not yet distinguish dummy arguments from local variables,
+filter private entities, or include generic interfaces and module variables in
+the rendered reference. Call names are the parser's existing evidence, not
+resolved cross-module links. The reST writer retains the existing layout;
+call lists are sorted for reproducible output.
+
+Descriptions are treated as plain prose by the reST writer. Blank lines
+separate paragraphs; source wrapping and incidental indentation within a
+paragraph are normalized, and reST punctuation is escaped. Lists, directives,
+and inline markup in comments are therefore displayed literally. Doxygen
+commands are also literal text until explicit translation is implemented.
+Source authors do not need to adopt reST syntax. This policy lives in the
+writer, allowing a future explicit strict-reST mode without changing the
+documentation model. Unit summaries retain their original paragraph breaks
+during extraction; legacy variable docstrings may already have been flattened
+by the parser.
 
 
 Formatting rules
