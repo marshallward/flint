@@ -596,9 +596,25 @@ class Unit(object):
             self.statements.append(stmt)
 
     def refresh_callees(self):
-        """Collect callable symbols from executable statements."""
+        """Collect calls from this scope's executable statements only."""
         variable_names = {var.name.lower() for var in self.variables}
+        # The source stream includes nested scopes for rendering. Their calls
+        # and local variables belong to those scopes, not to their container.
+        # Track boundaries rather than indexing every nested statement.
+        nested_ends = {
+            id(child.statements[0]): child.statements[-1]
+            for child in (*self.subprograms, *self.derived_types, *self.interfaces)
+            if child.statements
+        }
+        nested_end = None
+        self.callees.clear()
         for stmt in self.statements:
+            if nested_end is None:
+                nested_end = nested_ends.get(id(stmt))
+            if nested_end is not None:
+                if stmt is nested_end:
+                    nested_end = None
+                continue
             if stmt.kind == 'declaration' or stmt.tag in ('D', 'U', 'I', 'i'):
                 continue
             if self.end_statement(stmt) or Unit.statement(stmt):

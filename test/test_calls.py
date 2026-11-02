@@ -1,10 +1,13 @@
 import io
 import unittest
+from pathlib import Path
+import tempfile
 from types import SimpleNamespace
 
 from flint.calls import get_callable_symbols
 from flint.lexer import Lexer
 from flint.token import PToken
+import flint
 
 
 def statement(text):
@@ -12,6 +15,52 @@ def statement(text):
 
 
 class TestCallableSymbols(unittest.TestCase):
+    def test_do_while_is_control_syntax_but_condition_calls_are_retained(self):
+        for prefix in ('do', 'do 100', 'do 100,', 'do,', 'loop: do', '10 do'):
+            with self.subTest(prefix=prefix):
+                line = statement(prefix + ' while (ready(check()) .and. while(value))')
+                self.assertEqual(get_callable_symbols(line, []), ['ready', 'check', 'while'])
+
+    def test_procedures_named_while_remain_callable(self):
+        for text in ('x = while(value)', 'call while(value)',
+                     'if (ready()) call while(value)', 'do i = 1, while(value)'):
+            with self.subTest(text=text):
+                result = get_callable_symbols(statement(text), [])
+                self.assertIn('while', result)
+
+    def test_call_graph_attributes_calls_to_their_own_scope(self):
+        text = '''module demo
+contains
+function lowercase(input)
+  character(len=*), intent(in) :: input
+  character(len=len(input)) :: lowercase
+  lowercase = input
+  lowercase(1:1) = 'a'
+end function lowercase
+subroutine outer()
+  call inner()
+contains
+  subroutine inner()
+    real :: local(2)
+    local(1) = compute()
+    call leaf()
+  end subroutine inner
+end subroutine outer
+end module demo
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'demo.F90'
+            path.write_text(text)
+            project = flint.parse(str(path))
+        module = project.modules[0]
+        lowercase, outer = module.subprograms
+        inner = outer.subprograms[0]
+        self.assertEqual(module.callees, set())
+        self.assertEqual(lowercase.callees, set())
+        self.assertEqual(outer.callees, {'inner'})
+        self.assertEqual(inner.callees, {'compute', 'leaf'})
+        self.assertEqual(project.graph, {'inner': {'outer'}, 'compute': {'inner'}, 'leaf': {'inner'}})
+
     def test_io_statements_are_not_calls(self):
         for text, expected in (
             ('write(unit,*) value()', ['value']),

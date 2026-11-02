@@ -12,7 +12,7 @@ _IO_STATEMENTS = frozenset((
 
 
 def _statement_keyword_indices(line):
-    """Locate IF and I/O keywords, including a logical IF's action.
+    """Locate control and I/O keywords, including a logical IF's action.
 
     Fortran keywords are not reserved: only exclude the keyword at the action
     position, never a same-named procedure inside an expression or CALL.
@@ -21,6 +21,15 @@ def _statement_keyword_indices(line):
     keywords = ()
     if start < len(line) and line[start].isdigit():
         start += 1
+    if start < len(line) and line[start] == 'do':
+        control = start + 1
+        # A DO may have a termination label and an optional separating comma.
+        if control < len(line) and line[control].isdigit():
+            control += 1
+        if control < len(line) and line[control] == ',':
+            control += 1
+        if line[control:control + 2] == ['while', '(']:
+            return (control,)
     if line[start:start + 2] == ['if', '(']:
         keywords = (start,)
         depth = 0
