@@ -145,8 +145,8 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
                             for child in unit.derived_types),
         procedures=tuple(build_unit_documentation(child, scope=path, graph=graph)
                          for child in unit.subprograms),
-        callees=tuple(sorted(str(name) for name in unit.callees)),
-        callers=tuple(sorted(str(name) for name in (graph or {}).get(unit.name, ()))),
+        callees=tuple(sorted(_text(name) for name in unit.callees)),
+        callers=tuple(sorted(_text(name) for name in (graph or {}).get(unit.name, ()))),
         display_name=str(unit.name) if unit.name is not None else name,
         uses=uses,
         default_public=default_public,

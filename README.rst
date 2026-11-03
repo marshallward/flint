@@ -71,6 +71,22 @@ with limited features.
     This is primarily a debugging tool, but might be of interest to users.
 
 
+Preprocessing
+-------------
+
+The lexer expands object-like and named-argument function-like macros in
+Fortran statements, including nested invocations and chained replacements.
+Arguments may span Fortran continuation lines. Recursive macro names are
+disabled during their own expansion. Original invocations, comments, and
+whitespace are retained for source rendering; analysis uses expanded tokens.
+
+Function-like definitions participate in ``#ifdef``, ``#ifndef``,
+``defined(...)``, and ``#undef``. This is a limited Fortran-oriented
+preprocessor, not a complete C preprocessor: variadic macros, stringification,
+and token pasting are unsupported. Function invocations in ``#if`` expressions
+are not expanded by the existing conditional-expression evaluator.
+
+
 Documentation generation
 ------------------------
 

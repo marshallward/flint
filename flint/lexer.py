@@ -13,6 +13,7 @@ import re
 import sys
 
 from flint.scanner import Scanner
+from flint.macros import expand_at
 from flint.statement import Statement
 from flint.token import PToken, _token_from_lexeme
 
@@ -245,27 +246,13 @@ class Lexer(object):
                     break
 
                 else:
-                    # NOTE: This is probably happening later than it should;
-                    #   Preprocessing is handled in liminals!
-                    if lx in self.macros:
-                        ptoks = [PToken(lxm) for lxm in self.macros[lx]]
-                        if ptoks:
-                            # The macro table retains the name before its
-                            # replacement. Keep that source anchor out of
-                            # grammatical analysis, but retain it for rendering.
-                            ptoks[0].is_macro_anchor = True
-                            ptoks[0].head = prior_tail
-                            prior_tail = ptoks[-1].tail
-                            ptoks[0].pp = [lx]
+                    tok = _token_from_lexeme(lx, prior_tail)
+                    statement_tokens.append(tok)
+                    prior_tail = tok.tail
 
-                            statement_tokens.extend(ptoks)
-                    # TODO: elif lx in self.fn_macros?
-                    else:
-                        tok = _token_from_lexeme(lx, prior_tail)
-
-                        statement_tokens.append(tok)
-                        prior_tail = tok.tail
-
+        # Expand complete invocations, including arguments split across lines,
+        # before lookahead can process subsequent #define/#undef directives.
+        statement_tokens = self.expand_macros(statement_tokens)
         if not self.cache:
             statement_tokens[-1].tail.extend(self.get_liminals())
             self.prior_tail = statement_tokens[-1].tail
@@ -274,6 +261,38 @@ class Lexer(object):
         statement.line_number = line_number
         self.current_line = statement
         return statement
+
+    def expand_macros(self, tokens):
+        values = [token.original for token in tokens]
+        result = []
+        index = 0
+        while index < len(tokens):
+            replacement = expand_at(values, index, self.macros, self.fn_macros)
+            if replacement is None:
+                result.append(tokens[index])
+                index += 1
+                continue
+            end, expanded = replacement
+            # Include internal gaps (comments and continuations), but leave the
+            # outer gaps attached to tokens so source coordinates still work.
+            original = ''.join(str(token) + ''.join(token.tail)
+                               for token in tokens[index:end - 1]) + str(tokens[end - 1])
+            if values[index] in self.macros or not expanded:
+                output = [PToken(values[index], pp=original, is_macro_anchor=True)]
+                output.extend(PToken(value) for value in expanded)
+            else:
+                output = [PToken(value) for value in expanded]
+                output[0].pp = original
+            output[0].head = tokens[index].head
+            output[-1].tail = tokens[end - 1].tail
+            result.extend(output)
+            index = end
+        return result
+
+    def conditional_macros(self):
+        # A function macro counts as defined, but its bare name in an integer
+        # expression is not an invocation and evaluates to zero.
+        return {**self.macros, **{name: [name, '0'] for name in self.fn_macros}}
 
     def get_liminals(self):
         lims = []
@@ -289,7 +308,7 @@ class Lexer(object):
 
             # Apply preprocessing to set up subsequent statements
             if new_lims and new_lims[0][0] == '#':
-                self.preprocess(new_lims[0])
+                lims.extend(self.preprocess(new_lims[0]) or [])
 
             # Statements are liminals if preprocessing has suspended parsing
             stmt = lexemes[split:]
@@ -324,6 +343,7 @@ class Lexer(object):
             # My berk scanner needs an endline
             scanner = Scanner()
             lexemes = scanner.parse(words[1] + '\n')
+            function_like = len(lexemes) > 1 and lexemes[1] == '('
 
             # NOTES:
             # - We currently do not track whitespace created by macros.
@@ -331,9 +351,12 @@ class Lexer(object):
             pp_lexemes = [lx for lx in lexemes if not lx.isspace()]
 
             # Preprocessor line continuation handler
+            continuation_lines = []
             while pp_lexemes and pp_lexemes[-1] == '\\':
-                next_line = next(self.source).lstrip()
-                lexemes = scanner.parse(next_line + '\n')
+                next_line = next(self.source)
+                continuation_lines.append(next_line)
+                self.line_number += 1
+                lexemes = scanner.parse(next_line.lstrip())
 
                 pp_lexemes = pp_lexemes[:-1] + [
                     lx for lx in lexemes if not lx.isspace()
@@ -342,45 +365,42 @@ class Lexer(object):
             macro_name = pp_lexemes[0]
 
             # NOTE: Use `lexemes` to ensure no whitespace between name and `(`.
-            if len(lexemes) > 1 and lexemes[1] == '(':
+            if function_like:
                 # Function-like macro
                 rpar_idx = pp_lexemes.index(')')
                 macro_vars = [lx for lx in pp_lexemes[2:rpar_idx] if lx != ',']
                 macro_toks = pp_lexemes[rpar_idx+1:]
 
                 self.fn_macros[macro_name] = (macro_vars, macro_toks)
+                self.macros.pop(macro_name, None)
             else:
                 # Object-like macro
                 self.macros[macro_name] = pp_lexemes
+                self.fn_macros.pop(macro_name, None)
+            return continuation_lines
 
         elif directive == 'undef':
-            identifier = words[1]
-            try:
-                self.macros.pop(identifier)
-                # self.fn_macros?
-            except KeyError:
-                # Useful, but perhaps too aggressive.
-                # print('f90lex: warning: unset identifier {} was never '
-                #       'defined.'.format(identifier))
-                pass
+            identifier = words[1].strip()
+            self.macros.pop(identifier, None)
+            self.fn_macros.pop(identifier, None)
 
         # Conditionals
 
         elif directive == 'if':
             expression = words[1] if len(words) > 1 else '0'
-            self.start_conditional(cpp_expr_eval(expression, self.macros))
+            self.start_conditional(cpp_expr_eval(expression, self.conditional_macros()))
 
         elif directive == 'ifdef':
             macro = words[1].strip() if len(words) > 1 else ''
-            self.start_conditional(macro in self.macros)
+            self.start_conditional(macro in self.macros or macro in self.fn_macros)
 
         elif directive == 'ifndef':
             macro = words[1].strip() if len(words) > 1 else ''
-            self.start_conditional(macro not in self.macros)
+            self.start_conditional(macro not in self.macros and macro not in self.fn_macros)
 
         elif directive == 'elif':
             expression = words[1] if len(words) > 1 else '0'
-            self.continue_conditional(cpp_expr_eval(expression, self.macros))
+            self.continue_conditional(cpp_expr_eval(expression, self.conditional_macros()))
 
         elif directive == 'else':
             self.continue_conditional(True)
