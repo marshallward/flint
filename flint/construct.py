@@ -39,7 +39,11 @@ class Construct(object):
 
         # TODO: Actual rules vary for every construct type, not just 'if'
         if stmt[0] in Construct.construct_types:
-            if stmt[0] == 'if':
+            if stmt[0] == 'block':
+                # BLOCK has no operands. The keyword is also a legal object
+                # name, e.g. block%name = '' or block => another_block.
+                return len(stmt) == 1
+            elif stmt[0] == 'if':
                 return (stmt[0], stmt[-1]) == ('if', 'then')
             elif stmt[0] == 'where':
                 assert stmt[1] == '('

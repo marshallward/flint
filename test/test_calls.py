@@ -15,6 +15,38 @@ def statement(text):
 
 
 class TestCallableSymbols(unittest.TestCase):
+    def test_block_objects_do_not_swallow_following_procedures(self):
+        text = '''module demo
+type node
+  integer :: value
+end type node
+contains
+subroutine first()
+  type(node), pointer :: block
+  type(node), target :: other
+  block => other
+  block%value = compute()
+  block
+    call inside_block()
+  end block
+end subroutine first
+subroutine second()
+  integer :: block(2)
+  block(1) = 1
+  call second_only()
+end subroutine second
+end module demo
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'demo.F90'
+            path.write_text(text)
+            module = flint.parse(str(path)).modules[0]
+        self.assertEqual([str(unit.name) for unit in module.subprograms], ['first', 'second'])
+        first, second = module.subprograms
+        self.assertEqual(first.statements[-1], ['end', 'subroutine', 'first'])
+        self.assertEqual(first.callees, {'compute', 'inside_block'})
+        self.assertEqual(second.callees, {'second_only'})
+
     def test_do_while_is_control_syntax_but_condition_calls_are_retained(self):
         for prefix in ('do', 'do 100', 'do 100,', 'do,', 'loop: do', '10 do'):
             with self.subTest(prefix=prefix):
