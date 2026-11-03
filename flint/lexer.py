@@ -263,9 +263,15 @@ class Lexer(object):
         return statement
 
     def expand_macros(self, tokens):
+        # Most statements contain no macros. Avoid allocating a second token
+        # list and invoking the recursive expander for each ordinary token.
+        for index, token in enumerate(tokens):
+            if token.original in self.macros or token.original in self.fn_macros:
+                break
+        else:
+            return tokens
         values = [token.original for token in tokens]
-        result = []
-        index = 0
+        result = tokens[:index]
         while index < len(tokens):
             replacement = expand_at(values, index, self.macros, self.fn_macros)
             if replacement is None:
