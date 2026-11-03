@@ -5,7 +5,12 @@ from pathlib import Path
 
 sys.path.insert(1, '../')
 import flint  # noqa: E402
-from report_real_units import real_unit_issues  # noqa: E402
+try:
+    from report_real_units import real_unit_issues  # noqa: E402
+except ModuleNotFoundError as exc:
+    if exc.name != 'report_real_units':
+        raise
+    raise unittest.SkipTest('requires the external MOM6 report_real_units script') from exc
 
 
 def issues_for_source(text):
