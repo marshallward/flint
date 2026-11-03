@@ -329,7 +329,7 @@ class ReferenceTests(unittest.TestCase):
         declaration = self.index.units['declared_api::c_work']
         self.assertTrue(declaration.declaration_only)
         self.assertEqual(declaration.summary, 'Call the C library.')
-        self.assertIn('bind ( c , name = "library_work" )', declaration.signature)
+        self.assertIn('bind(c, name="library_work")', declaration.signature)
         self.assertEqual(declaration.variables[0].intent, 'in')
         self.assertEqual(declaration.callees, ())
         self.assertEqual([ref.target for ref in self.index.callers[declaration.qualified_name]],
@@ -393,6 +393,11 @@ class ReferenceTests(unittest.TestCase):
         self.assertNotIn(anchor('generic_library::dispatch_array'), output.getvalue())
 
     def test_known_dependencies_are_distinct_from_unknown_calls(self):
+        unclassified = self.index.resolve('dependency_client::run', 'work')
+        self.assertEqual(unclassified.unindexed_module, 'dependency_api')
+        self.assertIn('dependency_api::remote_work', unclassified.reason)
+        self.assertIn('possibly external', unclassified.reason)
+        self.assertIsNone(unclassified.external)
         index = ReferenceIndex(self.modules, external_modules={
             'dependency_api': 'Example library', 'other_api': 'Other library'})
         ref = index.resolve('dependency_client::run', 'work')

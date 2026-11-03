@@ -143,6 +143,11 @@ Render each resulting ``.rst`` file with Docutils, Pandoc, or another reST
 renderer, using the same basename and an ``.html`` extension in one directory.
 Flint does not run the renderer. Its output uses standard reST links and
 explicit targets, with qualified anchors to distinguish same-named procedures.
+Displayed names retain declaration case, and signatures use compact punctuation
+such as ``subroutine step_MOM(forces, CS)``. Resolved link labels use definition
+spelling unless the call uses a different local alias. Filenames and anchors
+remain stable. Callable entries use ordinary ``api-procedure`` reST containers,
+allowing HTML themes to offer folding without renderer-specific directives.
 
 ``flint.docgen.references.ReferenceIndex`` resolves ordinary procedure names
 using local and host scopes, ``USE`` imports (including ``ONLY`` and renames),

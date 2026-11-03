@@ -21,6 +21,12 @@ class ArraySymbol:
 
 
 @dataclass(frozen=True)
+class UnindexedSymbol:
+    module: str
+    name: str
+
+
+@dataclass(frozen=True)
 class ExternalSymbol:
     library: str
     module: str
@@ -35,6 +41,7 @@ class Reference:
     external: ExternalSymbol | None = None
     is_data: bool = False
     is_argument: bool = False
+    unindexed_module: str = ''
 
 
 class ReferenceIndex:
@@ -150,8 +157,11 @@ class ReferenceIndex:
                 explicit = False
             modules = () if use.intrinsic else self.modules.get(use.module, ())
             if not modules:
-                if explicit and not use.intrinsic and use.module in self.external_modules:
-                    targets.add(ExternalSymbol(self.external_modules[use.module], use.module, remote))
+                if explicit and not use.intrinsic:
+                    if use.module in self.external_modules:
+                        targets.add(ExternalSymbol(self.external_modules[use.module], use.module, remote))
+                    else:
+                        targets.add(UnindexedSymbol(use.module, remote))
                     bound = True
                     continue
                 uncertain = bound = True
@@ -186,6 +196,11 @@ class ReferenceIndex:
             if bound:
                 if len(targets) == 1 and not uncertain:
                     target = next(iter(targets))
+                    if isinstance(target, UnindexedSymbol):
+                        return Reference(label, None,
+                                         f'unindexed module: {target.module}::{target.name}; '
+                                         'possibly external or omitted from source selection',
+                                         unindexed_module=target.module)
                     if isinstance(target, ArgumentSymbol):
                         return Reference(label, None, is_argument=True)
                     if isinstance(target, ArraySymbol):

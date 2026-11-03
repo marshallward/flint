@@ -10,6 +10,7 @@ import unittest
 import flint
 from flint.docgen.model import UnitDocumentation, VariableDocumentation, iter_module_documentation
 from flint.docgen.rst import write_module
+from flint.docgen.references import ReferenceIndex, HtmlDestinations
 from flint.tools.gendoc import generate_docs
 
 
@@ -34,6 +35,43 @@ end subroutine external_routine
 
 
 class DocumentationModelTests(unittest.TestCase):
+    def test_definition_case_and_compact_signatures_keep_stable_links(self):
+        text = '''module Ocean_API
+contains
+SUBROUTINE Advance(State, dt)
+real, intent(inout) :: State !< State value.
+real, intent(in) :: dt
+end subroutine Advance
+end module Ocean_API
+module Client
+use Ocean_API, only: advance
+contains
+subroutine Run()
+call aDvAnCe(1., 2.)
+end subroutine Run
+end module Client
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'mixed.F90'
+            path.write_text(text)
+            modules = tuple(iter_module_documentation(flint.parse(str(path))))
+        ocean = next(module for module in modules if module.name == 'ocean_api')
+        client = next(module for module in modules if module.name == 'client')
+        self.assertEqual(ocean.name, 'ocean_api')
+        self.assertEqual(ocean.display_name, 'Ocean_API')
+        self.assertEqual(ocean.procedures[0].signature, 'SUBROUTINE Advance(State, dt)')
+        self.assertEqual(ocean.procedures[0].variables[0].display_name, 'State')
+        index = ReferenceIndex(modules)
+        output = io.StringIO()
+        write_module(output, client, references=index, destinations=HtmlDestinations(index))
+        self.assertIn('Client module reference', output.getvalue())
+        self.assertIn('`Advance <ocean_api.html#flint-ocean-0api-1advance>`__', output.getvalue())
+        self.assertNotIn('aDvAnCe', output.getvalue())
+        output = io.StringIO()
+        write_module(output, ocean, references=index)
+        self.assertIn('**State**', output.getvalue())
+        self.assertIn('.. container:: api-procedure', output.getvalue())
+
     def test_unit_summary_keeps_paragraphs_before_rendering(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'demo.F90'
@@ -54,8 +92,9 @@ class DocumentationModelTests(unittest.TestCase):
         self.assertEqual(module.derived_types[0].qualified_name, 'demo::item')
         procedure = module.procedures[0]
         self.assertEqual(procedure.procedures[0].qualified_name, 'demo::update::helper')
-        self.assertEqual(procedure.signature, 'subroutine update ( x )')
-        self.assertEqual(procedure.variables[0], VariableDocumentation('x', 'inout', 'Value [m]'))
+        self.assertEqual(procedure.signature, 'subroutine update(x)')
+        self.assertEqual(procedure.variables[0],
+                         VariableDocumentation('x', 'inout', 'Value [m]', display_name='x'))
         self.assertEqual(procedure.variables[1].name, 'temporary')
         self.assertEqual(external.name, 'External')
         self.assertEqual(external.procedures[0].name, 'external_routine')
@@ -96,13 +135,15 @@ Functions/Subroutines
 Functions/Subroutine Documentation
 ==================================
 
-.. _flint-demo-1update:
+.. container:: api-procedure
 
-subroutine update ( x )
-  Update a value.
+   .. _flint-demo-1update:
 
-  Parameters
-    - **x** :: [inout] Value \[m\]
+   subroutine update ( x )
+     Update a value.
+
+     Parameters
+       - **x** :: [inout] Value \[m\]
 
 ''')
 

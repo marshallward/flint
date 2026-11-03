@@ -24,6 +24,7 @@ class VariableDocumentation:
     intent: str | None
     description: str
     is_array: bool = False
+    display_name: str = ''
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,23 @@ def _text(value):
     # Token slices preserve semantic names even for undisplayed macro tokens,
     # and produce plain strings rather than retaining mutable Token objects.
     return value[:] if value is not None else ''
+
+
+def _spelling(value):
+    """Use the semantic token's original case, including hidden macro tokens."""
+    return getattr(value, 'original', _text(value))
+
+
+def _signature(statement):
+    values = [_spelling(token) for token in semantic_tokens(statement)]
+    result = ''
+    previous = ''
+    for value in values:
+        tight = (not result or value in ('(', ')', '[', ']', ',', '%', '=', ':')
+                 or previous in ('(', '[', '%', '=', ':'))
+        result += ('' if tight else ' ') + value
+        previous = value
+    return result
 
 
 def _scope_metadata(unit):
@@ -143,9 +161,10 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
             name=_text(interface.name),
             qualified_name='::'.join((*path, 'interface', _text(interface.name))),
             kind='interface',
-            signature='interface ' + _text(interface.name),
+            signature=_signature(interface.statements[0]),
             summary=docstrip(interface.statements[0][0].head, oneline=False),
             description='',
+            display_name=_spelling(interface.name),
             implementations=tuple(_text(name) for name in interface.procedures)
                             + tuple(_text(body.name) for body in interface.subprograms),
         )
@@ -159,7 +178,7 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
         name=name,
         qualified_name='::'.join(path),
         kind=_text(unit.utype),
-        signature=' '.join(unit.doc.statement),
+        signature=_signature(unit.doc.statement),
         summary=(docstrip(unit.doc.statement[0].head, oneline=False)
                  if unit.doc.statement else unit.doc.header),
         description=unit.doc.footer,
@@ -167,13 +186,14 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
             _text(variable.name), _text(variable.intent) or None,
             variable.doc.docstring,
             is_array=variable.is_array,
+            display_name=_spelling(variable.name),
         ) for variable in unit.variables),
         derived_types=tuple(build_unit_documentation(child, scope=path, graph=graph)
                             for child in unit.derived_types),
         procedures=tuple(procedures.values()),
-        callees=tuple(sorted(_text(name) for name in unit.callees)),
+        callees=tuple(sorted(_spelling(name) for name in unit.callees)),
         callers=tuple(sorted(_text(name) for name in (graph or {}).get(unit.name, ()))),
-        display_name=str(unit.name) if unit.name is not None else name,
+        display_name=_spelling(unit.name) if unit.name is not None else name,
         uses=uses,
         default_public=default_public,
         access=access,
