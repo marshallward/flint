@@ -112,6 +112,11 @@ def write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destin
     callers = references.callers.get(unit.qualified_name, ()) if references is not None else ()
     implementations = (references.implementations[unit.qualified_name] if references is not None else
                        tuple(Reference(name, None) for name in unit.implementations))
+    if references is not None:
+        calls = tuple(ref for ref in calls
+                      if ref.target is None or references.is_public(ref.target))
+        implementations = tuple(ref for ref in implementations
+                                if ref.target is None or references.is_public(ref.target))
     for title, links in (('Implementations', implementations), ('Calls into', calls),
                          ('Called by', callers if show_callers else ())):
         if links:

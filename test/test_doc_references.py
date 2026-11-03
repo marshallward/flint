@@ -9,10 +9,33 @@ import unittest
 import flint
 from flint.docgen.model import iter_module_documentation
 from flint.docgen.references import HtmlDestinations, ReferenceIndex, anchor
-from flint.docgen.rst import write_module
+from flint.docgen.rst import write_module, write_unit
 
 
 SOURCES = {
+    'public_view': '''module public_view
+private :: helper, specific
+!> Public generic with a private implementation.
+interface operation
+  module procedure specific
+end interface operation
+contains
+subroutine run()
+call operation()
+call helper()
+call specific()
+call local_helper()
+call missing_external()
+contains
+subroutine local_helper()
+end subroutine local_helper
+end subroutine run
+subroutine helper()
+end subroutine helper
+subroutine specific()
+end subroutine specific
+end module public_view
+''',
     'generic_library': '''module generic_library
 private
 public :: dispatch
@@ -161,6 +184,37 @@ class ReferenceTests(unittest.TestCase):
         self.assertIn('Generic Interfaces', output.getvalue())
         self.assertIn('Implementations', output.getvalue())
         self.assertIn(anchor(target), output.getvalue())
+
+    def test_public_call_lists_hide_private_and_internal_procedures(self):
+        scope = 'public_view::run'
+        generic = 'public_view::interface::operation'
+        # Analysis retains the direct calls; only presentation filters them.
+        targets = {ref.target for ref in self.index.calls[scope]}
+        self.assertIn('public_view::helper', targets)
+        self.assertIn('public_view::specific', targets)
+        self.assertIn('public_view::run::local_helper', targets)
+        self.assertIn(generic, targets)
+        self.assertFalse(self.index.is_public('generic_library::dispatch_array'))
+        self.assertTrue(self.index.is_public('generic_library::interface::dispatch'))
+        output = io.StringIO()
+        write_unit(output, self.index.units[scope], references=self.index)
+        calls = output.getvalue().split('Calls into\n', 1)[1].split('\n\n', 1)[0]
+        self.assertIn(anchor(generic), calls)
+        self.assertIn('missing_external', calls)
+        self.assertNotIn('helper', calls)
+        self.assertNotIn('specific', calls)
+        output = io.StringIO()
+        write_unit(output, self.index.units[generic], references=self.index)
+        self.assertNotIn('Implementations', output.getvalue())
+        self.assertIn('Called by', output.getvalue())
+        # A mixed generic still lists its public specific, not its private one.
+        output = io.StringIO()
+        write_unit(output, self.index.units['generic_library::interface::dispatch'],
+                   references=self.index)
+        self.assertIn('Implementations', output.getvalue())
+        self.assertIn(anchor('generic_library::dispatch'), output.getvalue())
+        self.assertNotIn('dispatch_array', output.getvalue())
+        self.assertNotIn(anchor('generic_library::dispatch_array'), output.getvalue())
 
     def test_renames_host_scopes_and_reexports(self):
         expected = {

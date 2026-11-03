@@ -60,6 +60,22 @@ class ReferenceIndex:
         for child in (*unit.derived_types, *unit.procedures, *unit.interfaces):
             self._add(child, key, page)
 
+    def is_public(self, target):
+        """Whether an entity is public through its defining scope.
+
+        Internal procedures are implementation details even when their host
+        procedure is public. This does not change name resolution.
+        """
+        parent = self.parents[target]
+        if parent is None:
+            return True
+        scope = self.units[parent]
+        if scope.kind in ('function', 'subroutine', 'program'):
+            return False
+        name = self.units[target].name.lower()
+        return (dict(scope.access).get(name, scope.default_public)
+                and self.is_public(parent))
+
     def _implementation(self, interface, name):
         scope = self.parents[interface]
         # A generic may legally share its name with one of its specifics.
