@@ -16,21 +16,21 @@ functionality.
 Installation
 ============
 
-In most cases, flint can be installed with ``setup.py``
+From a source checkout, install flint in a virtual environment using Python
+3.10 or newer:
 
-.. code:: python
+.. code:: sh
 
-   python setup.py install --user
+   python -m venv .venv
+   source .venv/bin/activate
+   python -m pip install .
 
-If you want to install it in your system directories (and have permission):
+For development, use an editable installation so source changes take effect
+without reinstalling:
 
-.. code:: python
+.. code:: sh
 
-   python setup.py install
-
-This may not work for some users, and more elegant installation methods ought
-to be available in the future, depending on how well-received this project
-becomes.
+   python -m pip install -e .
 
 
 Basic usage
