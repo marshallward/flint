@@ -15,6 +15,57 @@ def statement(text):
 
 
 class TestCallableSymbols(unittest.TestCase):
+    def test_host_arrays_are_not_calls_and_local_procedures_can_shadow_them(self):
+        text = '''module demo
+real :: module_array(3), shared_name(3)
+contains
+subroutine outer()
+real :: host_array(3), value
+value = module_array(1) + host_array(1) + real_call()
+contains
+subroutine inner()
+real :: value
+value = module_array(1) + host_array(1) + shared_name()
+end subroutine inner
+function shared_name() result(value)
+real :: value
+value = module_array(1)
+end function shared_name
+end subroutine outer
+subroutine imported()
+use library, only: module_array => work
+real :: value
+value = module_array()
+end subroutine imported
+subroutine external_call()
+external :: shared_name
+real, external :: module_array
+real :: value
+call shared_name()
+value = module_array()
+end subroutine external_call
+subroutine sibling()
+real :: value
+value = module_array(1) + shared_name(1) + host_array()
+end subroutine sibling
+end module demo
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'demo.F90'
+            path.write_text(text)
+            project = flint.parse(str(path))
+        outer, imported, external, sibling = project.modules[0].subprograms
+        inner, shadow = outer.subprograms
+        self.assertEqual(outer.callees, {'real_call'})
+        self.assertEqual(inner.callees, {'shared_name'})
+        self.assertEqual(shadow.callees, set())
+        self.assertEqual(imported.callees, {'module_array'})
+        self.assertEqual(external.callees, {'shared_name', 'module_array'})
+        self.assertEqual(sibling.callees, {'host_array'})
+        self.assertEqual(project.graph['module_array'], {'imported', 'external_call'})
+        self.assertEqual(project.graph['shared_name'], {'inner', 'external_call'})
+        self.assertEqual(project.graph['host_array'], {'sibling'})
+
     def test_select_case_keywords_are_not_calls(self):
         for text, expected in (
             ('select case (uppercase(value))', ['uppercase']),

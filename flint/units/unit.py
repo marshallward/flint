@@ -170,7 +170,7 @@ class Unit(object):
             else:
                 return False
 
-    def parse(self, statements, graph=None):
+    def parse(self, statements, graph=None, *, _defer_calls=False):
         """Parse the statements of a program unit.
 
         Program units are generally very similar, but we leave it undefined
@@ -181,19 +181,8 @@ class Unit(object):
         self.parse_execution(statements)
         self.parse_subprogram(statements, graph=graph)
 
-        self.refresh_callees()
-
-        # Remove intrinsic functions from the set of callables
-        self.callees = self.callees - set(intrinsic_fns)
-
-        # Assign this unit as caller for each callee
-        if graph is not None:
-            for proc in self.callees:
-                try:
-                    graph[proc].add(self.name)
-                except KeyError:
-                    graph[proc] = set()
-                    graph[proc].add(self.name)
+        if not _defer_calls:
+            self.refresh_call_tree(graph=graph)
 
         # Finalisation
         stmt = statements.current_line
@@ -595,9 +584,33 @@ class Unit(object):
             stmt.tag = 'N'
             self.statements.append(stmt)
 
-    def refresh_callees(self):
+    def refresh_call_tree(self, host_variables=(), *, graph=None):
+        """Analyze contained scopes after all sibling declarations are known."""
+        visible_variables = self.refresh_callees(host_variables)
+        self.callees.difference_update(intrinsic_fns)
+        if graph is not None:
+            for name in self.callees:
+                graph.setdefault(name, set()).add(self.name)
+        for child in self.subprograms:
+            child.refresh_call_tree(visible_variables, graph=graph)
+
+    def refresh_callees(self, host_variables=()):
         """Collect calls from this scope's executable statements only."""
-        variable_names = {var.name.lower() for var in self.variables}
+        local_variables, declared_procedures = set(), set()
+        for variable in self.variables:
+            name = variable.name.lower()
+            attributes = getattr(variable, 'attributes', ())
+            if (getattr(variable, 'type', None) == 'procedure'
+                    or any(attr[0] in ('external', 'intrinsic') for attr in attributes)):
+                declared_procedures.add(name)
+            else:
+                local_variables.add(name)
+        local_procedures = {child.name.lower() for child in (*self.subprograms, *self.interfaces)
+                            if child.name is not None}
+        local_procedures.update(declared_procedures)
+        if self.utype in ('function', 'subroutine') and self.name is not None:
+            local_procedures.add(self.name.lower())
+        variable_names = (set(host_variables) - local_procedures) | local_variables
         # The source stream includes nested scopes for rendering. Their calls
         # and local variables belong to those scopes, not to their container.
         # Track boundaries rather than indexing every nested statement.
@@ -615,6 +628,28 @@ class Unit(object):
                 if stmt is nested_end:
                     nested_end = None
                 continue
+            if stmt[0] == 'use':
+                # Explicit imports introduce local names that can shadow host
+                # arrays. Their remote type requires cross-module resolution.
+                words = [token[:] for token in semantic_tokens(stmt)]
+                start = words.index('::') + 1 if '::' in words else 1
+                rest = words[start + 1:]
+                only = rest[:3] == [',', 'only', ':']
+                rest = rest[3:] if only else rest[1:]
+                group = []
+                for word in [*rest, ',']:
+                    if word == ',':
+                        if group and (only or '=>' in group) and group[0].isidentifier():
+                            if group[0] not in local_variables:
+                                variable_names.discard(group[0])
+                        group = []
+                    else:
+                        group.append(word)
+            elif stmt[0] in ('external', 'intrinsic'):
+                # Procedure declarations bind callable names, not data objects.
+                for token in stmt[1:]:
+                    if token.isidentifier():
+                        variable_names.discard(token.lower())
             if stmt.kind == 'declaration' or stmt.tag in ('D', 'U', 'I', 'i'):
                 continue
             if self.end_statement(stmt) or Unit.statement(stmt):
@@ -622,6 +657,7 @@ class Unit(object):
             self.callees.update(get_callable_symbols(
                 stmt, self.variables, variable_names=variable_names,
             ))
+        return variable_names
 
     # Execution
 
@@ -677,7 +713,7 @@ class Unit(object):
         # this may have made more sense.  But that is no longer the case.)
         if Unit.statement(stmt):
             subprog = Unit()
-            subprog.parse(statements)
+            subprog.parse(statements, _defer_calls=True)
             self.subprograms.append(subprog)
             self.statements.extend(subprog.statements)
         elif self.end_statement(stmt):
@@ -690,7 +726,7 @@ class Unit(object):
         for stmt in statements:
             if Unit.statement(stmt):
                 subprog = Unit()
-                subprog.parse(statements, graph=graph)
+                subprog.parse(statements, _defer_calls=True)
                 self.subprograms.append(subprog)
                 self.statements.extend(subprog.statements)
             elif self.end_statement(stmt):
