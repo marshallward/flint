@@ -21,6 +21,10 @@ def _statement_keyword_indices(line):
     keywords = ()
     if start < len(line) and line[start].isdigit():
         start += 1
+    if line[start:start + 3] == ['select', 'case', '(']:
+        return (start + 1,)
+    if line[start:start + 2] == ['case', '(']:
+        return (start,)
     if start < len(line) and line[start] == 'do':
         control = start + 1
         # A DO may have a termination label and an optional separating comma.

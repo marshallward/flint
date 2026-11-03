@@ -15,6 +15,24 @@ def statement(text):
 
 
 class TestCallableSymbols(unittest.TestCase):
+    def test_select_case_keywords_are_not_calls(self):
+        for text, expected in (
+            ('select case (uppercase(value))', ['uppercase']),
+            ('choice: select case (case(value))', ['case']),
+            ('100 select case (selector())', ['selector']),
+            ('case (lower(), upper())', ['lower', 'upper']),
+            ('100 case (kind(value)) choice', ['kind']),
+            ('case default', []),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(get_callable_symbols(statement(text), []), expected)
+
+    def test_procedures_named_case_remain_callable(self):
+        for text in ('x = case(value)', 'call case(value)',
+                     'if (ready()) call case(value)'):
+            with self.subTest(text=text):
+                self.assertIn('case', get_callable_symbols(statement(text), []))
+
     def test_block_objects_do_not_swallow_following_procedures(self):
         text = '''module demo
 type node
