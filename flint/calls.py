@@ -23,7 +23,8 @@ def _statement_keyword_indices(line):
         start += 1
     if line[start:start + 3] == ['else', 'if', '(']:
         return (start + 1,)
-    if line[start:start + 3] == ['select', 'case', '(']:
+    if (line[start:start + 1] == ['select'] and len(line) > start + 2
+            and line[start + 1] in ('case', 'type') and line[start + 2] == '('):
         return (start + 1,)
     if line[start:start + 2] == ['case', '(']:
         return (start,)

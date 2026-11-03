@@ -15,6 +15,17 @@ def statement(text):
 
 
 class TestCallableSymbols(unittest.TestCase):
+    def test_select_type_preserves_selector_calls_and_type_names(self):
+        for text, expected in (
+            ('select type (t => EOS%type)', []),
+            ('choice: select type (t => get_object())', ['get_object']),
+            ('100 select type (t => type(value))', ['type']),
+            ('x = type(value)', ['type']),
+            ('call type(value)', ['type']),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(get_callable_symbols(statement(text), []), expected)
+
     def test_else_if_condition_calls_are_preserved(self):
         for text in ('else if (ready(check())) then',
                      '100 else if (ready(check())) then branch'):
