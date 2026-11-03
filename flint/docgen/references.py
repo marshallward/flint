@@ -9,6 +9,12 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class ArraySymbol:
+    scope: str
+    name: str
+
+
+@dataclass(frozen=True)
 class ExternalSymbol:
     library: str
     module: str
@@ -21,6 +27,7 @@ class Reference:
     target: str | None
     reason: str = ''
     external: ExternalSymbol | None = None
+    is_data: bool = False
 
 
 class ReferenceIndex:
@@ -50,7 +57,8 @@ class ReferenceIndex:
         for key, unit in self.units.items():
             self.implementations[key] = tuple(
                 self._implementation(key, name) for name in unit.implementations)
-            calls = tuple(self.resolve(key, name) for name in unit.callees)
+            calls = tuple(ref for name in unit.callees
+                          if not (ref := self.resolve(key, name)).is_data)
             self.calls[key] = calls
             for reference in calls:
                 if reference.target is not None:
@@ -115,8 +123,11 @@ class ReferenceIndex:
             return targets, len(targets) != len(children), True
         if unit.name.lower() == name and unit.kind in ('function', 'subroutine'):
             return {scope}, False, True
-        if any(v.name.lower() == name for v in unit.variables):
-            return set(), True, True
+        for variable in unit.variables:
+            if variable.name.lower() == name:
+                if variable.is_array:
+                    return {ArraySymbol(scope, name)}, False, True
+                return set(), True, True
         targets, uncertain, bound = set(), False, False
         for use in unit.uses:
             names = dict(use.names)
@@ -166,6 +177,8 @@ class ReferenceIndex:
             if bound:
                 if len(targets) == 1 and not uncertain:
                     target = next(iter(targets))
+                    if isinstance(target, ArraySymbol):
+                        return Reference(label, None, is_data=True)
                     if isinstance(target, ExternalSymbol):
                         return Reference(label, None, external=target)
                     return Reference(label, target)

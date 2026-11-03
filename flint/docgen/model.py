@@ -22,6 +22,7 @@ class VariableDocumentation:
     name: str
     intent: str | None
     description: str
+    is_array: bool = False
 
 
 @dataclass(frozen=True)
@@ -155,6 +156,7 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
         variables=tuple(VariableDocumentation(
             _text(variable.name), _text(variable.intent) or None,
             variable.doc.docstring,
+            is_array=variable.is_array,
         ) for variable in unit.variables),
         derived_types=tuple(build_unit_documentation(child, scope=path, graph=graph)
                             for child in unit.derived_types),

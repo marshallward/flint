@@ -13,6 +13,47 @@ from flint.docgen.rst import write_module, write_unit
 
 
 SOURCES = {
+    'array_library': '''module array_library
+private
+public :: values
+real :: values(4), hidden(4)
+end module array_library
+''',
+    'array_facade': '''module array_facade
+use array_library, only: exposed => values
+end module array_facade
+''',
+    'array_client': '''module array_client
+contains
+subroutine run()
+use array_library, only: renamed => values, hidden
+use array_facade, only: indirect => exposed
+real :: x
+x = renamed(1) + indirect(1) + hidden(1) + unknown(1)
+end subroutine run
+subroutine wildcard()
+use array_library
+real :: x
+x = values(1)
+end subroutine wildcard
+subroutine shadowed()
+use array_library, only: values
+real :: x
+x = values()
+contains
+function values() result(x)
+real :: x
+x = 1.
+end function values
+end subroutine shadowed
+subroutine ambiguous()
+use array_library, only: work => values
+use alpha, only: work => helper
+real :: x
+x = work(1)
+end subroutine ambiguous
+end module array_client
+''',
     'declared_api': '''module declared_api
 private
 public :: c_work, plain_work, generic_work
@@ -234,6 +275,19 @@ class ReferenceTests(unittest.TestCase):
                 (Path(tmp) / (name + '.F90')).write_text(text)
             self.modules = tuple(iter_module_documentation(flint.parse(tmp)))
         self.index = ReferenceIndex(self.modules)
+
+    def test_imported_arrays_are_data_not_calls(self):
+        for scope, name in [('run', 'renamed'), ('run', 'indirect'), ('wildcard', 'values')]:
+            self.assertTrue(self.index.resolve('array_client::' + scope, name).is_data)
+        self.assertEqual({ref.label for ref in self.index.calls['array_client::run']},
+                         {'hidden', 'unknown'})
+        self.assertEqual(self.index.calls['array_client::wildcard'], ())
+        self.assertEqual(self.index.resolve('array_client::shadowed', 'values').target,
+                         'array_client::shadowed::values')
+        self.assertFalse(self.index.resolve('array_client::ambiguous', 'work').is_data)
+        self.assertEqual(self.index.resolve('array_client::ambiguous', 'work').reason,
+                         'ambiguous reference')
+        self.assertTrue(any('array_client::run: unknown:' in d for d in self.index.diagnostics))
 
     def test_explicit_procedure_interfaces_are_api_targets(self):
         for name, target in [('renamed', 'c_work'), ('plain_work', 'plain_work')]:
