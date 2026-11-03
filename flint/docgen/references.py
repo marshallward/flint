@@ -9,14 +9,26 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class ExternalSymbol:
+    library: str
+    module: str
+    name: str
+
+
+@dataclass(frozen=True)
 class Reference:
     label: str
     target: str | None
     reason: str = ''
+    external: ExternalSymbol | None = None
 
 
 class ReferenceIndex:
-    def __init__(self, modules):
+    def __init__(self, modules, *, external_modules=None):
+        # Publication projects supply dependency ownership; Flint has no
+        # built-in library names or filename/prefix guesses.
+        self.external_modules = {name.lower(): library
+                                 for name, library in (external_modules or {}).items()}
         self.units = {}
         self.parents = {}
         self.pages = {}
@@ -43,7 +55,7 @@ class ReferenceIndex:
             for reference in calls:
                 if reference.target is not None:
                     self.callers[reference.target].append(Reference(key, key))
-                else:
+                elif reference.external is None:
                     self.diagnostics.append(f'{key}: {reference.label}: {reference.reason}')
         for key, references in self.callers.items():
             self.callers[key] = tuple(sorted(set(references), key=lambda ref: ref.label))
@@ -118,6 +130,10 @@ class ReferenceIndex:
                 explicit = False
             modules = () if use.intrinsic else self.modules.get(use.module, ())
             if not modules:
+                if explicit and not use.intrinsic and use.module in self.external_modules:
+                    targets.add(ExternalSymbol(self.external_modules[use.module], use.module, remote))
+                    bound = True
+                    continue
                 uncertain = bound = True
                 continue
             found = set()
@@ -149,7 +165,10 @@ class ReferenceIndex:
             targets, uncertain, bound = self._local(current, name, set())
             if bound:
                 if len(targets) == 1 and not uncertain:
-                    return Reference(label, next(iter(targets)))
+                    target = next(iter(targets))
+                    if isinstance(target, ExternalSymbol):
+                        return Reference(label, None, external=target)
+                    return Reference(label, target)
                 reason = 'ambiguous reference' if len(targets) > 1 else 'unresolved reference'
                 return Reference(label, None, reason)
             current = self.parents[current]

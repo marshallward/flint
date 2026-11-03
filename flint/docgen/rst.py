@@ -114,9 +114,9 @@ def write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destin
                        tuple(Reference(name, None) for name in unit.implementations))
     if references is not None:
         calls = tuple(ref for ref in calls
-                      if ref.target is None or references.is_public(ref.target))
+                      if ref.target is not None and references.is_public(ref.target))
         implementations = tuple(ref for ref in implementations
-                                if ref.target is None or references.is_public(ref.target))
+                                if ref.target is not None and references.is_public(ref.target))
     for title, links in (('Implementations', implementations), ('Calls into', calls),
                          ('Called by', callers if show_callers else ())):
         if links:
@@ -124,6 +124,21 @@ def write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destin
             for ref in links:
                 doc.write(indent + '  ' +
                           _link(ref, references, unit.qualified_name, destinations) + '\n')
+            doc.write('\n')
+
+    external_calls = {}
+    if references is not None:
+        for ref in references.calls[unit.qualified_name]:
+            if ref.external is not None:
+                external_calls.setdefault(ref.external.library, []).append(ref)
+    if external_calls:
+        doc.write('\n' + indent + '.. container:: external-calls\n\n')
+        doc.write(indent + '   .. rubric:: External calls\n\n')
+        for library, links in sorted(external_calls.items()):
+            doc.write(indent + '   ' + _prose(library) + '\n')
+            for ref in links:
+                origin = ref.external.module + '::' + ref.external.name
+                doc.write(indent + f'     * ``{ref.label}`` (``{origin}``)\n')
             doc.write('\n')
 
     for child in unit.derived_types:

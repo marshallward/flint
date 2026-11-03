@@ -13,6 +13,37 @@ from flint.docgen.rst import write_module, write_unit
 
 
 SOURCES = {
+    'dependency_facade': '''module dependency_facade
+use dependency_api, only: exported => remote_work
+private
+public :: exported
+end module dependency_facade
+''',
+    'dependency_client': '''module dependency_client
+contains
+subroutine run()
+use dependency_facade, only: work => exported
+call work()
+call unknown()
+end subroutine run
+subroutine ambiguous()
+use dependency_api, only: work => remote_work
+use other_api, only: work => other_work
+call work()
+end subroutine ambiguous
+subroutine wildcard()
+use dependency_api
+call remote_work()
+end subroutine wildcard
+subroutine shadowed()
+use dependency_api, only: helper => remote_work
+call helper()
+contains
+subroutine helper()
+end subroutine helper
+end subroutine shadowed
+end module dependency_client
+''',
     'public_view': '''module public_view
 private :: helper, specific
 !> Public generic with a private implementation.
@@ -200,7 +231,8 @@ class ReferenceTests(unittest.TestCase):
         write_unit(output, self.index.units[scope], references=self.index)
         calls = output.getvalue().split('Calls into\n', 1)[1].split('\n\n', 1)[0]
         self.assertIn(anchor(generic), calls)
-        self.assertIn('missing_external', calls)
+        self.assertNotIn('missing_external', calls)
+        self.assertTrue(any('missing_external' in message for message in self.index.diagnostics))
         self.assertNotIn('helper', calls)
         self.assertNotIn('specific', calls)
         output = io.StringIO()
@@ -215,6 +247,35 @@ class ReferenceTests(unittest.TestCase):
         self.assertIn(anchor('generic_library::dispatch'), output.getvalue())
         self.assertNotIn('dispatch_array', output.getvalue())
         self.assertNotIn(anchor('generic_library::dispatch_array'), output.getvalue())
+
+    def test_known_dependencies_are_distinct_from_unknown_calls(self):
+        index = ReferenceIndex(self.modules, external_modules={
+            'dependency_api': 'Example library', 'other_api': 'Other library'})
+        ref = index.resolve('dependency_client::run', 'work')
+        self.assertIsNone(ref.target)
+        self.assertEqual(ref.external.library, 'Example library')
+        self.assertEqual(ref.external.module, 'dependency_api')
+        self.assertEqual(ref.external.name, 'remote_work')
+        self.assertFalse(any('dependency_client::run: work:' in d for d in index.diagnostics))
+        for scope, name in [('ambiguous', 'work'), ('wildcard', 'remote_work'), ('run', 'unknown')]:
+            ref = index.resolve('dependency_client::' + scope, name)
+            self.assertIsNone(ref.external)
+            self.assertIsNone(ref.target)
+        self.assertEqual(index.resolve('dependency_client::shadowed', 'helper').target,
+                         'dependency_client::shadowed::helper')
+        output = io.StringIO()
+        write_unit(output, index.units['dependency_client::run'], references=index)
+        self.assertIn('External calls', output.getvalue())
+        self.assertIn('Example library', output.getvalue())
+        self.assertIn('dependency_api::remote_work', output.getvalue())
+        self.assertNotIn('Calls into', output.getvalue())
+        self.assertNotIn('unknown', output.getvalue())
+        if importlib.util.find_spec('docutils'):
+            from docutils.core import publish_doctree
+            warnings = io.StringIO()
+            publish_doctree(output.getvalue(), settings_overrides={
+                'warning_stream': warnings, 'halt_level': 2})
+            self.assertEqual(warnings.getvalue(), '')
 
     def test_renames_host_scopes_and_reexports(self):
         expected = {

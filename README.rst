@@ -148,9 +148,20 @@ explicit targets, with qualified anchors to distinguish same-named procedures.
 using local and host scopes, ``USE`` imports (including ``ONLY`` and renames),
 public module re-exports, and external procedures. Reverse caller lists are
 built from these resolved calls, rather than from the parser's unqualified
-graph. Unknown or ambiguous names are rendered as plain text and diagnosed on
-stderr by the command. Missing modules, generic interfaces, and unsupported
-bindings are not guessed from similarly named procedures elsewhere.
+graph. Named procedure-list generic interfaces are linked as interfaces, not
+as guessed overloads. Unknown or ambiguous names are omitted from published
+call lists and diagnosed on stderr by the command. Unsupported bindings are
+not guessed from similarly named procedures elsewhere.
+
+Applications may pass ``external_modules={module_name: library_name}`` to
+``ReferenceIndex``. An explicit import from a known dependency produces a
+``Reference.external`` record containing its library, module, and original
+symbol name. Such references appear in a separate ``external-calls`` container
+grouped by library, without guessed URLs. This identifies import provenance;
+it does not verify the dependency's procedure signatures. Wildcard imports
+without inventories remain unresolved. Library ownership is application policy,
+not built into Flint. Private targets are omitted from forward call and
+implementation lists; the underlying analysis retains them.
 
 ``HtmlDestinations`` is a separate policy mapping resolved identities to HTML
 page URLs. Without ``--link-format html``, only same-page references become
