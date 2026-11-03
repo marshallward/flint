@@ -15,6 +15,18 @@ def statement(text):
 
 
 class TestCallableSymbols(unittest.TestCase):
+    def test_labeled_format_descriptors_are_not_calls(self):
+        for text in ('10 format("calc=",f22.16," ans",f22.16)',
+                     '100 format(2(1x, f10.3), DT"custom"(1, 2))'):
+            with self.subTest(text=text):
+                self.assertEqual(get_callable_symbols(statement(text), []), [])
+
+    def test_format_named_procedures_are_still_calls(self):
+        for text in ('x = format(value)', 'call format(value)',
+                     '10 x = format(value)', '10 call format(value)'):
+            with self.subTest(text=text):
+                self.assertIn('format', get_callable_symbols(statement(text), []))
+
     def test_host_arrays_are_not_calls_and_local_procedures_can_shadow_them(self):
         text = '''module demo
 real :: module_array(3), shared_name(3)
