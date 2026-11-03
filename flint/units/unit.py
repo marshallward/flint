@@ -650,7 +650,7 @@ class Unit(object):
                 for token in stmt[1:]:
                     if token.isidentifier():
                         variable_names.discard(token.lower())
-            if stmt.kind == 'declaration' or stmt.tag in ('D', 'U', 'I', 'i'):
+            if stmt.kind == 'declaration' or stmt.tag in ('D', 'd', 'U', 'I', 'i'):
                 continue
             if self.end_statement(stmt) or Unit.statement(stmt):
                 continue

@@ -15,6 +15,37 @@ def statement(text):
 
 
 class TestCallableSymbols(unittest.TestCase):
+    def test_accessibility_declarations_are_not_calls(self):
+        text = '''module demo
+private
+public :: operator(+), assignment(=), run
+contains
+subroutine run()
+call actual_work()
+end subroutine run
+end module demo
+'''
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'demo.F90'
+            path.write_text(text)
+            project = flint.parse(str(path))
+        self.assertEqual(project.modules[0].callees, set())
+        self.assertEqual(project.modules[0].subprograms[0].callees, {'actual_work'})
+        self.assertEqual(project.graph, {'actual_work': {'run'}})
+
+    def test_allocate_type_specs_are_not_calls(self):
+        for text, expected in (
+            ('allocate(character(att_len) :: att_val)', []),
+            ('allocate(character(len=length_of(x)) :: att_val)', ['length_of']),
+            ('if (ready()) allocate(character(length_of(x)) :: att_val)',
+             ['ready', 'length_of']),
+            ('allocate(real(kind=kind_of(x)) :: values(count()))', ['kind_of', 'values', 'count']),
+            ('allocate(character(count()))', ['character', 'count']),
+            ('x = character(value)', ['character']),
+        ):
+            with self.subTest(text=text):
+                self.assertEqual(get_callable_symbols(statement(text), []), expected)
+
     def test_select_type_preserves_selector_calls_and_type_names(self):
         for text, expected in (
             ('select type (t => EOS%type)', []),

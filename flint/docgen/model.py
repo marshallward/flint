@@ -7,6 +7,7 @@ documentation interpretation and coverage; it is not a public-API filter.
 from dataclasses import dataclass, replace
 
 from flint.document import docstrip
+from flint.token import semantic_tokens
 
 
 @dataclass(frozen=True)
@@ -46,6 +47,7 @@ class UnitDocumentation:
     interfaces: tuple['UnitDocumentation', ...] = ()
     implementations: tuple[str, ...] = ()
     declaration_only: bool = False
+    arguments: tuple[str, ...] = ()
 
 
 def _text(value):
@@ -115,6 +117,14 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
     name = _text(unit.name) or 'External'
     path = (*scope, name)
     uses, default_public, access = _scope_metadata(unit)
+    arguments = ()
+    if unit.utype in ('function', 'subroutine'):
+        header_tokens = list(semantic_tokens(unit.doc.statement))
+        start = unit.header_index(header_tokens) + 2
+        header = [_text(token) for token in header_tokens]
+        if header[start:start + 1] == ['(']:
+            end = header.index(')', start)
+            arguments = tuple(word for word in header[start + 1:end] if word.isidentifier())
     procedures = {child.name.lower(): build_unit_documentation(child, scope=path, graph=graph)
                   for child in unit.subprograms}
     for interface in unit.interfaces:
@@ -173,6 +183,7 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
                      + tuple(_text(body.name).lower() for interface in unit.interfaces
                              if interface.abstract for body in interface.subprograms),
         interfaces=interfaces,
+        arguments=arguments,
     )
 
 

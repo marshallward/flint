@@ -13,6 +13,21 @@ from flint.docgen.rst import write_module, write_unit
 
 
 SOURCES = {
+    'argument_api': '''module argument_api
+contains
+subroutine run(fn)
+real, external :: fn !< Function supplied by the caller.
+real, external :: missing_external
+real :: x
+x = fn(1.) + missing_external(1.)
+contains
+subroutine inner()
+real :: y
+y = fn(2.)
+end subroutine inner
+end subroutine run
+end module argument_api
+''',
     'array_library': '''module array_library
 private
 public :: values
@@ -275,6 +290,21 @@ class ReferenceTests(unittest.TestCase):
                 (Path(tmp) / (name + '.F90')).write_text(text)
             self.modules = tuple(iter_module_documentation(flint.parse(tmp)))
         self.index = ReferenceIndex(self.modules)
+
+    def test_procedure_arguments_are_not_unresolved_call_targets(self):
+        scope = 'argument_api::run'
+        unit = self.index.units[scope]
+        self.assertEqual(unit.arguments, ('fn',))
+        self.assertTrue(self.index.resolve(scope, 'fn').is_argument)
+        self.assertTrue(self.index.resolve(scope + '::inner', 'fn').is_argument)
+        self.assertEqual([ref.label for ref in self.index.calls[scope]], ['missing_external'])
+        self.assertEqual(self.index.calls[scope + '::inner'], ())
+        self.assertFalse(any('argument_api::run: fn:' in d for d in self.index.diagnostics))
+        output = io.StringIO()
+        write_unit(output, unit, references=self.index)
+        self.assertIn('**fn**', output.getvalue())
+        self.assertIn('Function supplied by the caller.', output.getvalue())
+        self.assertNotIn('Calls into', output.getvalue())
 
     def test_imported_arrays_are_data_not_calls(self):
         for scope, name in [('run', 'renamed'), ('run', 'indirect'), ('wildcard', 'values')]:

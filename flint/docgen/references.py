@@ -9,6 +9,12 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class ArgumentSymbol:
+    scope: str
+    name: str
+
+
+@dataclass(frozen=True)
 class ArraySymbol:
     scope: str
     name: str
@@ -28,6 +34,7 @@ class Reference:
     reason: str = ''
     external: ExternalSymbol | None = None
     is_data: bool = False
+    is_argument: bool = False
 
 
 class ReferenceIndex:
@@ -57,8 +64,8 @@ class ReferenceIndex:
         for key, unit in self.units.items():
             self.implementations[key] = tuple(
                 self._implementation(key, name) for name in unit.implementations)
-            calls = tuple(ref for name in unit.callees
-                          if not (ref := self.resolve(key, name)).is_data)
+            resolved = (self.resolve(key, name) for name in unit.callees)
+            calls = tuple(ref for ref in resolved if not ref.is_data and not ref.is_argument)
             self.calls[key] = calls
             for reference in calls:
                 if reference.target is not None:
@@ -111,6 +118,8 @@ class ReferenceIndex:
     def _local(self, scope, name, visiting):
         """Return (targets, uncertain, bound) at one lexical scope."""
         unit = self.units[scope]
+        if name in unit.arguments:
+            return {ArgumentSymbol(scope, name)}, False, True
         if name in unit.opaque_names:
             return set(), True, True
         children = self.children[scope].get(name, ())
@@ -177,6 +186,8 @@ class ReferenceIndex:
             if bound:
                 if len(targets) == 1 and not uncertain:
                     target = next(iter(targets))
+                    if isinstance(target, ArgumentSymbol):
+                        return Reference(label, None, is_argument=True)
                     if isinstance(target, ArraySymbol):
                         return Reference(label, None, is_data=True)
                     if isinstance(target, ExternalSymbol):

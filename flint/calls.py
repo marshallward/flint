@@ -52,6 +52,21 @@ def _statement_keyword_indices(line):
             return keywords
     if start < len(line) and line[start] in _IO_STATEMENTS:
         return (*keywords, start)
+    if line[start:start + 2] == ['allocate', '(']:
+        keywords = (*keywords, start)
+        # Only a top-level :: makes this a type specification. Without it,
+        # character(...) may instead be the array being allocated.
+        depth = 0
+        for index in range(start + 2, len(line)):
+            token = line[index]
+            if token == '(':
+                depth += 1
+            elif token == ')':
+                if depth == 0:
+                    break
+                depth -= 1
+            elif token == '::' and depth == 0:
+                return (*keywords, start + 2)
     return keywords
 
 
