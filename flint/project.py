@@ -35,7 +35,7 @@ class Project(object):
     def parse(self, *paths, excludes=None, followlinks=False):
         # Set up the exclusion list
         if excludes:
-            exclude_dirs = [os.path.normpath(p) for p in excludes]
+            exclude_dirs = {os.path.normcase(os.path.realpath(p)) for p in excludes}
         else:
             exclude_dirs = []
 
@@ -54,7 +54,7 @@ class Project(object):
                 self.directories.append(root)
 
                 # Skip any excluded directories
-                if os.path.normpath(root) in exclude_dirs:
+                if os.path.normcase(os.path.realpath(root)) in exclude_dirs:
                     continue
 
                 for fname in files:

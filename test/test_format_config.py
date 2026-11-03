@@ -137,6 +137,22 @@ excluded-functions = ["max"]
         finally:
             os.chdir(original_cwd)
 
+    def test_config_exclusions_with_symlinked_source_path(self):
+        self.config.write_text('[format]\nexclude = ["ignored"]\n')
+        ignored = self.root / 'ignored'
+        ignored.mkdir()
+        (ignored / 'bad.F90').write_text('subroutine demo()\nx=1\nend subroutine demo\n')
+        with tempfile.TemporaryDirectory() as directory:
+            alias = Path(directory) / 'source'
+            try:
+                alias.symlink_to(self.root, target_is_directory=True)
+            except (OSError, NotImplementedError):
+                self.skipTest('directory symlinks unavailable')
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(format_statements([str(alias)], config=self.config), 0)
+                self.assertEqual(
+                    format_statements([str(alias)], config=self.config, excludes=[]), 1)
+
     def test_python_api_reuses_project_without_mutating_settings(self):
         self.source.write_text('subroutine demo()\n  x=1\nend subroutine demo\n')
         settings = {'rules': ['assignment-spacing'], 'assignment-spacing': {'strict': True}}
