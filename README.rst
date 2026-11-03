@@ -178,6 +178,44 @@ A later combined-document policy can reuse symbol resolution while supplying
 different destinations.
 
 
+Call graph diagrams
+~~~~~~~~~~~~~~~~~~~
+
+To add caller/callee diagrams to the generated reference, install Graphviz
+(providing the ``dot`` executable) and run::
+
+    flint gendoc src --output reference --link-format html --call-graphs svg
+
+Flint writes DOT and SVG files beside the reST pages, which reference the SVG
+images. Render the reST to HTML in that same directory and retain the SVG files
+alongside it. Nodes link to the generated HTML pages when ``--link-format html``
+is selected. Clickable SVG links require an HTML renderer that embeds SVG as
+an object or inline SVG rather than an ordinary ``img`` element.
+With Docutils' HTML5 writer, select ``--image-loading=embed`` for inline SVG.
+
+Each public procedure or generic interface with connected calls gets separate
+**Callees** and **Callers** diagrams (empty directions are omitted).
+The highlighted node is the documented entity; arrows point from caller to
+callee. Nodes are grouped in labelled module boxes. ``--graph-depth 2`` follows calls two hops in each diagram's direction
+(default one). Edges are collected during traversal, without adding unrelated
+connections between boundary nodes.
+Cycles are retained. Private and internal procedures are included and labelled
+so that implementation paths remain visible. Unknown, ambiguous, and external
+procedure targets are omitted; generic interfaces remain distinct nodes rather
+than guessed calls to their implementations. Large neighborhoods can still
+produce large diagrams, so start with the default depth.
+
+For DOT export without installing Graphviz::
+
+    flint gendoc src --output reference --call-graphs dot
+
+The Python API separates graph extraction from rendering:
+``flint.docgen.graphs.call_graph(references, qualified_name, depth=1,
+direction='callees')`` returns
+an immutable graph, and ``write_dot(stream, graph, references)`` exports it.
+Use ``direction='callers'`` to follow incoming calls instead.
+
+
 Formatting rules
 ----------------
 

@@ -62,7 +62,7 @@ def _link(reference, references, current, destinations):
     return f'`{_prose(label)} <{target}>`__'
 
 
-def write_module(doc, module, *, references=None, destinations=None):
+def write_module(doc, module, *, references=None, destinations=None, graph_images=None):
     """Write a module reference to a text stream using the legacy layout."""
     if references is None:
         references = ReferenceIndex((module,))
@@ -93,39 +93,45 @@ def write_module(doc, module, *, references=None, destinations=None):
     if module.derived_types:
         doc.write('Type Documentation\n==================\n')
         for entry in module.derived_types:
-            write_unit(doc, entry, show_callers=False, references=references, destinations=destinations)
+            write_unit(doc, entry, show_callers=False, references=references,
+                       destinations=destinations, graph_images=graph_images)
 
     if module.interfaces:
         doc.write('Generic Interface Documentation\n===============================\n\n')
         for entry in module.interfaces:
-            write_unit(doc, entry, references=references, destinations=destinations)
+            write_unit(doc, entry, references=references, destinations=destinations,
+                       graph_images=graph_images)
 
     if declarations:
         doc.write('Procedure Interface Documentation\n=================================\n\n')
         for entry in declarations:
-            write_unit(doc, entry, references=references, destinations=destinations)
+            write_unit(doc, entry, references=references, destinations=destinations,
+                       graph_images=graph_images)
 
     if implementations:
         doc.write('Functions/Subroutine Documentation\n==================================\n\n')
         for entry in implementations:
-            write_unit(doc, entry, references=references, destinations=destinations)
+            write_unit(doc, entry, references=references, destinations=destinations,
+                       graph_images=graph_images)
 
 
-def write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destinations=None):
+def write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destinations=None,
+               graph_images=None):
     """Group each callable entry in a portable reST presentation container."""
     if unit.kind in ('function', 'subroutine', 'interface'):
         content = io.StringIO()
         _write_unit(content, unit, show_callers=show_callers,
-                    references=references, destinations=destinations)
+                    references=references, destinations=destinations, graph_images=graph_images)
         indent = depth * ' '
         doc.write(indent + '.. container:: api-procedure\n\n')
         doc.write(_indented(content.getvalue().rstrip(), indent + '   ') + '\n\n')
     else:
         _write_unit(doc, unit, depth, show_callers=show_callers,
-                    references=references, destinations=destinations)
+                    references=references, destinations=destinations, graph_images=graph_images)
 
 
-def _write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destinations=None):
+def _write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destinations=None,
+                graph_images=None):
     """Write a unit record and its nested types and procedures."""
     indent = depth * ' '
     doc.write(indent + '.. _' + anchor(unit.qualified_name) + ':\n\n')
@@ -165,6 +171,11 @@ def _write_unit(doc, unit, depth=0, *, show_callers=True, references=None, desti
                           _link(ref, references, unit.qualified_name, destinations) + '\n')
             doc.write('\n')
 
+    for title, image in (graph_images or {}).get(unit.qualified_name, ()):
+        doc.write('\n' + indent + '.. rubric:: ' + title + '\n')
+        doc.write('\n' + indent + '.. image:: ' + image + '\n')
+        doc.write(indent + '   :alt: ' + title + ' of ' + unit.qualified_name + '\n\n')
+
     external_calls = {}
     if references is not None:
         for ref in references.calls[unit.qualified_name]:
@@ -182,7 +193,7 @@ def _write_unit(doc, unit, depth=0, *, show_callers=True, references=None, desti
 
     for child in unit.derived_types:
         write_unit(doc, child, depth + 2, show_callers=False,
-                   references=references, destinations=destinations)
+                   references=references, destinations=destinations, graph_images=graph_images)
     for child in (*unit.interfaces, *unit.procedures):
         write_unit(doc, child, depth + 2, show_callers=show_callers,
-                   references=references, destinations=destinations)
+                   references=references, destinations=destinations, graph_images=graph_images)

@@ -103,6 +103,10 @@ def parse():
     gendoc_cmd.add_argument(*arg_exclude['flags'], **arg_exclude['parameters'])
     gendoc_cmd.add_argument('--link-format', choices=('html',), default=None,
                             help='Target format for cross-module links (default: local links only)')
+    gendoc_cmd.add_argument('--call-graphs', choices=('dot', 'svg'), default=None,
+                            help='Export call graphs; SVG requires Graphviz dot')
+    gendoc_cmd.add_argument('--graph-depth', type=int, default=1,
+                            help='Caller/callee neighborhood depth (default: 1)')
 
     # tag
     tag_cmd = subparsers.add_parser('tag')
@@ -129,9 +133,10 @@ def parse():
 
     run_args = vars(args)
     run_args.pop('run_cmd')
-    if run_cmd is flint.tools.format.format_statements:
+    if run_cmd in (flint.tools.format.format_statements, flint.tools.gendoc.generate_docs):
         try:
             return run_cmd(**run_args)
         except ValueError as error:
-            format_cmd.error(str(error))
+            command = format_cmd if run_cmd is flint.tools.format.format_statements else gendoc_cmd
+            command.error(str(error))
     return run_cmd(**run_args)
