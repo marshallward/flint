@@ -137,6 +137,12 @@ excluded-functions = ["max"]
         finally:
             os.chdir(original_cwd)
 
+    def test_config_exclusions_do_not_require_relative_paths(self):
+        self.config.write_text('[format]\nexclude = ["ignored"]\n')
+        with patch('os.path.relpath', side_effect=ValueError('different drives')):
+            settings = load_config(self.config)
+        self.assertEqual(settings['exclude'], [str((self.root / 'ignored').resolve())])
+
     def test_config_exclusions_with_symlinked_source_path(self):
         self.config.write_text('[format]\nexclude = ["ignored"]\n')
         ignored = self.root / 'ignored'

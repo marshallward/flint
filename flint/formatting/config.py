@@ -1,6 +1,5 @@
 """Project formatting configuration shared by Python callers and the CLI."""
 from functools import partial
-import os
 from pathlib import Path
 
 from flint.formatting.rules import ALL_RULES, RULES
@@ -85,9 +84,9 @@ def load_config(path=None, *, start=None):
     except (OSError, ValueError) as error:
         raise ValueError(f'{path}: {error}') from error
     if 'exclude' in config:
-        # Project accepts both relative and absolute source paths; match either.
-        paths = [(path.parent / item).resolve() for item in config['exclude']]
-        config['exclude'] = [item for p in paths for item in (str(p), os.path.relpath(p))]
+        # Project compares canonical paths, including sources on another drive.
+        config['exclude'] = [str((path.parent / item).resolve())
+                             for item in config['exclude']]
     return config
 
 
