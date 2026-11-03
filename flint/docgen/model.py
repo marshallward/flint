@@ -4,7 +4,7 @@ These records contain ordinary Python values, not parser objects. Rebuild a
 snapshot after editing source. Extraction currently preserves gendoc's legacy
 documentation interpretation and coverage; it is not a public-API filter.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from flint.document import docstrip
 
@@ -44,6 +44,7 @@ class UnitDocumentation:
     opaque_names: tuple[str, ...] = ()
     interfaces: tuple['UnitDocumentation', ...] = ()
     implementations: tuple[str, ...] = ()
+    declaration_only: bool = False
 
 
 def _text(value):
@@ -113,6 +114,19 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
     name = _text(unit.name) or 'External'
     path = (*scope, name)
     uses, default_public, access = _scope_metadata(unit)
+    procedures = {child.name.lower(): build_unit_documentation(child, scope=path, graph=graph)
+                  for child in unit.subprograms}
+    for interface in unit.interfaces:
+        if interface.abstract:
+            continue
+        for body in interface.subprograms:
+            # Explicit interface bodies declare procedures in the enclosing
+            # scope, even when there is no implementation in this project.
+            name_key = _text(body.name).lower()
+            if name_key not in procedures:
+                procedures[name_key] = replace(
+                    build_unit_documentation(body, scope=path), declaration_only=True,
+                    callees=(), callers=())
     interfaces = tuple(
         UnitDocumentation(
             name=_text(interface.name),
@@ -121,12 +135,13 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
             signature='interface ' + _text(interface.name),
             summary=docstrip(interface.statements[0][0].head, oneline=False),
             description='',
-            implementations=tuple(_text(name) for name in interface.procedures),
+            implementations=tuple(_text(name) for name in interface.procedures)
+                            + tuple(_text(body.name) for body in interface.subprograms),
         )
         for interface in unit.interfaces
         if (interface.name is not None and _text(interface.name).isidentifier()
             and len(interface.statements[0]) == 2
-            and not interface.abstract and interface.procedures and not interface.subprograms)
+            and not interface.abstract and (interface.procedures or interface.subprograms))
     )
     documented_interfaces = {interface.name.lower() for interface in interfaces}
     return UnitDocumentation(
@@ -143,8 +158,7 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
         ) for variable in unit.variables),
         derived_types=tuple(build_unit_documentation(child, scope=path, graph=graph)
                             for child in unit.derived_types),
-        procedures=tuple(build_unit_documentation(child, scope=path, graph=graph)
-                         for child in unit.subprograms),
+        procedures=tuple(procedures.values()),
         callees=tuple(sorted(_text(name) for name in unit.callees)),
         callers=tuple(sorted(_text(name) for name in (graph or {}).get(unit.name, ()))),
         display_name=str(unit.name) if unit.name is not None else name,
@@ -153,7 +167,9 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
         access=access,
         opaque_names=tuple(_text(interface.name).lower() for interface in unit.interfaces
                            if getattr(interface, 'name', None)
-                           and _text(interface.name).lower() not in documented_interfaces),
+                           and _text(interface.name).lower() not in documented_interfaces)
+                     + tuple(_text(body.name).lower() for interface in unit.interfaces
+                             if interface.abstract for body in interface.subprograms),
         interfaces=interfaces,
     )
 

@@ -55,10 +55,13 @@ def write_module(doc, module, *, references=None, destinations=None):
     title = module.name + ' module reference'
     doc.write('=' * len(title) + '\n' + title + '\n' + '=' * len(title) + '\n')
     doc.write(_prose(module.summary) + '\n\n')
+    implementations = tuple(entry for entry in module.procedures if not entry.declaration_only)
+    declarations = tuple(entry for entry in module.procedures if entry.declaration_only)
 
     for title, entries in (('Data Types', module.derived_types),
                            ('Generic Interfaces', module.interfaces),
-                           ('Functions/Subroutines', module.procedures)):
+                           ('Procedure Interfaces', declarations),
+                           ('Functions/Subroutines', implementations)):
         if entries:
             doc.write(title + '\n' + '=' * len(title) + '\n')
             doc.write('.. list-table::\n\n')
@@ -83,9 +86,14 @@ def write_module(doc, module, *, references=None, destinations=None):
         for entry in module.interfaces:
             write_unit(doc, entry, references=references, destinations=destinations)
 
-    if module.procedures:
+    if declarations:
+        doc.write('Procedure Interface Documentation\n=================================\n\n')
+        for entry in declarations:
+            write_unit(doc, entry, references=references, destinations=destinations)
+
+    if implementations:
         doc.write('Functions/Subroutine Documentation\n==================================\n\n')
-        for entry in module.procedures:
+        for entry in implementations:
             write_unit(doc, entry, references=references, destinations=destinations)
 
 
@@ -117,7 +125,10 @@ def write_unit(doc, unit, depth=0, *, show_callers=True, references=None, destin
                       if ref.target is not None and references.is_public(ref.target))
         implementations = tuple(ref for ref in implementations
                                 if ref.target is not None and references.is_public(ref.target))
-    for title, links in (('Implementations', implementations), ('Calls into', calls),
+    specifics_title = ('Specific Procedures' if references is not None and any(
+        references.units[ref.target].declaration_only for ref in implementations
+        if ref.target is not None) else 'Implementations')
+    for title, links in ((specifics_title, implementations), ('Calls into', calls),
                          ('Called by', callers if show_callers else ())):
         if links:
             doc.write('\n' + indent + title + '\n')

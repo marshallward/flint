@@ -148,8 +148,11 @@ explicit targets, with qualified anchors to distinguish same-named procedures.
 using local and host scopes, ``USE`` imports (including ``ONLY`` and renames),
 public module re-exports, and external procedures. Reverse caller lists are
 built from these resolved calls, rather than from the parser's unqualified
-graph. Named procedure-list generic interfaces are linked as interfaces, not
-as guessed overloads. Unknown or ambiguous names are omitted from published
+graph. Named generic interfaces are linked as interfaces, not as guessed
+overloads. Explicit procedure interface bodies are documented as procedure
+declarations in their enclosing scope, including ``bind(c)`` signatures; no
+implementation body is required. Abstract interface prototypes are not treated
+as callable procedure definitions. Unknown or ambiguous names are omitted from published
 call lists and diagnosed on stderr by the command. Unsupported bindings are
 not guessed from similarly named procedures elsewhere.
 

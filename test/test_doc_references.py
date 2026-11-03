@@ -13,6 +13,42 @@ from flint.docgen.rst import write_module, write_unit
 
 
 SOURCES = {
+    'declared_api': '''module declared_api
+private
+public :: c_work, plain_work, generic_work
+interface
+  !> Call the C library.
+  function c_work(x) result(y) bind(c, name="library_work")
+    real, intent(in) :: x !< Input value.
+    real :: y
+  end function c_work
+  subroutine plain_work()
+  end subroutine plain_work
+  subroutine private_work()
+  end subroutine private_work
+end interface
+interface generic_work
+  subroutine specific_work()
+  end subroutine specific_work
+end interface
+abstract interface
+  subroutine callback()
+  end subroutine callback
+end interface
+end module declared_api
+''',
+    'declared_client': '''module declared_client
+use declared_api, only: renamed => c_work, plain_work, private_work, generic_work
+contains
+subroutine run()
+real :: x
+x = renamed(1.)
+call plain_work()
+call private_work()
+call generic_work()
+end subroutine run
+end module declared_client
+''',
     'dependency_facade': '''module dependency_facade
 use dependency_api, only: exported => remote_work
 private
@@ -198,6 +234,30 @@ class ReferenceTests(unittest.TestCase):
                 (Path(tmp) / (name + '.F90')).write_text(text)
             self.modules = tuple(iter_module_documentation(flint.parse(tmp)))
         self.index = ReferenceIndex(self.modules)
+
+    def test_explicit_procedure_interfaces_are_api_targets(self):
+        for name, target in [('renamed', 'c_work'), ('plain_work', 'plain_work')]:
+            self.assertEqual(self.index.resolve('declared_client::run', name).target,
+                             'declared_api::' + target)
+        self.assertIsNone(self.index.resolve('declared_client::run', 'private_work').target)
+        self.assertIsNone(self.index.resolve('declared_api', 'callback').target)
+        self.assertNotIn('declared_api::callback', self.index.units)
+        declaration = self.index.units['declared_api::c_work']
+        self.assertTrue(declaration.declaration_only)
+        self.assertEqual(declaration.summary, 'Call the C library.')
+        self.assertIn('bind ( c , name = "library_work" )', declaration.signature)
+        self.assertEqual(declaration.variables[0].intent, 'in')
+        self.assertEqual(declaration.callees, ())
+        self.assertEqual([ref.target for ref in self.index.callers[declaration.qualified_name]],
+                         ['declared_client::run'])
+        generic = self.index.resolve('declared_client::run', 'generic_work').target
+        self.assertEqual(generic, 'declared_api::interface::generic_work')
+        self.assertEqual(self.index.implementations[generic][0].target, 'declared_api::specific_work')
+        module = next(m for m in self.modules if m.name == 'declared_api')
+        output = io.StringIO()
+        write_module(output, module, references=self.index)
+        self.assertIn('Procedure Interfaces', output.getvalue())
+        self.assertIn(anchor('declared_api::c_work'), output.getvalue())
 
     def test_generic_interfaces_link_without_selecting_an_overload(self):
         target = 'generic_library::interface::dispatch'
