@@ -15,6 +15,13 @@ def statement(text):
 
 
 class TestCallableSymbols(unittest.TestCase):
+    def test_else_if_condition_calls_are_preserved(self):
+        for text in ('else if (ready(check())) then',
+                     '100 else if (ready(check())) then branch'):
+            with self.subTest(text=text):
+                self.assertEqual(get_callable_symbols(statement(text), []), ['ready', 'check'])
+        self.assertEqual(get_callable_symbols(statement('else if (if(value)) then'), []), ['if'])
+
     def test_labeled_format_descriptors_are_not_calls(self):
         for text in ('10 format("calc=",f22.16," ans",f22.16)',
                      '100 format(2(1x, f10.3), DT"custom"(1, 2))'):

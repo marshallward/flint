@@ -21,6 +21,8 @@ def _statement_keyword_indices(line):
     keywords = ()
     if start < len(line) and line[start].isdigit():
         start += 1
+    if line[start:start + 3] == ['else', 'if', '(']:
+        return (start + 1,)
     if line[start:start + 3] == ['select', 'case', '(']:
         return (start + 1,)
     if line[start:start + 2] == ['case', '(']:
