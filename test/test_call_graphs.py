@@ -37,6 +37,10 @@ subroutine run()
 call work()
 call dispatch()
 call unknown()
+contains
+subroutine inner()
+call work()
+end subroutine inner
 end subroutine run
 subroutine work_local()
 end subroutine work_local

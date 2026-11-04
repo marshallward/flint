@@ -191,6 +191,11 @@ def _write_unit(doc, unit, depth=0, *, show_callers=True, references=None, desti
                 doc.write(indent + f'     * ``{ref.label}`` (``{origin}``)\n')
             doc.write('\n')
 
+    if (graph_images or {}).get(unit.qualified_name) and (
+            unit.derived_types or unit.interfaces or unit.procedures):
+        # End the image directive before the indented nested-unit blocks.
+        doc.write('\n' + indent + '..\n\n')
+
     for child in unit.derived_types:
         write_unit(doc, child, depth + 2, show_callers=False,
                    references=references, destinations=destinations, graph_images=graph_images)
