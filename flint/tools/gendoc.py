@@ -17,7 +17,9 @@ from flint.docgen.graphs import call_graph, write_dot
 
 
 def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=None,
-                  call_graphs=None, graph_depth=1):
+                  call_graphs=None, graph_depth=1, markup='plain'):
+    if markup not in ('plain', 'rst', 'doxygen'):
+        raise ValueError(f'Unsupported documentation markup: {markup}')
     if link_format not in (None, 'html'):
         raise ValueError(f'Unsupported link format: {link_format}')
     if call_graphs not in (None, 'dot', 'svg'):
@@ -52,7 +54,7 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=Non
     for module in modules:
         with (output / (module.name + '.rst')).open('w', encoding='utf-8') as doc:
             write_module(doc, module, references=references, destinations=destinations,
-                         graph_images=graph_images)
+                         graph_images=graph_images, markup=markup)
     for diagnostic in references.diagnostics:
         print('gendoc: ' + diagnostic, file=sys.stderr)
 

@@ -121,16 +121,40 @@ the rendered reference. Call names are the parser's existing evidence, not
 resolved cross-module links. The reST writer retains the existing layout;
 call lists are sorted for reproducible output.
 
-Descriptions are treated as plain prose by the reST writer. Blank lines
-separate paragraphs; source wrapping and incidental indentation within a
-paragraph are normalized, and reST punctuation is escaped. Lists, directives,
-and inline markup in comments are therefore displayed literally. Doxygen
-commands are also literal text until explicit translation is implemented.
-Source authors do not need to adopt reST syntax. This policy lives in the
-writer, allowing a future explicit strict-reST mode without changing the
-documentation model. Unit summaries retain their original paragraph breaks
-during extraction; legacy variable docstrings may already have been flattened
-by the parser.
+Select the source comment format explicitly with ``--markup`` (or the
+``markup=`` keyword of ``write_module``, ``write_unit``, and ``generate_docs``):
+
+* ``plain`` (default): escape punctuation and normalize prose wrapping, retaining
+  paragraph breaks. Markup is displayed literally.
+* ``rst``: retain native reStructuredText, including indentation, directives, and
+  literal blocks. Source comments must contain valid reST.
+* ``doxygen``: translate the supported Doxygen subset to reST, without invoking
+  Doxygen, Pandoc, or an HTML renderer. Existing Fortran comments can be retained
+  while changing the documentation build system.
+
+For example::
+
+    flint gendoc src --output reference --markup doxygen --link-format html
+
+All modes use the existing ``!>``, ``!<``, and ``!!`` comment markers. Extraction
+retains indentation and paragraph boundaries in both unit and variable comments.
+Declaration groups (``!>@{`` / ``!>@}``) remain supported.
+
+The Doxygen frontend supports inline and display mathematics, named mathematical
+environments, namespace/section/anchor targets, citations, references (including
+labeled Markdown reference links), verbatim/code blocks, images, pipe tables,
+simple lists, common inline HTML/code/emphasis, and descriptive commands such as
+``brief``, ``note``, ``param``, and ``return``. ASCII stencil/tree paragraphs are
+preserved as literal blocks. Explicit ``verbatim`` or ``code`` blocks are the
+reliable way to preserve arbitrary diagrams and their spacing.
+
+This is not a complete Doxygen implementation. Unsupported commands and unclosed
+math/code delimiters fail conversion. The frontend produces ``:ref:`` and
+``:cite:`` roles for a project's site-wide resolver (or Sphinx); bare Docutils
+does not resolve those roles itself. Image paths are retained for the caller to
+stage. Doxygen group/page discovery, arbitrary HTML, and implicit symbol-name
+autolinking are not implemented. Source-format migration can be a separate step
+after adopting the new build system.
 
 Cross-module documentation links
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

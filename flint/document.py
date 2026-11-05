@@ -17,18 +17,32 @@ def is_docgroup(tokens):
     return any(tok.startswith(dtok) for tok in tokens for dtok in grp_tokens)
 
 
-def docstrip(tokens, oneline=True):
-    # XXX: Replace [3:] with something more robust
-    docstr_tokens = [
-        tok[3:] for tok in tokens
-        if any(tok.startswith(d) for d in doc_tokens)
-    ]
+def docstrip(tokens, oneline=False):
+    """Remove comment markers, retaining reST indentation and paragraph breaks."""
+    docstr_tokens = []
+    gap = ''
+    for tok in tokens:
+        if any(tok.startswith(d) for d in doc_tokens):
+            if docstr_tokens and gap.count('\n') > 1 and docstr_tokens[-1]:
+                docstr_tokens.append('')
+            docstr_tokens.append(tok[2:].removeprefix(' '))
+            gap = ''
+        else:
+            gap += tok
 
-    # NOTE: When oneline is true, this converts blank lines (converted to empty
-    #   strings) to spaces.  It's not really clear what we want here.  If you
-    #   have paragraphs separated by blank lines, then you probably want to
-    #   preserve them.
+    # Flatten only when explicitly requested; markup needs the block boundaries.
     return ' '.join(docstr_tokens) if oneline else '\n'.join(docstr_tokens)
+
+
+def groupstrip(tokens):
+    """Read only the most recent declaration group, not preceding comments."""
+    start = None
+    for index, token in enumerate(tokens):
+        if token.startswith(grp_tokens):
+            start = index
+    if start is None or tokens[start].startswith('!>@}'):
+        return ''
+    return docstrip(tokens[start:]).removeprefix('@{').removeprefix(' ')
 
 
 class Document(object):

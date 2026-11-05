@@ -107,6 +107,8 @@ def parse():
                             help='Export call graphs; SVG requires Graphviz dot')
     gendoc_cmd.add_argument('--graph-depth', type=int, default=1,
                             help='Caller/callee neighborhood depth (default: 1)')
+    gendoc_cmd.add_argument('--markup', choices=('plain', 'rst', 'doxygen'), default='plain',
+                            help='Source documentation format (default: plain prose)')
 
     # tag
     tag_cmd = subparsers.add_parser('tag')

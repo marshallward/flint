@@ -8,7 +8,7 @@ import itertools
 from flint.calls import get_callable_symbols
 from flint.construct import Construct
 from flint.declarations import parse_declaration
-from flint.document import is_docstring, is_docgroup, docstrip, Document
+from flint.document import is_docstring, is_docgroup, docstrip, groupstrip, Document
 from flint.interface import Interface
 from flint.intrinsics import intrinsic_fns
 from flint.statement import Statement
@@ -329,8 +329,7 @@ class Unit(object):
 
             # Check for any group tokens
             if (is_docstring(tok.head) and is_docgroup(tok.head)):
-                # XXX: Use [2:] to strip '{ ', maybe do this in docstrip...?
-                self.grp_docstr = docstrip(tok.head)[2:]
+                self.grp_docstr = groupstrip(tok.head)
 
             if tok in Variable.intrinsic_types:
                 vtype = tok
@@ -491,7 +490,7 @@ class Unit(object):
             elif attribute[0] == 'dimension':
                 dimension = Variable.dimension_from_tokens(iter(attribute[2:]))
         if is_docstring(stmt[0].head) and is_docgroup(stmt[0].head):
-            self.grp_docstr = docstrip(stmt[0].head)[2:]
+            self.grp_docstr = groupstrip(stmt[0].head)
         stmt_vars = []
         for start, end in declaration.entities:
             rank = dimension
