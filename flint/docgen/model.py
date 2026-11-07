@@ -28,6 +28,19 @@ class VariableDocumentation:
 
 
 @dataclass(frozen=True)
+class BindingDocumentation:
+    name: str
+    qualified_name: str
+    kind: str
+    signature: str
+    description: str
+    targets: tuple[str, ...]
+    interface: str | None
+    attributes: tuple[tuple[str, ...], ...]
+    public: bool | None
+
+
+@dataclass(frozen=True)
 class UnitDocumentation:
     name: str
     qualified_name: str
@@ -49,6 +62,7 @@ class UnitDocumentation:
     implementations: tuple[str, ...] = ()
     declaration_only: bool = False
     arguments: tuple[str, ...] = ()
+    bindings: tuple[BindingDocumentation, ...] = ()
 
 
 def _text(value):
@@ -204,6 +218,11 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
                              if interface.abstract for body in interface.subprograms),
         interfaces=interfaces,
         arguments=arguments,
+        bindings=tuple(BindingDocumentation(
+            binding.name, '::'.join((*path, binding.name)), binding.kind,
+            _signature(binding.statement), binding.description, binding.targets,
+            binding.interface, binding.attributes, binding.public,
+        ) for binding in unit.bindings),
     )
 
 

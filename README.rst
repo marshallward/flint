@@ -100,15 +100,16 @@ returns a nonzero exit status when required documentation is absent. Explicit
 ordinary comments and empty markers do not. Missing includes and skipped input
 files fail the check rather than producing a successful partial assessment.
 
-The default scope includes concrete derived types, named interfaces,
+The default scope includes concrete derived types, named interfaces and generic bindings,
 module variables, and type components, including private entities. Add
 ``--strict`` to also require module/submodule, program, function, subroutine,
-and abstract-type descriptions, including private and internal procedures.
+abstract-type, type-bound procedure, and finalization-procedure descriptions,
+including private and internal procedures.
 Their variables, types, and interfaces are still checked in
 relaxed mode. Procedure-local variables are excluded. Add ``--arguments``
 independently to check dummy arguments as well; argument
 descriptions must be attached to their declarations. Function-result descriptions,
-type-bound binding descriptions, and the quality of prose are not checked.
+and the quality of prose are not checked.
 This is an explicit policy over Flint's parsed entities, not an exact emulation
 of Doxygen's undocumented-entity heuristics.
 
@@ -497,7 +498,34 @@ objects. Module procedure pointers and pointer components are checked even in
 relaxed documentation mode; procedure-local pointers remain outside the policy
 and dummy pointers are checked with ``--arguments``. Non-pointer procedure
 declarations, separate ``pointer`` attribute statements, and type-bound bindings
-are not added to the variable model by this support.
+are not added to the variable model by this support. Type-bound bindings have
+their own model, described below.
+
+Type-bound procedures
+~~~~~~~~~~~~~~~~~~~~~
+
+Each derived type exposes locally declared associations through ``unit.bindings``.
+These are separate from ``unit.variables`` and executable ``unit.subprograms``.
+The binding part starts at the type's ``contains`` statement. Supported forms
+include specific procedure bindings (with implicit or renamed targets), deferred
+bindings, generic bindings, and ``final`` declarations. Generic names retain their
+full spelling, including ``operator(+)``, ``assignment(=)``, and ``read(formatted)``.
+
+Each binding exposes ``name``, ``kind`` (``binding``, ``generic-binding``, or
+``final-binding``), ``targets``, ``interface``, ``attributes``, and ``public``.
+An implicit specific target has the binding's own name; a deferred binding has
+an interface name and no implementation target. Binding accessibility defaults
+to public independently of component accessibility, honors a binding-part
+``private`` statement, and can be overridden by declaration attributes.
+Finalizers have ``public is None`` because they have no binding accessibility.
+
+``statement``, ``span``, ``location``, ``documentation`` and ``description`` retain
+source and comment evidence. Generic target lists belong to one generic binding,
+while a multi-name procedure/final statement produces one entry per name.
+Documentation snapshots expose corresponding ``UnitDocumentation.bindings``
+records. Parsing is structural: it does not resolve target implementations,
+validate override compatibility, copy inherited bindings onto child types, or
+infer dynamic-dispatch call edges.
 
 ``variable.declaration`` is a source entity view, ``declaration_tokens`` exposes
 its original tokens and whitespace tails, ``location`` locates the name token,

@@ -52,7 +52,9 @@ def check_documentation(source, *, arguments=False, strict=False, defer_includes
     visited, including abstract interfaces. Diagnostics describe parser coverage,
     not complete Doxygen compatibility. Macro-hidden tokens use the declaration
     line when a physical name-token location is unavailable. ``strict`` also
-    requires module/submodule, program, function, subroutine, and abstract-type descriptions.
+    requires module/submodule, program, function, subroutine, abstract-type,
+    type-bound procedure, and finalization-procedure descriptions. Generic
+    bindings are checked like named interfaces, including in relaxed mode.
     Their contents are always visited, regardless of visibility. Declarations
     originating in ``defer_includes`` are deferred only in relaxed mode.
     """
@@ -61,7 +63,8 @@ def check_documentation(source, *, arguments=False, strict=False, defer_includes
     deferred = {Path(path).resolve() for path in defer_includes}
 
     def issue(statement, kind, name, line=None):
-        if not strict and kind in ('module', 'submodule', 'program', 'subroutine', 'function'):
+        if not strict and kind in ('module', 'submodule', 'program', 'subroutine', 'function',
+                                   'binding', 'final-binding'):
             return
         origin = getattr(statement, 'origin_statement', None)
         if origin is not None:
@@ -121,6 +124,11 @@ def check_documentation(source, *, arguments=False, strict=False, defer_includes
             issue(statement, 'argument', '::'.join((*path, arg)))
         for child in (*unit.derived_types, *unit.subprograms):
             visit(child, path)
+        for binding in unit.bindings:
+            if not binding.description.strip():
+                location = binding.location
+                issue(binding.statement, binding.kind, '::'.join((*path, binding.name)),
+                      location.line if location else None)
         for interface in unit.interfaces:
             header = interface.statements[0]
             if interface.name is not None:

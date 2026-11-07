@@ -6,6 +6,7 @@
 import itertools
 
 from flint.calls import get_callable_symbols
+from flint.bindings import parse_bindings
 from flint.construct import Construct
 from flint.declarations import parse_declaration
 from flint.document import is_docstring, is_docgroup, docstrip, groupstrip, Document
@@ -92,6 +93,7 @@ class Unit(object):
         self.variables = []
         self.interfaces = []
         self.derived_types = []
+        self.bindings = []
         self.namelists = {}
 
         # Call tree properties
@@ -179,7 +181,10 @@ class Unit(object):
         self.parse_header(statements.current_line)
         self.parse_specification(statements)
         self.parse_execution(statements)
-        self.parse_subprogram(statements, graph=graph)
+        if self.utype == 'type' and statements.current_line[0] == 'contains':
+            self.parse_binding_part(statements)
+        else:
+            self.parse_subprogram(statements, graph=graph)
 
         if not _defer_calls:
             self.refresh_call_tree(graph=graph)
@@ -234,6 +239,29 @@ class Unit(object):
         self.statements.append(stmt)
 
     # Specification
+
+    def parse_binding_part(self, statements):
+        """Parse type associations separately from components and procedures."""
+        contains = statements.current_line
+        contains.tag = 'd'
+        self.statements.append(contains)
+        default_public = True  # Independent of the component-part PRIVATE.
+        group = ''
+        for stmt in statements:
+            if self.end_statement(stmt):
+                break
+            if list(semantic_tokens(stmt)) == ['private']:
+                default_public = False
+            if is_docstring(stmt[0].head) and is_docgroup(stmt[0].head):
+                group = groupstrip(stmt[0].head)
+            bindings = parse_bindings(stmt, default_public=default_public)
+            for binding in bindings:
+                binding.group_description = group
+            self.bindings.extend(bindings)
+            if is_docstring(stmt[-1].tail) and is_docgroup(stmt[-1].tail):
+                group = ''
+            stmt.tag = 'd' if bindings or stmt[0] == 'private' else 'X'
+            self.statements.append(stmt)
 
     def parse_specification(self, statements):
         """Parse the specification-part of a program-unit
