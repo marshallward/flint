@@ -139,6 +139,31 @@ the same check for a parsed ``Source``, returning ``DocumentationIssue`` records
 Generating the reference
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
+To generate linked reST, SVG call graphs, and diagnostic reports::
+
+   flint gendoc src -o reference --markup doxygen --link-format html \
+       --call-graphs svg --include-private --reports reports
+
+Source selection follows resolved symlink targets when applying ``--exclude``.
+Known excluded targets may be absent; other broken source symlinks fail the
+build. Include directories within the selected trees are discovered automatically;
+use ``-I`` for additional directories. Duplicate module names and failed source
+parses are errors. Generation retains documentation snapshots rather than the
+whole parsed project. Empty external-procedure pages are omitted.
+
+``--include-private`` adds diagrams rooted at private/internal procedures.
+``--graph-fontsize`` controls Graphviz text size in points; SVG IDs are unique
+across diagrams so images can be embedded inline. ``--graph-depth 0`` disables
+diagrams without requiring Graphviz.
+
+Python callers can use ``flint.tools.gendoc.generate_docs()`` with the same
+options (using underscores in keyword names). It returns a ``GenerationResult``
+with ``pages`` (page stems mapped to display titles) and ``summary`` (source,
+page, graph, exclusion, and reference counts). The ``excludes`` argument also
+accepts a mapping from diagnostic labels to paths. Optional ``reports`` output
+contains ``parse.log``, ``excluded-dependencies.txt``, ``external.txt``, and
+``unresolved.txt``. HTML rendering and site navigation belong to the caller.
+
 ``flint gendoc`` separates source extraction from reStructuredText rendering:
 
 * ``flint.docgen.model.iter_module_documentation(project)`` yields immutable

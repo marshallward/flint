@@ -110,6 +110,11 @@ def parse():
                             help='Caller/callee neighborhood depth (default: 1)')
     gendoc_cmd.add_argument('--markup', choices=('plain', 'rst', 'doxygen'), default='plain',
                             help='Source documentation format (default: plain prose)')
+    gendoc_cmd.add_argument('--include-private', action='store_true',
+                            help='Generate diagrams for private procedures as well')
+    gendoc_cmd.add_argument('--graph-fontsize', type=float,
+                            help='Graphviz font size in points')
+    gendoc_cmd.add_argument('--reports', help='Directory for generation diagnostics')
 
     # Documentation presence (no rendering).
     checkdocs_cmd = subparsers.add_parser('check-docs')
@@ -155,7 +160,8 @@ def parse():
                 flint.tools.checkdocs.check_docs: checkdocs_cmd}
     if run_cmd in commands:
         try:
-            return run_cmd(**run_args)
+            result = run_cmd(**run_args)
+            return None if run_cmd is flint.tools.gendoc.generate_docs else result
         except ValueError as error:
             commands[run_cmd].error(str(error))
     return run_cmd(**run_args)

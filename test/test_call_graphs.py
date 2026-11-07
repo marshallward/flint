@@ -126,6 +126,29 @@ class CallGraphTests(unittest.TestCase):
                 generate_docs([str(self.source)], output, call_graphs='svg')
 
     @unittest.skipUnless(shutil.which('dot'), 'requires Graphviz dot')
+    def test_private_graphs_have_unique_inline_ids_and_configurable_fontsize(self):
+        self.source.write_text(SOURCE.replace('call leaf()', 'call leaf()\ncall hidden()'))
+        output = self.root / 'private'
+        with contextlib.redirect_stderr(io.StringIO()):
+            result = generate_docs([self.source], output, call_graphs='svg',
+                                   include_private=True, graph_fontsize=12, link_format='html')
+        self.assertTrue((output / ('callers-' + anchor('library::hidden') + '.svg')).is_file())
+        images = list(output.glob('*.svg'))
+        self.assertEqual(result.summary['call_graphs'], len(images))
+        ids = []
+        for path in images:
+            tree = ET.parse(path)
+            ids.extend(node.get('id') for node in tree.iter() if 'id' in node.attrib)
+            self.assertIn('font-size="12.00"', path.read_text())
+        self.assertEqual(len(ids), len(set(ids)))
+        # Disabling diagrams does not require a Graphviz installation.
+        with patch('flint.tools.gendoc.shutil.which', return_value=None), \
+                contextlib.redirect_stderr(io.StringIO()):
+            result = generate_docs([self.source], self.root / 'no-graphs',
+                                   call_graphs='svg', graph_depth=0)
+        self.assertEqual(result.summary['call_graphs'], 0)
+
+    @unittest.skipUnless(shutil.which('dot'), 'requires Graphviz dot')
     def test_svg_generation_and_rst_embedding(self):
         output = self.root / 'docs'
         with contextlib.redirect_stderr(io.StringIO()):

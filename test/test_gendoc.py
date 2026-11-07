@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import flint
 from flint.docgen.model import UnitDocumentation, VariableDocumentation, iter_module_documentation
@@ -106,6 +107,75 @@ end module Client
 
 
 class RstWriterTests(unittest.TestCase):
+    def test_sources_exclude_symlink_targets_and_keep_header_directories(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'src'
+            source.mkdir()
+            headers = source / 'headers'
+            headers.mkdir()
+            (headers / 'values.h').write_text('#define STEP_NAME advance\n')
+            dependency = root / 'dependency'
+            dependency.mkdir()
+            (dependency / 'bad.f90').write_text('not Fortran\n')
+            (source / 'alias.f90').symlink_to(dependency / 'bad.f90')
+            (source / 'missing.f90').symlink_to(dependency / 'absent.f90')
+            (source / 'demo.f90').write_text(
+                '#include "values.h"\nmodule demo\ncontains\nsubroutine STEP_NAME(value)\n'
+                'integer, intent(in) :: value !< Input value.\n'
+                'end subroutine STEP_NAME\nend module demo\n')
+            output = root / 'docs'
+            reports = root / 'reports'
+            result = generate_docs([source, headers, dependency], output,
+                                   excludes={'dependency': dependency}, reports=reports)
+            self.assertEqual(result.pages, {'demo': 'demo'})
+            self.assertEqual(result.summary['source_files'], 1)
+            self.assertEqual(result.summary['excluded_dependency_files'], {'dependency': 3})
+            self.assertIn('subroutine advance(value)', (output / 'demo.rst').read_text())
+            self.assertIn('alias.f90', (reports / 'excluded-dependencies.txt').read_text())
+            # Exclusion works without a dependency checkout, including broken aliases.
+            (dependency / 'bad.f90').unlink()
+            dependency.rmdir()
+            result = generate_docs([source], root / 'absent', excludes=[dependency])
+            self.assertEqual(result.summary['source_files'], 1)
+            with self.assertRaisesRegex(FileNotFoundError, 'missing target'):
+                generate_docs([source], root / 'broken')
+
+    def test_generation_rejects_missing_empty_duplicate_and_unparsed_inputs(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'src'
+            source.mkdir()
+            with self.assertRaisesRegex(FileNotFoundError, 'does not exist'):
+                generate_docs([root / 'missing'], root / 'output')
+            with self.assertRaisesRegex(ValueError, 'No Fortran'):
+                generate_docs([source], root / 'output')
+            first = source / 'first.f90'
+            first.write_text('module demo\nend module demo\n')
+            with patch('flint.tools.gendoc.flint.parse') as parse:
+                parse.return_value.sources = []
+                with self.assertRaisesRegex(ValueError, 'Unable to parse .*first.f90'):
+                    generate_docs([source], root / 'output')
+            (source / 'second.f90').write_text('module demo\nend module demo\n')
+            with self.assertRaisesRegex(ValueError, 'Duplicate module demo: .*first.f90.*second.f90'):
+                generate_docs([source], root / 'output')
+
+    def test_external_procedures_merge_across_files_and_reports_match_results(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = root / 'first.f90'
+            first.write_text('subroutine first()\ncall second()\nend subroutine first\n')
+            second = root / 'second.f90'
+            second.write_text('subroutine second()\nend subroutine second\n')
+            result = generate_docs([first, second], root / 'docs', reports=root / 'reports')
+            self.assertEqual(result.pages, {'External': 'External'})
+            self.assertEqual(result.summary['source_files'], 2)
+            self.assertEqual(result.summary['unresolved_references'], 0)
+            rst = (root / 'docs/External.rst').read_text()
+            self.assertIn('subroutine first()', rst)
+            self.assertIn('subroutine second()', rst)
+            self.assertEqual((root / 'reports/unresolved.txt').read_text(), '')
+
     def test_writer_uses_records_without_parser_objects(self):
         procedure = UnitDocumentation(
             name='update', qualified_name='demo::update', kind='subroutine',
