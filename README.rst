@@ -142,7 +142,7 @@ Generating the reference
 To generate linked reST, SVG call graphs, and diagnostic reports::
 
    flint gendoc src -o reference --markup doxygen --link-format html \
-       --call-graphs svg --include-private --reports reports
+       --call-graphs svg --include-private --reports reports --index api-index.rst
 
 Source selection follows resolved symlink targets when applying ``--exclude``.
 Known excluded targets may be absent; other broken source symlinks fail the
@@ -155,6 +155,12 @@ whole parsed project. Empty external-procedure pages are omitted.
 ``--graph-fontsize`` controls Graphviz text size in points; SVG IDs are unique
 across diagrams so images can be embedded inline. ``--graph-depth 0`` disables
 diagrams without requiring Graphviz.
+
+``--index FILE.rst`` adds an alphabetized module index. ``--index-title`` sets
+its heading (default: ``API reference``). Index links target HTML when
+``--link-format html`` is selected, otherwise they target the generated reST.
+The index filename must not collide with a module page. Project introductions
+and website navigation remain the responsibility of the caller.
 
 Python callers can use ``flint.tools.gendoc.generate_docs()`` with the same
 options (using underscores in keyword names). It returns a ``GenerationResult``

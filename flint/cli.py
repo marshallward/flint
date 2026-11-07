@@ -115,6 +115,10 @@ def parse():
     gendoc_cmd.add_argument('--graph-fontsize', type=float,
                             help='Graphviz font size in points')
     gendoc_cmd.add_argument('--reports', help='Directory for generation diagnostics')
+    gendoc_cmd.add_argument('--index', dest='index_file', metavar='FILE.rst',
+                            help='Generate a module index alongside the module pages')
+    gendoc_cmd.add_argument('--index-title', default='API reference',
+                            help='Title for the optional module index')
 
     # Documentation presence (no rendering).
     checkdocs_cmd = subparsers.add_parser('check-docs')

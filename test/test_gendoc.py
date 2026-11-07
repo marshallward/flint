@@ -107,6 +107,42 @@ end module Client
 
 
 class RstWriterTests(unittest.TestCase):
+    def test_optional_index_uses_display_names_and_selected_link_format(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'modules.f90'
+            source.write_text('module Zebra\nend module Zebra\n'
+                              'module Alpha\nend module Alpha\n')
+            for link_format, suffix in ((None, 'rst'), ('html', 'html')):
+                with self.subTest(link_format=link_format):
+                    output = root / suffix
+                    result = generate_docs([source], output, index_file='api-index.rst',
+                                           index_title='Example API', link_format=link_format)
+                    index = (output / 'api-index.rst').read_text()
+                    self.assertTrue(index.startswith('Example API\n===========\n'))
+                    self.assertIn(f'`Alpha <alpha.{suffix}>`__', index)
+                    self.assertIn(f'`Zebra <zebra.{suffix}>`__', index)
+                    self.assertLess(index.index('`Alpha'), index.index('`Zebra'))
+                    self.assertEqual(result.summary['module_pages'], 2)
+                    self.assertEqual(set(result.pages), {'alpha', 'zebra'})
+
+    def test_index_rejects_module_collisions_and_directory_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'demo.f90'
+            source.write_text('module demo\nend module demo\n')
+            output = root / 'output'
+            output.mkdir()
+            page = output / 'demo.rst'
+            page.write_text('Existing module page\n')
+            for name in ('demo.rst', 'DEMO.rst'):
+                with self.assertRaisesRegex(ValueError, 'conflicts with a module'):
+                    generate_docs([source], output, index_file=name)
+            for name in ('../index.rst', 'index.html'):
+                with self.assertRaisesRegex(ValueError, 'Index filename'):
+                    generate_docs([source], output, index_file=name)
+            self.assertEqual(page.read_text(), 'Existing module page\n')
+
     def test_missing_symlink_targets_canonicalize_existing_ancestors(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

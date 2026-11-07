@@ -121,12 +121,14 @@ def generate_graphs(references, output, *, format, depth, html_links,
 
 def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=None,
                   call_graphs=None, graph_depth=1, markup='plain', *,
-                  include_private=False, graph_fontsize=None, reports=None):
+                  include_private=False, graph_fontsize=None, reports=None,
+                  index_file=None, index_title='API reference'):
     """Generate linked reST and optional graphs, returning page titles and counts.
 
     Only documentation snapshots are retained between files. ``reports`` enables
     parser, exclusion, external-reference, and unresolved-reference logs.
     ``excludes`` accepts either paths or a mapping of library labels to paths.
+    ``index_file`` optionally names a reST index alongside the module pages.
     """
     if markup not in ('plain', 'rst', 'doxygen'):
         raise ValueError(f'Unsupported documentation markup: {markup}')
@@ -136,6 +138,10 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=Non
         raise ValueError(f'Unsupported graph format: {call_graphs}')
     if graph_depth < 0:
         raise ValueError('Graph depth must be nonnegative')
+    if index_file is not None:
+        index_file = Path(index_file)
+        if index_file.name != str(index_file) or index_file.suffix != '.rst':
+            raise ValueError('Index filename must be a .rst filename without directories')
     dot = shutil.which('dot') if call_graphs == 'svg' and graph_depth else None
     if call_graphs == 'svg' and graph_depth and dot is None:
         raise ValueError('SVG call graphs require Graphviz dot; install Graphviz or use --call-graphs dot')
@@ -171,6 +177,9 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=Non
             del project
     if externals:
         modules.append(replace(external, procedures=tuple(externals)))
+    pages = {module.name: module.display_name or module.name for module in modules}
+    if index_file is not None and index_file.stem.casefold() in {name.casefold() for name in pages}:
+        raise ValueError(f'Index filename conflicts with a module page: {index_file}')
     references = ReferenceIndex(modules)
     destinations = HtmlDestinations(references) if link_format == 'html' else None
     output = Path(docdir)
@@ -186,6 +195,12 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=Non
                              graph_images=graph_images, markup=markup)
             except ValueError as error:
                 raise ValueError(f'{owners.get(module.name.lower(), module.name)}: {error}') from error
+    if index_file is not None:
+        suffix = 'html' if link_format == 'html' else 'rst'
+        with (output / index_file).open('w', encoding='utf-8') as stream:
+            stream.write(index_title + '\n' + '=' * len(index_title) + '\n\nModules\n-------\n\n')
+            for name, title in sorted(pages.items(), key=lambda entry: entry[0].lower()):
+                stream.write(f'* `{title} <{name}.{suffix}>`__\n')
     excluded_counts = {}
     for label, path, target in excluded:
         excluded_counts[label] = excluded_counts.get(label, 0) + 1
@@ -203,7 +218,7 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=Non
     for diagnostic in references.diagnostics:
         print('gendoc: ' + diagnostic, file=sys.stderr)
     return GenerationResult(
-        pages={module.name: module.display_name or module.name for module in modules},
+        pages=pages,
         summary={'source_files': len(files), 'module_pages': len(modules),
                  'call_graphs': graph_count,
                  'excluded_dependency_files': excluded_counts,
