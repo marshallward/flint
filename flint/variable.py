@@ -58,6 +58,16 @@ class Variable(object):
         return rank
 
     @property
+    def is_procedure(self):
+        """Whether this declaration names a procedure rather than a data object."""
+        return self.type == 'procedure'
+
+    @property
+    def is_pointer(self):
+        """Whether the declaration carries an explicit POINTER attribute."""
+        return any(attribute[0] == 'pointer' for attribute in self.attributes)
+
+    @property
     def is_array(self):
         return self.dimension is not None
 

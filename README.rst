@@ -487,8 +487,12 @@ precision`` variables have ``type == 'real'``; their full type syntax remains
 available from ``variable.declaration.type_tokens``. Entity shapes override
 declaration-wide DIMENSION attributes.
 
-Procedure declarations with an explicit ``pointer`` attribute, including derived
-type components, also populate ``unit.variables`` with ``type == 'procedure'``.
+Procedure declarations, including dummy procedures and procedure-pointer
+components, also populate ``unit.variables`` with ``type == 'procedure'``.
+``is_procedure`` distinguishes them from data objects; ``is_pointer`` reports
+whether the declaration has an explicit ``pointer`` attribute. Non-pointer dummy
+procedures such as ``procedure(iface), optional :: callback`` retain their
+interfaces, attributes, locations, and comments without being treated as arrays.
 The interface specification (including an empty ``procedure()``) is preserved
 in ``variable.declaration.type_tokens``. Attributes such as ``pointer``,
 ``nopass``, ``pass(name)``, access, and intent remain in ``variable.attributes``;
@@ -496,10 +500,13 @@ pointer initialization targets remain in ``declaration_tokens``. These scalar
 declarations use the same location and documentation-association APIs as data
 objects. Module procedure pointers and pointer components are checked even in
 relaxed documentation mode; procedure-local pointers remain outside the policy
-and dummy pointers are checked with ``--arguments``. Non-pointer procedure
-declarations, separate ``pointer`` attribute statements, and type-bound bindings
-are not added to the variable model by this support. Type-bound bindings have
-their own model, described below.
+and dummy procedures (with or without ``pointer``) are checked with
+``--arguments``. ``--strict`` alone does not enable argument checks. Module-level
+non-pointer procedure declarations follow the strict-only procedure-description
+policy. An attribute-free procedure declaration may omit ``::``; pointer
+initializers require both ``pointer`` and ``::``. Separate ``pointer`` attribute
+statements are not resolved by this support. Type-bound bindings have their own
+model, described below.
 
 Type-bound procedures
 ~~~~~~~~~~~~~~~~~~~~~

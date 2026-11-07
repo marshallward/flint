@@ -64,7 +64,7 @@ def check_documentation(source, *, arguments=False, strict=False, defer_includes
 
     def issue(statement, kind, name, line=None):
         if not strict and kind in ('module', 'submodule', 'program', 'subroutine', 'function',
-                                   'binding', 'final-binding'):
+                                   'procedure', 'binding', 'final-binding'):
             return
         origin = getattr(statement, 'origin_statement', None)
         if origin is not None:
@@ -108,6 +108,8 @@ def check_documentation(source, *, arguments=False, strict=False, defer_includes
             declared.add(varname.lower())
             if kind in ('module', 'submodule', 'type'):
                 category = 'component' if kind == 'type' else 'variable'
+                if kind != 'type' and variable.is_procedure and not variable.is_pointer:
+                    category = 'procedure'
             elif varname.lower() in arg_names:
                 category = 'argument'
             else:

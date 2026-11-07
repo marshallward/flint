@@ -69,7 +69,7 @@ class TestDeclarationGrammar(unittest.TestCase):
     def test_complete_match_and_fallback(self):
         for text in (
             'real = 1', 'real(i) = 1', 'type :: box', 'type is (box)',
-            'real function f(x)', 'procedure(iface) :: f',
+            'real function f(x)', 'procedure :: f',
             'integer*8 i', 'integer ::', 'integer :: i,',
             'integer :: i =', 'integer i = 1', 'integer, unknown :: i',
             'integer, dimension(2) i', 'integer :: i(2]',
@@ -102,6 +102,22 @@ class TestDeclarationGrammar(unittest.TestCase):
                      'procedure(), pointer :: p(2)', 'procedure(), pointer :: p = null()',
                      'procedure(), pointer :: p =>', 'procedure(), pointer ::',
                      'procedure(), pointer p', 'procedure(), pointer :: p,'):
+            with self.subTest(text=text):
+                self.assertIsNone(parse_declaration(tokens(text)))
+
+    def test_nonpointer_procedure_declaration_forms(self):
+        for text in ('procedure() :: callback', 'procedure(iface) callback, other',
+                     'procedure(real(kind=8)), optional :: callback',
+                     'procedure(iface), public :: external_callback'):
+            with self.subTest(text=text):
+                statement = tokens(text)
+                result = parse_declaration(statement)
+                self.assertIsNotNone(result)
+                self.assertEqual(statement.source_text(), text + '\n')
+                self.assertEqual(statement[result.type_spec[0]], 'procedure')
+        for text in ('procedure() :: callback => null()', 'procedure(iface) callback => target',
+                     'procedure(), optional callback', 'procedure(iface) callback(2)',
+                     'procedure(iface) callback,', 'procedure(iface), deferred :: callback'):
             with self.subTest(text=text):
                 self.assertIsNone(parse_declaration(tokens(text)))
 
