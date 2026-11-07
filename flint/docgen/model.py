@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 
 from flint.document import docstrip
 from flint.token import semantic_tokens
+from flint.generics import comma_groups, generic_spec
 
 
 @dataclass(frozen=True)
@@ -103,16 +104,17 @@ def _scope_metadata(unit):
             if statement is end:
                 end = None
             continue
-        words = [_text(token).lower() for token in statement]
+        words = [_text(token).lower() for token in semantic_tokens(statement)]
         if not words:
             continue
         if words[0] == 'contains':
             break
         if words[0] in ('public', 'private'):
-            names = [word for word in words[1:] if word not in (',', '::')]
+            rest = words[2:] if words[1:2] == ['::'] else words[1:]
+            names = [generic_spec(group) for group in comma_groups(rest)]
             if not names:
                 default_public = words[0] == 'public'
-            access.update((name, words[0] == 'public') for name in names)
+            access.update((name, words[0] == 'public') for name in names if name is not None)
         elif words[0] == 'use':
             start = words.index('::') + 1 if '::' in words else 1
             module = words[start]
@@ -120,18 +122,14 @@ def _scope_metadata(unit):
             only = rest[:3] == [',', 'only', ':']
             rest = rest[3:] if only else rest[1:]
             names = []
-            # Operators and assignment interfaces are outside this
-            # procedure-name index.
-            group = []
-            for word in [*rest, ',']:
-                if word == ',':
-                    if len(group) == 1 and group[0].isidentifier():
-                        names.append((group[0], group[0]))
-                    elif len(group) == 3 and group[1] == '=>' and group[0].isidentifier():
-                        names.append((group[0], group[2]))
-                    group = []
+            for group in comma_groups(rest):
+                if '=>' in group:
+                    split = group.index('=>')
+                    local, remote = generic_spec(group[:split]), generic_spec(group[split + 1:])
                 else:
-                    group.append(word)
+                    local = remote = generic_spec(group)
+                if local is not None and remote is not None:
+                    names.append((local, remote))
             uses.append(UseAssociation(module, only, tuple(names), 'intrinsic' in words[:start]))
     for variable in unit.variables:
         for attribute in variable.attributes:
@@ -183,8 +181,7 @@ def build_unit_documentation(unit, *, scope=(), graph=None):
                             + tuple(_text(body.name) for body in interface.subprograms),
         )
         for interface in unit.interfaces
-        if (interface.name is not None and _text(interface.name).isidentifier()
-            and len(interface.statements[0]) == 2
+        if (interface.name is not None
             and not interface.abstract and (interface.procedures or interface.subprograms))
     )
     documented_interfaces = {interface.name.lower() for interface in interfaces}

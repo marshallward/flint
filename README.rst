@@ -234,6 +234,27 @@ as callable procedure definitions. Unknown or ambiguous names are omitted from p
 call lists and diagnosed on stderr by the command. Unsupported bindings are
 not guessed from similarly named procedures elsewhere.
 
+Operator, assignment, and defined-I/O interfaces retain complete semantic names,
+such as ``operator(+)``, ``operator(-)``, ``assignment(=)``, and
+``read(formatted)``. Their members, closing specifications, ``public``/``private``
+access lists, and ``USE`` lists use those identities. Equivalent intrinsic
+relational spellings, such as ``operator(.eq.)`` and ``operator(==)``, share a
+semantic identity while original source spelling is preserved. Generic punctuation
+is escaped in generated anchors so distinct operator pages/targets cannot collide.
+
+``ReferenceIndex.generic_interfaces(scope, name)`` tracks the contributors to an
+operator/assignment/I/O generic through local declarations, host scopes, ``ONLY``
+imports, defined-operator renames, and public re-exports. The result's
+``interfaces`` tuple contains the contributing qualified interface identities;
+``incomplete`` is true for unknown dependencies, cyclic re-exports, or other
+unresolved contributors. For example, importing ``operator(+)`` from two modules
+retains both contributing interfaces. Their existing ``implementations`` entries
+retain the specific procedures. This is an overload-set inventory, not compiler
+type checking: multiple contributors are not diagnosed as a semantic ambiguity,
+and expression operand types are not used to select an implementation or create
+operator call-graph edges. Ordinary ``resolve`` still returns a single hyperlink
+target only when one can be identified.
+
 Applications may pass ``external_modules={module_name: library_name}`` to
 ``ReferenceIndex``. An explicit import from a known dependency produces a
 ``Reference.external`` record containing its library, module, and original

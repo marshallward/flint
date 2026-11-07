@@ -5,6 +5,8 @@
 """
 from flint.document import Document
 from flint.statement import Statement
+from flint.generics import generic_spec
+from flint.token import Token, semantic_tokens
 
 
 class Interface(object):
@@ -46,7 +48,7 @@ class Interface(object):
         self.statements.append(stmt)
 
     def parse_header(self, stmt):
-        tokens = iter(stmt)
+        tokens = iter(semantic_tokens(stmt))
         tok = next(tokens)
 
         if tok == 'abstract':
@@ -54,11 +56,15 @@ class Interface(object):
             tok = next(tokens)
         assert tok == 'interface'
 
-        # TODO: Parse generic-spec (operator, assignment, etc)
-        try:
-            self.name = next(tokens)
-        except StopIteration:
-            pass
+        spec = list(tokens)
+        if spec:
+            identity = generic_spec(spec)
+            assert identity is not None, 'Unsupported interface generic specification'
+            # Preserve the ordinary name token. A composite identity is a
+            # detached token; the original statement remains untouched.
+            self.name = spec[0] if len(spec) == 1 else Token(identity)
+            if len(spec) > 1:
+                self.name.original = ''.join(getattr(token, 'original', token[:]) for token in spec)
 
         stmt.tag = 'I'
         self.statements.append(stmt)
@@ -80,10 +86,12 @@ class Interface(object):
         if stmt[0].startswith('end'):
             if len(stmt) == 1 and stmt[0] == 'endinterface':
                 return True
+            elif stmt[0] == 'endinterface':
+                assert generic_spec(list(semantic_tokens(stmt))[1:]) == self.name
+                return True
             elif len(stmt) >= 2 and (stmt[0], stmt[1]) == ('end', 'interface'):
-                # TODO: other generic-spec tests
                 if len(stmt) >= 3:
-                    assert stmt[2] == self.name
+                    assert generic_spec(list(semantic_tokens(stmt))[2:]) == self.name
                 return True
             else:
                 return False

@@ -353,7 +353,8 @@ class ReferenceTests(unittest.TestCase):
         self.assertEqual([ref.target for ref in self.index.callers[target]], ['generic_client::run'])
         self.assertFalse(self.index.callers['generic_library::dispatch'])
         module = next(m for m in self.modules if m.name == 'generic_library')
-        self.assertEqual({entry.name for entry in module.interfaces}, {'dispatch', 'hidden'})
+        self.assertEqual({entry.name for entry in module.interfaces},
+                         {'dispatch', 'hidden', 'operator(+)', 'operator(-)'})
         output = io.StringIO()
         write_module(output, module, references=self.index)
         self.assertIn('Generic Interfaces', output.getvalue())

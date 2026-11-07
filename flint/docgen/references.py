@@ -1,11 +1,12 @@
 """Scope-aware documentation references, independent of output format.
 
-This resolves ordinary procedures, named procedure-list interfaces, host
-association, and USE imports. Other unsupported bindings remain unresolved, rather than being
-guessed from a globally matching name.
+This resolves procedures, generic interfaces, host association, and USE imports.
+Operator-generic contributors can be collected without selecting an overload.
+Unsupported bindings remain unresolved rather than guessed from a global name.
 """
 from collections import defaultdict
 from dataclasses import dataclass
+from flint.generics import canonical_generic_name
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,13 @@ class Reference:
     is_data: bool = False
     is_argument: bool = False
     unindexed_module: str = ''
+
+
+@dataclass(frozen=True)
+class GenericContributors:
+    """Accessible interface identities, not an overload-selection result."""
+    interfaces: tuple[str, ...]
+    incomplete: bool = False
 
 
 class ReferenceIndex:
@@ -122,7 +130,7 @@ class ReferenceIndex:
             return Reference(name, None, 'unresolved implementation')
         return reference
 
-    def _local(self, scope, name, visiting):
+    def _local(self, scope, name, visiting, *, combine_generics=False):
         """Return (targets, uncertain, bound) at one lexical scope."""
         unit = self.units[scope]
         if name in unit.arguments:
@@ -130,13 +138,17 @@ class ReferenceIndex:
         if name in unit.opaque_names:
             return set(), True, True
         children = self.children[scope].get(name, ())
+        local_interfaces = set()
         if children:
             interfaces = {key for key in children if self.units[key].kind == 'interface'}
             if interfaces:
-                return interfaces, len(interfaces) != 1, True
-            targets = {key for key in children
-                       if self.units[key].kind in ('function', 'subroutine')}
-            return targets, len(targets) != len(children), True
+                if not combine_generics:
+                    return interfaces, len(interfaces) != 1, True
+                local_interfaces = interfaces
+            else:
+                targets = {key for key in children
+                           if self.units[key].kind in ('function', 'subroutine')}
+                return targets, len(targets) != len(children), True
         if unit.name.lower() == name and unit.kind in ('function', 'subroutine'):
             return {scope}, False, True
         for variable in unit.variables:
@@ -144,7 +156,7 @@ class ReferenceIndex:
                 if variable.is_array:
                     return {ArraySymbol(scope, name)}, False, True
                 return set(), True, True
-        targets, uncertain, bound = set(), False, False
+        targets, uncertain, bound = local_interfaces, False, bool(local_interfaces)
         for use in unit.uses:
             names = dict(use.names)
             if name in names:
@@ -169,7 +181,8 @@ class ReferenceIndex:
             found = set()
             unknown = len(modules) != 1
             for module in modules:
-                exported, incomplete = self._export(module, remote, visiting)
+                exported, incomplete = self._export(module, remote, visiting,
+                                                     combine_generics=combine_generics)
                 found.update(exported)
                 unknown |= incomplete
             targets.update(found)
@@ -177,19 +190,44 @@ class ReferenceIndex:
             bound |= bool(found) or unknown or explicit
         return targets, uncertain, bound
 
-    def _export(self, module, name, visiting):
+    def _export(self, module, name, visiting, *, combine_generics=False):
         key = (module, name)
         if key in visiting:
             return set(), True
         unit = self.units[module]
         if not dict(unit.access).get(name, unit.default_public):
             return set(), False
-        targets, uncertain, _ = self._local(module, name, visiting | {key})
+        targets, uncertain, _ = self._local(module, name, visiting | {key},
+                                             combine_generics=combine_generics)
         return targets, uncertain
+
+    def generic_interfaces(self, scope, name):
+        """Track contributors to an operator/assignment/I/O generic across USE.
+
+        Include local declarations, host scopes, renames and public re-exports.
+        Multiple contributors are legal and are not called a semantic ambiguity.
+        Unknown dependencies or cycles mark the result incomplete. This query
+        does not select a specific implementation or diagnose signature conflicts.
+        """
+        name = canonical_generic_name(name)
+        if not name.startswith(('operator(', 'assignment(', 'read(', 'write(')):
+            raise ValueError('Expected an operator, assignment, or defined-I/O generic name')
+        targets, incomplete = set(), False
+        current = scope
+        while current is not None:
+            found, uncertain, _ = self._local(current, name, set(), combine_generics=True)
+            incomplete |= uncertain
+            for target in found:
+                if isinstance(target, str) and self.units[target].kind == 'interface':
+                    targets.add(target)
+                else:
+                    incomplete = True
+            current = self.parents[current]
+        return GenericContributors(tuple(sorted(targets)), incomplete)
 
     def resolve(self, scope, name):
         label = name
-        name = name.lower()
+        name = canonical_generic_name(name)
         current = scope
         while current is not None:
             targets, uncertain, bound = self._local(current, name, set())
@@ -220,7 +258,12 @@ class ReferenceIndex:
 
 def anchor(qualified_name):
     """A stable reST/HTML identifier with reversible Fortran-name escaping."""
-    return 'flint-' + qualified_name.lower().replace('_', '-0').replace('::', '-1')
+    # Keep existing ordinary-name anchors; generic punctuation needs escaping
+    # because Docutils otherwise strips it and merges distinct operator IDs.
+    words = qualified_name.lower().split('::')
+    return 'flint-' + '-1'.join(''.join(
+        char if char.isalnum() else '-0' if char == '_' else f'-2{ord(char):06x}'
+        for char in word) for word in words)
 
 
 class HtmlDestinations:
