@@ -45,6 +45,33 @@ end module Demo
             (4, 'variable', 'Demo::missing'), (5, 'type', 'Demo::state'),
             (6, 'component', 'Demo::state::component'), (9, 'subroutine', 'Demo::work')])
 
+    def test_member_comments_do_not_document_enclosing_or_following_scopes(self):
+        text = '''module demo
+integer :: value !< A value, not a module or type description.
+type :: state
+integer :: field !< A field, not a type description.
+end type state
+contains
+subroutine work()
+integer :: local !< A local, not a procedure description.
+end subroutine work
+end module demo
+'''
+        self.assertEqual([(i.kind, i.name) for i in self.check(text, strict=False)],
+                         [('type', 'demo::state')])
+        self.assertEqual([(i.kind, i.name) for i in self.check(text, strict=True)],
+                         [('module', 'demo'), ('type', 'demo::state'), ('subroutine', 'demo::work')])
+
+    def test_scope_header_and_footer_documentation_still_count(self):
+        for text in (
+                '!! Module description.\nmodule demo\nend module demo\n',
+                'module demo !< Module description.\nend module demo\n',
+                'module demo\n!< Module description.\nend module demo\n',
+                'module demo\ninteger :: x !< Value.\n!> Module description.\nend module demo\n',
+                'module demo\ninteger :: x !< Value.\n\n!! Module description.\nend module demo\n'):
+            with self.subTest(text=text):
+                self.assertEqual(self.check(text, strict=True), [])
+
     def test_relaxed_mode_still_checks_contents(self):
         text = '''module demo
 integer :: missing

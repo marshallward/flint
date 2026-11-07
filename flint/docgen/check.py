@@ -6,9 +6,10 @@ Argument checks are opt-in; this is not a documentation-quality assessment.
 """
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 from flint.document import docstrip
-from flint.documentation import documentation_pass
+from flint.documentation import documentation_pass, declaration_comments, _comments, _groups
 from flint.docgen.model import _scope_metadata
 from flint.token import semantic_tokens
 from flint.variable import Variable
@@ -40,6 +41,44 @@ def _variable_documented(variable):
     return any(docstrip([text for text in block.comments
                          if not text.startswith(('!>@{', '!>@}'))]).strip()
                for block in blocks)
+
+
+def _leading_scope_documented(statement, *, first=False):
+    """A preceding declaration's backward comment does not describe this scope."""
+    statement = getattr(statement, 'origin_statement', statement)
+    head = statement[0].head
+    start_line = statement.line_number - sum(text.count('\n') for text in head)
+    for group in reversed(list(_groups(_comments(head, start_line)))):
+        marked = [(line, text) for line, text in group if text.startswith(('!>', '!<', '!!'))]
+        if not marked:
+            continue
+        line, marker = marked[0]
+        if marker.startswith('!<'):
+            continue
+        if marker.startswith('!!') and not first and line == start_line:
+            continue  # Inline on the previous statement, not a leading block.
+        return bool(docstrip([text for _, text in marked
+                              if not text.startswith(('!>@{', '!>@}'))]).strip())
+    return False
+
+
+def _unit_documented(unit, *, first_statement=None):
+    """Check source-owned scope descriptions rather than overlapping legacy gaps."""
+    header = unit.doc.statement
+    if not header:
+        return False
+    if _leading_scope_documented(header, first=header is first_statement):
+        return True
+    original = getattr(header, 'origin_statement', header)
+    entity = SimpleNamespace(name_index=0, span=(0, len(original)),
+                             location=SimpleNamespace(line=original.line_number))
+    blocks = declaration_comments(original, (entity,))
+    if any(block.placement != 'leading' and docstrip(block.comments).strip() for block in blocks):
+        return True
+    # Scientific module descriptions may appear before END MODULE. Only forward
+    # or standalone !! documentation there belongs to the enclosing scope.
+    return (len(unit.statements) > 1
+            and _leading_scope_documented(unit.statements[-1]))
 
 
 @documentation_pass()
@@ -92,8 +131,7 @@ def check_documentation(source, *, arguments=False, strict=False, defer_includes
         attributes = header[:header.index('::')] if '::' in header else header
         abstract_type = kind == 'type' and 'abstract' in attributes
         if (name and statement and (strict or not abstract_type)
-                and not any(text.strip() for text in (
-                    unit.doc.header, unit.doc.docstring, unit.doc.footer))):
+                and not _unit_documented(unit, first_statement=source.statements[0])):
             issue(statement, kind, qualified)
         arg_names = set()
         if arguments and kind in ('function', 'subroutine') and statement:
