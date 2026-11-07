@@ -69,11 +69,39 @@ class TestDeclarationGrammar(unittest.TestCase):
     def test_complete_match_and_fallback(self):
         for text in (
             'real = 1', 'real(i) = 1', 'type :: box', 'type is (box)',
-            'real function f(x)', 'procedure(iface), pointer :: f',
+            'real function f(x)', 'procedure(iface) :: f',
             'integer*8 i', 'integer ::', 'integer :: i,',
             'integer :: i =', 'integer i = 1', 'integer, unknown :: i',
             'integer, dimension(2) i', 'integer :: i(2]',
         ):
+            with self.subTest(text=text):
+                self.assertIsNone(parse_declaration(tokens(text)))
+
+    def test_procedure_pointer_spans_and_roundtrip(self):
+        for spec in ('procedure()', 'procedure(handler)', 'procedure(real(kind=8))'):
+            text = spec + ', pointer, nopass, public :: first => null(), second => handler_impl'
+            statement = tokens(text)
+            result = parse_declaration(statement)
+            self.assertIsNotNone(result)
+            self.assertEqual(spelling(statement, result.type_spec), spec)
+            self.assertEqual([spelling(statement, s) for s in result.attributes],
+                             ['pointer', 'nopass', 'public'])
+            self.assertEqual([spelling(statement, s) for s in result.entities],
+                             ['first=>null()', 'second=>handler_impl'])
+            self.assertEqual([spelling(statement, s) for s in result.initializations],
+                             ['=>null()', '=>handler_impl'])
+            self.assertEqual(statement.source_text(), text + '\n')
+        for text in ('procedure(iface), pointer, intent(inout), optional :: callback',
+                     'procedure(iface), pointer, pass(self), private :: callback',
+                     'procedure(iface), pointer, pass :: callback'):
+            self.assertIsNotNone(parse_declaration(tokens(text)))
+
+    def test_procedure_binding_and_malformed_pointer_fallback(self):
+        for text in ('procedure :: run => impl', 'procedure(iface), deferred :: run',
+                     'procedure(iface), nopass :: run => impl',
+                     'procedure(), pointer :: p(2)', 'procedure(), pointer :: p = null()',
+                     'procedure(), pointer :: p =>', 'procedure(), pointer ::',
+                     'procedure(), pointer p', 'procedure(), pointer :: p,'):
             with self.subTest(text=text):
                 self.assertIsNone(parse_declaration(tokens(text)))
 

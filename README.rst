@@ -486,6 +486,19 @@ precision`` variables have ``type == 'real'``; their full type syntax remains
 available from ``variable.declaration.type_tokens``. Entity shapes override
 declaration-wide DIMENSION attributes.
 
+Procedure declarations with an explicit ``pointer`` attribute, including derived
+type components, also populate ``unit.variables`` with ``type == 'procedure'``.
+The interface specification (including an empty ``procedure()``) is preserved
+in ``variable.declaration.type_tokens``. Attributes such as ``pointer``,
+``nopass``, ``pass(name)``, access, and intent remain in ``variable.attributes``;
+pointer initialization targets remain in ``declaration_tokens``. These scalar
+declarations use the same location and documentation-association APIs as data
+objects. Module procedure pointers and pointer components are checked even in
+relaxed documentation mode; procedure-local pointers remain outside the policy
+and dummy pointers are checked with ``--arguments``. Non-pointer procedure
+declarations, separate ``pointer`` attribute statements, and type-bound bindings
+are not added to the variable model by this support.
+
 ``variable.declaration`` is a source entity view, ``declaration_tokens`` exposes
 its original tokens and whitespace tails, ``location`` locates the name token,
 and ``documentation`` provides associated comment blocks. These source views

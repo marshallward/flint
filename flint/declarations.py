@@ -3,7 +3,8 @@
 The grammar identifies token spans, not a fully validated Fortran program.
 Selectors, shapes, and initialization expressions are balanced opaque regions;
 expression typing, attribute constraints, and scope constraints belong to later
-analysis. Procedure declarations and compiler extensions are not recognized.
+analysis. Procedure-pointer declarations are supported; non-pointer procedure
+declarations, type-bound bindings, and compiler extensions require fallback.
 No tokens or source whitespace are copied or modified.
 """
 from dataclasses import dataclass
@@ -66,10 +67,28 @@ TYPE_DECLARATION = seq(
     ENTITY, repeat(seq(',', ENTITY)),
 )
 
+# Procedure pointers have scalar names, not data-object shapes or lengths.
+# Keep this grammar separate so bindings and ordinary procedure declarations
+# cannot accidentally become variable/component entries.
+PROCEDURE_ATTRIBUTE = choice(
+    choice('public', 'private', 'pointer', 'optional', 'protected', 'save', 'nopass'),
+    seq(choice('intent', 'bind'), PARENS),
+    seq('pass', optional(PARENS)),
+)
+PROCEDURE_ENTITY = capture('entity', seq(
+    NAME, optional(capture('initialization', seq('=>', EXPRESSION))),
+))
+PROCEDURE_POINTER_DECLARATION = seq(
+    capture('type', seq('procedure', '(', optional(choice(TYPE_SPEC, NAME)), ')')),
+    repeat(seq(',', capture('attribute', PROCEDURE_ATTRIBUTE))),
+    capture('separator', '::'),
+    PROCEDURE_ENTITY, repeat(seq(',', PROCEDURE_ENTITY)),
+)
+
 _CLOSERS = {'(': ')', '[': ']', '(/': '/)'}
 _ENDS = frozenset(_CLOSERS.values())
 _STARTERS = frozenset(('integer', 'real', 'complex', 'logical', 'double',
-                       'character', 'type', 'class'))
+                       'character', 'type', 'class', 'procedure'))
 
 
 @dataclass(frozen=True)
@@ -231,10 +250,11 @@ def _compile(rule):
 
 
 _match_declaration = _compile(TYPE_DECLARATION)
+_match_procedure_pointer = _compile(PROCEDURE_POINTER_DECLARATION)
 
 
 def parse_declaration(tokens, start=0):
-    """Recognize a complete type declaration, or return None for fallback.
+    """Recognize a data or procedure-pointer declaration, or return None.
 
     ``tokens`` must contain semantic Token objects. ``start`` can skip a label;
     returned spans still refer to the full original token sequence. Source-only
@@ -251,7 +271,12 @@ def parse_declaration(tokens, start=0):
     if start >= len(tokens) or tokens[start] not in _STARTERS:
         return None
     captures = []
-    if _match_declaration(tokens, start, captures) != len(tokens):
+    procedure = tokens[start] == 'procedure'
+    matcher = _match_procedure_pointer if procedure else _match_declaration
+    if matcher(tokens, start, captures) != len(tokens):
+        return None
+    if procedure and not any(kind == 'attribute' and tokens[span[0]] == 'pointer'
+                             for kind, span in captures):
         return None
     parts = {'type': [], 'attribute': [], 'entity': [], 'initialization': [],
              'separator': []}
@@ -305,8 +330,8 @@ class DeclaredEntity:
 def declared_entities(statement, *, locations=None):
     """Return declared entity views, or None for an unrecognized declaration.
 
-    Supports the same standard type declarations as parse_declaration, with or
-    without ``::``. Procedure declarations and extensions require caller fallback.
+    Supports the same declarations as parse_declaration, including procedure
+    pointers. Non-pointer procedures, bindings and extensions require fallback.
     Locations use displayed statement coordinates, not inferred include origins.
     Recompute views after token insertion/removal and locations after whitespace
     edits. ``locations`` may supply a current index-to-TokenLocation mapping to

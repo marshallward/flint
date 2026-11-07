@@ -35,5 +35,5 @@ class DeclaredEntityTests(unittest.TestCase):
         self.assertIsNone(entities[0].declaration.separator)
 
     def test_unsupported_and_non_declaration_return_none(self):
-        self.assertIsNone(self.entities('  procedure(callback), pointer :: p'))
+        self.assertIsNone(self.entities('  procedure(callback) :: p'))
         self.assertIsNone(self.entities('  real = 1'))
