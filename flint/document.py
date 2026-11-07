@@ -54,3 +54,4 @@ class Document(object):
         self.header = ''        # Docstring preceding a statement or unit
         self.docstring = ''     # Statement or unit docstring
         self.footer = ''        # Docstring following a program unit
+        self.group_description = ''  # Explicit declaration-group documentation

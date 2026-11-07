@@ -11,6 +11,7 @@ import flint.tools.format
 import flint.tools.gendoc
 import flint.tools.tag
 import flint.tools.report
+import flint.tools.checkdocs
 
 
 def parse():
@@ -110,6 +111,20 @@ def parse():
     gendoc_cmd.add_argument('--markup', choices=('plain', 'rst', 'doxygen'), default='plain',
                             help='Source documentation format (default: plain prose)')
 
+    # Documentation presence (no rendering).
+    checkdocs_cmd = subparsers.add_parser('check-docs')
+    checkdocs_cmd.set_defaults(run_cmd=flint.tools.checkdocs.check_docs)
+    checkdocs_cmd.add_argument('srcdirs', nargs='+', metavar='path')
+    checkdocs_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
+    checkdocs_cmd.add_argument(*arg_exclude['flags'], **arg_exclude['parameters'])
+    checkdocs_cmd.add_argument('--arguments', action='store_true',
+                               help='Also require documentation for dummy arguments')
+    checkdocs_cmd.add_argument('--strict', action='store_true',
+                               help='Restore all deferred documentation checks, including private parameters and selected headers')
+    checkdocs_cmd.add_argument('--defer-include', dest='defer_includes', action='append', default=[],
+                               metavar='PATH',
+                               help='Defer descriptions originating in this header; --strict restores checks')
+
     # tag
     tag_cmd = subparsers.add_parser('tag')
     tag_cmd.set_defaults(run_cmd=flint.tools.tag.tag_statements)
@@ -135,10 +150,12 @@ def parse():
 
     run_args = vars(args)
     run_args.pop('run_cmd')
-    if run_cmd in (flint.tools.format.format_statements, flint.tools.gendoc.generate_docs):
+    commands = {flint.tools.format.format_statements: format_cmd,
+                flint.tools.gendoc.generate_docs: gendoc_cmd,
+                flint.tools.checkdocs.check_docs: checkdocs_cmd}
+    if run_cmd in commands:
         try:
             return run_cmd(**run_args)
         except ValueError as error:
-            command = format_cmd if run_cmd is flint.tools.format.format_statements else gendoc_cmd
-            command.error(str(error))
+            commands[run_cmd].error(str(error))
     return run_cmd(**run_args)

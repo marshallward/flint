@@ -144,6 +144,10 @@ class Lexer(object):
             ])
             statement.line_number = self.line_number
             statement.source_visible = False
+            # Keep physical evidence separate from the hidden expansion used for
+            # source round-tripping. Nested includes retain the ultimate origin.
+            statement.origin_statement = getattr(inc_stmt, 'origin_statement', inc_stmt)
+            statement.source_path = getattr(inc_stmt, 'source_path', None)
 
             self.current_line = statement
             return statement
@@ -259,6 +263,7 @@ class Lexer(object):
 
         statement = Statement(statement_tokens)
         statement.line_number = line_number
+        statement.source_path = getattr(self.source, 'name', None)
         self.current_line = statement
         return statement
 

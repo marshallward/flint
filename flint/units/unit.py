@@ -457,6 +457,8 @@ class Unit(object):
                     stmt_vars.append(var)
 
             # Retroactively apply docstrings to any comma-separated variables
+            for variable in stmt_vars:
+                variable.doc.group_description = self.grp_docstr or ''
             stmt_docstring = stmt_vars[-1].doc.docstring
             for svar in stmt_vars[:-1]:
                 if stmt_docstring and not svar.doc.docstring:
@@ -512,6 +514,8 @@ class Unit(object):
             stmt_vars.append(var)
         # Keep the historical docstring interface for existing documentation
         # clients; the documentation property exposes precise source evidence.
+        for variable in stmt_vars:
+            variable.doc.group_description = self.grp_docstr or ''
         shared_docstring = stmt_vars[-1].doc.docstring
         for variable in stmt_vars[:-1]:
             if shared_docstring and not variable.doc.docstring:

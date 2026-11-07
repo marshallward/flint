@@ -114,18 +114,21 @@ def _analyze_declaration(statement, entities=None):
             break
     names = [entity.name_index for entity in entities]
     ends = {entity.name_index: entity.span[1] for entity in entities}
+    cursor_line = statement.line_number
     for index, token in enumerate(statement):
-        location = locations.get(index)
-        if location is None:
-            continue
-        for group in _groups(_comments(token.tail, location.end_line)):
+        # Macro expansion tokens have no displayed span, but may own the
+        # original trailing comments. Count their liminals without inventing
+        # physical token locations for declaration names.
+        end_line = cursor_line + str(token).count('\n')
+        cursor_line = end_line + sum(text.count('\n') for text in token.tail)
+        for group in _groups(_comments(token.tail, end_line)):
             owner = next((name for name in reversed(names) if name <= index), None)
             if owner is None:
                 break
             line, text = group[0]
-            if text.startswith('!>') or line > location.end_line + 1:
+            if text.startswith('!>') or line > end_line + 1:
                 break
-            placement = 'trailing' if line == location.end_line else 'following'
+            placement = 'trailing' if line == end_line else 'following'
             kind = 'backward' if any(text.startswith('!<') for _, text in group) else 'plain'
             # Following blocks only apply after the final code token; comments
             # within a continued entity list retain the preceding entity owner.
@@ -142,7 +145,7 @@ def _analyze_declaration(statement, entities=None):
                 # Comments inside an unfinished initializer/shape stay local.
                 owners = [name for name in names if name == owner or (
                     name <= index and name in locations
-                    and locations[name].line == location.end_line
+                    and locations[name].line == end_line
                 )]
             for entity_index in owners:
                 result.append(CommentBlock(tuple(text for _, text in group), line,

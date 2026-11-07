@@ -90,6 +90,54 @@ are not expanded by the existing conditional-expression evaluator.
 Documentation generation
 ------------------------
 
+Documentation presence checks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``flint check-docs src -I include`` checks documentation without rendering a
+site. It reports ``path:line: missing-documentation: kind qualified_name`` and
+returns a nonzero exit status when required documentation is absent. Explicit
+``!>``, ``!<``, and ``!!`` descriptions and declaration-group descriptions count;
+ordinary comments and empty markers do not. Missing includes and skipped input
+files fail the check rather than producing a successful partial assessment.
+
+The default scope includes concrete derived types, named interfaces,
+module variables, and type components, including private entities. Add
+``--strict`` to also require module/submodule, program, function, subroutine,
+and abstract-type descriptions, including private and internal procedures.
+Their variables, types, and interfaces are still checked in
+relaxed mode. Procedure-local variables are excluded. Add ``--arguments``
+independently to check dummy arguments as well; argument
+descriptions must be attached to their declarations. Function-result descriptions,
+type-bound binding descriptions, and the quality of prose are not checked.
+This is an explicit policy over Flint's parsed entities, not an exact emulation
+of Doxygen's undocumented-entity heuristics.
+
+Private module parameters are also deferred to ``--strict``. Public parameters
+and private non-parameter variables remain checked in relaxed mode. Visibility
+honors module default accessibility, named access statements, and declaration
+attributes.
+
+Repeat ``--exclude PATH`` to omit dependency trees (including resolved symlink
+targets). Repeat ``-I PATH`` for include directories, including directories
+containing headers but no Fortran sources. Files are checked individually so
+alternative drivers with duplicate module names can be checked together.
+Exit codes are 0 for no omissions, 1 for missing documentation, and 2 for
+invalid command inputs or reported incomplete parses. Other parser failures
+also terminate unsuccessfully. This command never edits source files.
+
+``--defer-include PATH`` temporarily defers documentation diagnostics for
+declarations originating in that exact header. Repeat it for multiple headers.
+``--strict`` restores these checks. Other headers (including nested includes)
+and local declarations with macro initializers are still checked. Include
+diagnostics use the original header path and line.
+
+``flint.docgen.check.check_documentation(source, arguments=False, strict=False,
+defer_includes=())`` provides
+the same check for a parsed ``Source``, returning ``DocumentationIssue`` records.
+
+Generating the reference
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 ``flint gendoc`` separates source extraction from reStructuredText rendering:
 
 * ``flint.docgen.model.iter_module_documentation(project)`` yields immutable
