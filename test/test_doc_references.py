@@ -396,9 +396,19 @@ class ReferenceTests(unittest.TestCase):
     def test_known_dependencies_are_distinct_from_unknown_calls(self):
         unclassified = self.index.resolve('dependency_client::run', 'work')
         self.assertEqual(unclassified.unindexed_module, 'dependency_api')
-        self.assertIn('dependency_api::remote_work', unclassified.reason)
-        self.assertIn('possibly external', unclassified.reason)
-        self.assertIsNone(unclassified.external)
+        self.assertEqual(unclassified.reason, '')
+        self.assertEqual(unclassified.external.library, '')
+        self.assertEqual(unclassified.external.module, 'dependency_api')
+        self.assertEqual(unclassified.external.name, 'remote_work')
+        self.assertFalse(any('dependency_client::run: work:' in d for d in self.index.diagnostics))
+        for scope, name in [('ambiguous', 'work'), ('wildcard', 'remote_work'), ('run', 'unknown')]:
+            ref = self.index.resolve('dependency_client::' + scope, name)
+            self.assertIsNone(ref.external)
+            self.assertTrue(ref.reason)
+        output = io.StringIO()
+        write_unit(output, self.index.units['dependency_client::run'], references=self.index)
+        self.assertIn('External calls', output.getvalue())
+        self.assertIn('dependency_api::remote_work', output.getvalue())
         index = ReferenceIndex(self.modules, external_modules={
             'dependency_api': 'Example library', 'other_api': 'Other library'})
         ref = index.resolve('dependency_client::run', 'work')
@@ -451,7 +461,7 @@ class ReferenceTests(unittest.TestCase):
     def test_ambiguous_private_missing_and_excluded_names_are_not_guessed(self):
         for scope, name in (
             ('uncertain::ambiguous', 'helper'), ('uncertain::hidden', 'secret'),
-            ('uncertain::empty_import', 'helper'), ('uncertain::unavailable', 'first'),
+            ('uncertain::empty_import', 'helper'),
             ('uncertain::renamed', 'helper'),
         ):
             with self.subTest(scope=scope):
@@ -461,6 +471,10 @@ class ReferenceTests(unittest.TestCase):
         self.assertEqual(self.index.resolve('uncertain::ambiguous', 'helper').reason,
                          'ambiguous reference')
         self.assertTrue(self.index.diagnostics)
+        imported = self.index.resolve('uncertain::unavailable', 'first')
+        self.assertIsNone(imported.target)
+        self.assertIsNotNone(imported.external)
+        self.assertFalse(imported.reason)
 
     def test_output_policy_is_separate_from_resolution(self):
         policy = HtmlDestinations(self.index)

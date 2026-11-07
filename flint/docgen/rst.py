@@ -170,7 +170,8 @@ def _write_unit(doc, unit, depth=0, *, show_callers=True, references=None, desti
     if references is not None:
         for ref in references.calls[unit.qualified_name]:
             if ref.external is not None:
-                external_calls.setdefault(ref.external.library, []).append(ref)
+                group = ref.external.library or ref.external.module
+                external_calls.setdefault(group, []).append(ref)
     if external_calls:
         doc.write('\n' + indent + '.. container:: external-calls\n\n')
         doc.write(indent + '   .. rubric:: External calls\n\n')

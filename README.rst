@@ -255,12 +255,16 @@ and expression operand types are not used to select an implementation or create
 operator call-graph edges. Ordinary ``resolve`` still returns a single hyperlink
 target only when one can be identified.
 
-Applications may pass ``external_modules={module_name: library_name}`` to
-``ReferenceIndex``. An explicit import from a known dependency produces a
-``Reference.external`` record containing its library, module, and original
-symbol name. Such references appear in a separate ``external-calls`` container
-grouped by library, without guessed URLs. This identifies import provenance;
-it does not verify the dependency's procedure signatures. Wildcard imports
+An explicit import from an unindexed module produces a ``Reference.external``
+record containing the module and original symbol name, without an unresolved
+diagnostic. Here external means outside the indexed source, not necessarily
+outside the project. Applications may optionally pass
+``external_modules={module_name: library_name}`` to ``ReferenceIndex`` to add
+library labels; otherwise the record's library is empty. Such references appear
+in a separate ``external-calls`` container grouped by library or, without a
+label, by module, without guessed URLs. This identifies import provenance;
+it does not establish whether a function-like expression refers to a procedure
+or an array, nor verify a procedure signature. Wildcard imports
 without inventories remain unresolved. Library ownership is application policy,
 not built into Flint. Private targets are omitted from forward call and
 implementation lists; the underlying analysis retains them.

@@ -236,8 +236,7 @@ class ReferenceIndex:
                     target = next(iter(targets))
                     if isinstance(target, UnindexedSymbol):
                         return Reference(label, None,
-                                         f'unindexed module: {target.module}::{target.name}; '
-                                         'possibly external or omitted from source selection',
+                                         external=ExternalSymbol('', target.module, target.name),
                                          unindexed_module=target.module)
                     if isinstance(target, ArgumentSymbol):
                         return Reference(label, None, is_argument=True)
