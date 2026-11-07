@@ -12,7 +12,7 @@ import flint
 from flint.docgen.model import UnitDocumentation, VariableDocumentation, iter_module_documentation
 from flint.docgen.rst import write_module
 from flint.docgen.references import ReferenceIndex, HtmlDestinations
-from flint.tools.gendoc import generate_docs
+from flint.tools.gendoc import discover_sources, generate_docs
 
 
 SOURCE = '''!> Example module.
@@ -107,6 +107,34 @@ end module Client
 
 
 class RstWriterTests(unittest.TestCase):
+    def test_missing_symlink_targets_canonicalize_existing_ancestors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'src'
+            source.mkdir()
+            dependency = root / 'dependency'
+            dependency.mkdir()
+            alias = root / 'short-name'
+            alias.symlink_to(root, target_is_directory=True)
+            (source / 'demo.f90').write_text('module demo\nend module demo\n')
+            missing = source / 'missing.f90'
+            target = alias / 'dependency/absent/file.f90'
+            missing.symlink_to(target)
+            original_resolve = Path.resolve
+
+            def windows_resolve(path, *args, **kwargs):
+                # Simulate a short-name prefix surviving resolution of a
+                # broken symlink. Existing ancestors still resolve normally.
+                if path == missing:
+                    return target
+                return original_resolve(path, *args, **kwargs)
+
+            with patch.object(Path, 'resolve', windows_resolve):
+                files, includes, excluded = discover_sources([source], {'library': dependency})
+            self.assertEqual(files, [source / 'demo.f90'])
+            self.assertEqual(excluded, [
+                ('library', missing, dependency.resolve() / 'absent/file.f90')])
+
     def test_sources_exclude_symlink_targets_and_keep_header_directories(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

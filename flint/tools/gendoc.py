@@ -27,6 +27,20 @@ class GenerationResult:
     summary: dict
 
 
+def _resolved_path(path):
+    """Canonicalize existing ancestors even when the final target is missing.
+
+    On Windows, resolving a missing target can retain 8.3 path components,
+    while resolving an existing exclusion root expands them to long names.
+    """
+    path = path.resolve()
+    missing = []
+    while not path.exists() and path != path.parent:
+        missing.append(path.name)
+        path = path.parent
+    return path.resolve().joinpath(*reversed(missing))
+
+
 def discover_sources(srcdirs, excludes):
     """Find sources and include directories, respecting resolved exclusions.
 
@@ -35,12 +49,12 @@ def discover_sources(srcdirs, excludes):
     """
     roots = (excludes.items() if isinstance(excludes, Mapping)
              else ((str(path), path) for path in excludes))
-    roots = [(label, Path(path).absolute(), Path(path).resolve()) for label, path in roots]
+    roots = [(label, Path(path).absolute(), _resolved_path(Path(path))) for label, path in roots]
 
     def excluded(path):
         return next((label for label, lexical, resolved in roots
                      if path.absolute().is_relative_to(lexical)
-                     or path.resolve().is_relative_to(resolved)), None)
+                     or _resolved_path(path).is_relative_to(resolved)), None)
 
     paths = set()
     for item in srcdirs:
@@ -53,7 +67,7 @@ def discover_sources(srcdirs, excludes):
         label = excluded(path)
         if label is not None:
             if path.suffix in ('.F90', '.f90'):
-                omitted.append((label, path, path.resolve()))
+                omitted.append((label, path, _resolved_path(path)))
         else:
             if path.is_symlink() and not path.exists():
                 raise FileNotFoundError(f'Source symlink has a missing target: {path} -> {path.resolve()}')
