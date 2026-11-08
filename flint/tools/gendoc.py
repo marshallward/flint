@@ -6,6 +6,7 @@
 from collections.abc import Mapping
 import contextlib
 from dataclasses import dataclass, replace
+import io
 from pathlib import Path
 import sys
 import shutil
@@ -161,7 +162,15 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=Non
             stack.enter_context(contextlib.redirect_stdout(log))
             stack.enter_context(contextlib.redirect_stderr(log))
         for path in files:
-            project = flint.parse(str(path), includes=include_dirs)
+            diagnostics = io.StringIO()
+            try:
+                with contextlib.redirect_stderr(diagnostics):
+                    project = flint.parse(str(path), includes=include_dirs)
+            finally:
+                if reports is not None:
+                    log.write(diagnostics.getvalue())
+            if diagnostics.getvalue():
+                raise ValueError(f'Incomplete parse of {path}:\n{diagnostics.getvalue().rstrip()}')
             if len(project.sources) != 1:
                 raise ValueError(f'Unable to parse {path}')
             for module in iter_module_documentation(project):

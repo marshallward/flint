@@ -224,6 +224,21 @@ class RstWriterTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'Duplicate module demo: .*first.f90.*second.f90'):
                 generate_docs([source], root / 'output')
 
+    def test_missing_include_rejects_generation_and_retains_parse_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / 'demo.f90'
+            source.write_text('module demo\n#include "absent.h"\nend module demo\n')
+            for reports in (None, root / 'reports'):
+                with self.subTest(reports=reports):
+                    output = root / 'docs'
+                    with self.assertRaisesRegex(ValueError, 'Incomplete parse of .*demo.f90') as error:
+                        generate_docs([source], output, reports=reports, index_file='index.rst')
+                    self.assertIn('absent.h', str(error.exception))
+                    self.assertFalse(output.exists())
+                    if reports is not None:
+                        self.assertIn('absent.h', (reports / 'parse.log').read_text())
+
     def test_external_procedures_merge_across_files_and_reports_match_results(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
