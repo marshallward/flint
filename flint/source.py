@@ -42,7 +42,7 @@ class Source(object):
         # XXX: This chokes on non-unicode strings (e.g. latin-1).
         #  Using errors='replace' gets past these errors but will break
         #  roundtrip parsing.  This needs some additional thought.
-        with open(path, errors='replace', newline='') as fpath:
+        with open(path, encoding='utf-8', errors='replace', newline='') as fpath:
             lexer = Lexer(fpath, self.include_paths)
             # Ordinarily shared with the first token's head. Keep an owner
             # even when comments/directives produce no semantic statements.

@@ -319,8 +319,9 @@ class Lexer(object):
             lims += new_lims
 
             # Apply preprocessing to set up subsequent statements
-            if new_lims and new_lims[0][0] == '#':
-                lims.extend(self.preprocess(new_lims[0]) or [])
+            for item in new_lims:
+                if item.startswith('#'):
+                    lims.extend(self.preprocess(item) or [])
 
             # Statements are liminals if preprocessing has suspended parsing
             stmt = lexemes[split:]
@@ -443,7 +444,7 @@ class Lexer(object):
                     break
 
             if inc_path:
-                with open(inc_path, newline='') as inc:
+                with open(inc_path, encoding='utf-8', newline='') as inc:
                     # Share the macro environment before leading directives are
                     # processed by the constructor, not after their definitions
                     # and conditional results have already been consumed.
@@ -494,7 +495,7 @@ class Lexer(object):
 
 
 def is_liminal(lexeme):
-    return lexeme.isspace() or lexeme[0] in '!#' or lexeme == ';'
+    return lexeme.isspace() or lexeme[0] in '!#' or lexeme in (';', '\ufeff')
 
 
 def cpp_macro_value(macros, token):

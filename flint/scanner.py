@@ -206,6 +206,7 @@ class Scanner(object):
 
     def __init__(self):
         self.delim = None
+        self._at_start = True
 
     @property
     def prior_delim(self):
@@ -216,6 +217,12 @@ class Scanner(object):
         self.delim = value
     
     def parse(self, line):
+        if self._at_start and line:
+            self._at_start = False
+            if line.startswith('\ufeff'):
+                # A UTF-8 signature belongs to the physical file, not its
+                # first Fortran token. Retain it as a separate source lexeme.
+                return ['\ufeff', *self.parse(line[1:])]
         # The state machine uses LF internally. Only the physical terminator
         # is normalized; restore its exact spelling in the resulting lexeme.
         ending = '\r\n' if line.endswith('\r\n') else '\r' if line.endswith('\r') else None
