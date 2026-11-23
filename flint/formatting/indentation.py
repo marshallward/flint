@@ -1,7 +1,8 @@
 """Report Fortran indentation inconsistencies using Flint statements.
 
-Block bodies use ``indent`` spaces (default four). Module contents are not
-indented. Continuation code is at least two levels beyond its statement's first
+Block bodies use ``indent`` spaces (default four). Module, submodule, and program
+contents are not indented unless ``module_contents`` is enabled.
+Continuation code is at least two levels beyond its statement's first
 line; the action of a continued single-line IF may instead use one level.
 Declaration continuations allow at least one extra level by default;
 ``strict`` requires at least two for declarations too.
@@ -221,7 +222,7 @@ def indentation_issues(source, strict=False, indent=4, module_contents=False,
             issues.append(Issue(path, line_number, original, message))
 
         if event == 'open':
-            step = 0 if kind in ('module', 'submodule') and not module_contents else indent
+            step = 0 if kind in ('module', 'submodule', 'program') and not module_contents else indent
             blocks.append(Block(kind, expected, expected + step))
         elif event == 'case':
             blocks.append(Block('case', expected, expected + indent))

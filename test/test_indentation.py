@@ -51,6 +51,31 @@ class IndentationTests(unittest.TestCase):
             'end module sample\n'
         ), [])
 
+    def test_program_contents_follow_module_policy(self):
+        for enabled in (False, True):
+            with self.subTest(module_contents=enabled):
+                prefix = '  ' if enabled else ''
+                self.path.write_text(
+                    'program sample\n'
+                    + prefix + 'implicit none\n'
+                    + prefix + 'integer :: i\n'
+                    + prefix + 'i = 0\n'
+                    + prefix + 'do while (i < 3)\n'
+                    + prefix + '  i = i + 1\n'
+                    + prefix + 'end do\n'
+                    + 'contains\n'
+                    + prefix + 'subroutine work()\n'
+                    + prefix + '  print *, "hello"\n'
+                    + prefix + 'end subroutine work\n'
+                    + 'end program sample\n',
+                    encoding='utf-8',
+                )
+                source = flint.parse(str(self.path)).sources[0]
+                self.assertEqual(indentation_issues(
+                    source, indent=2, module_contents=enabled), [])
+                self.assertTrue(indentation_issues(
+                    source, indent=2, module_contents=not enabled))
+
     def test_bad_block_indent_does_not_cascade(self):
         issues = self.check(
             'subroutine work(a)\n'

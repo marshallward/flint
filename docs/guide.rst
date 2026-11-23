@@ -384,7 +384,8 @@ Unknown names are errors.
 * ``callable-comma-spacing`` spaces commas in known callable argument lists,
   preserving array subscripts. Repeat ``--exclude-function NAME`` to exempt
   particular callables (case-insensitive).
-* ``indentation`` checks four-space block bodies, with unindented module contents.
+* ``indentation`` checks four-space block bodies, with unindented module,
+  submodule, and program contents.
   The configuration setting ``format.indentation.width`` sets a positive number
   of spaces per level (default 4).
   Continuations require at least eight extra spaces, except declarations (four)
@@ -496,7 +497,8 @@ independent; when omitted, they default to twice the block width (ordinary
 continuations) and once the block width (declarations). Strict indentation uses
 the ordinary continuation width for declarations too. The IF-action exception
 always uses one block width. Module headers and ``contains`` remain aligned;
-``module-contents = true`` indents module bodies by one level.
+``module-contents = true`` indents module, submodule, and program bodies by one
+level. These units share the same indentation policy.
 
 Python scripts use the same configuration and override machinery:
 
