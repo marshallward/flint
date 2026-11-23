@@ -25,6 +25,27 @@ def parse_source(text):
 
 
 class TestUnit(unittest.TestCase):
+    def test_namelist_groups_accumulate_without_duplicating_source(self):
+        text = (
+            'program sample\n'
+            'integer :: x, y, a, b, c, d\n'
+            'namelist /left/ x, a /right/ y, b\n'
+            'namelist /first/ c, /second/ d\n'
+            'namelist /LEFT/ c\n'
+            'write(*, nml=left)\n'
+            'end program sample\n'
+        )
+        source = parse_source(text)
+        self.assertEqual(source.source_text(), text)
+        self.assertEqual(render(source.statements), text)
+        self.assertEqual(source.units[0].namelists, {
+            'left': ['x', 'a', 'c'],
+            'right': ['y', 'b'],
+            'first': ['c'],
+            'second': ['d'],
+        })
+        self.assertEqual(sum(stmt[0] == 'namelist' for stmt in source.statements), 3)
+
     def test_continued_end_before_semicolon_keeps_unit_boundaries(self):
         text = (
             'program sample\n'

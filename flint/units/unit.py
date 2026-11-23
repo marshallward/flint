@@ -612,20 +612,20 @@ class Unit(object):
             assert tok == '/'
             # TODO: Validate group name
             nml_group = next(tokens)
-            self.namelists[nml_group] = []
+            members = self.namelists.setdefault(nml_group, [])
             assert next(tokens) == '/'
 
             tok = next(tokens)
             while tok and tok != '/':
                 # TODO: Validate object name
-                self.namelists[nml_group].append(tok)
+                members.append(tok)
                 tok = next(tokens, None)
                 assert tok in (',', '/', None)
                 if tok == ',':
                     tok = next(tokens)
 
-            stmt.tag = 'N'
-            self.statements.append(stmt)
+        stmt.tag = 'N'
+        self.statements.append(stmt)
 
     def refresh_call_tree(self, host_variables=(), *, graph=None):
         """Analyze contained scopes after all sibling declarations are known."""
