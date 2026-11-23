@@ -18,7 +18,7 @@ class Construct(object):
         'forall',
         'where',
         # Proxy for keyword pairs below
-        'change'
+        'change',
         'select',
     ]
 
@@ -35,9 +35,9 @@ class Construct(object):
     def construct_stmt(stmt):
         if stmt.kind == 'assignment':
             return False
-        # Pop off construct label
-        if stmt[0][-1] == ':':
-            stmt = stmt[1:]
+        stmt = stmt.code_tokens
+        if not stmt:
+            return False
 
         # TODO: Actual rules vary for every construct type, not just 'if'
         if stmt[0] in Construct.construct_types:
@@ -67,24 +67,39 @@ class Construct(object):
                 return True
 
     def end_statement(self, stmt):
-        if stmt[0].startswith('end'):
-            if len(stmt) == 1 and stmt[0] in ('end', 'end' + self.ctype):
-                return True
-            elif len(stmt) == 2 and (stmt[0], stmt[1]) == ('end', self.ctype):
-                return True
-            else:
-                return False
-
-        elif self.ctype == 'do' and len(stmt) > 1 and stmt[1] == 'continue':
-            # TODO: Will stmt[0] always be a label?
-            # TODO: Check if label is inside the 'do' construct?
+        if (self.terminal_label is not None and stmt.statement_label is not None
+                and int(stmt.statement_label) == self.terminal_label):
             return True
+        if stmt.kind == 'assignment':
+            return False
+        words = stmt.code_tokens
+        if not words:
+            return False
+        if words[0] == 'end' + self.ctype:
+            suffix = words[1:]
+        elif words[:2] == ['end', self.ctype]:
+            suffix = words[2:]
         else:
             return False
+        if self.ctype == 'team' and suffix[:1] == ['(']:
+            depth = 0
+            for index, token in enumerate(suffix):
+                if token == '(':
+                    depth += 1
+                elif token == ')':
+                    depth -= 1
+                    if depth == 0:
+                        suffix = suffix[index + 1:]
+                        break
+            else:
+                return False
+        return not suffix or (len(suffix) == 1 and self.name is not None
+                              and suffix[0] == self.name.lower())
 
     def __init__(self, unit, depth=1):
         self.ctype = None
         self.name = None
+        self.terminal_label = None
 
         # Program unit containing the construct
         self.unit = unit
@@ -95,15 +110,11 @@ class Construct(object):
 
     def parse(self, statements):
         stmt = statements.current_line
-        # Check for construct label (and pop off)
-        if stmt[0][-1] == ':':
-            self.name = stmt[0][:-1]
-            stmt = stmt[1:]
-
-        if stmt[0] == 'select':
-            self.ctype = stmt[1]
-        else:
-            self.ctype = stmt[0]
+        self.name = stmt.construct_name
+        words = stmt.code_tokens
+        self.ctype = 'team' if words[:2] == ['change', 'team'] else words[0]
+        if self.ctype == 'do' and len(words) > 1 and words[1].isdigit():
+            self.terminal_label = int(words[1])
 
         stmt.tag = 'C'
         self.statements.append(stmt)
@@ -117,6 +128,10 @@ class Construct(object):
                 cons = Construct(self.unit, depth=self.depth + 1)
                 cons.parse(statements)
                 self.statements.extend(cons.statements)
+                # Legacy nested DOs may share one terminal statement. The
+                # child already recorded it, so close without appending again.
+                if self.terminal_label is not None and self.end_statement(statements.current_line):
+                    break
             elif self.end_statement(stmt):
                 stmt.tag = 'C'
                 self.statements.append(stmt)

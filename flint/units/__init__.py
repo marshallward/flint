@@ -11,6 +11,7 @@ from flint.units.program import Program
 
 
 def get_program_unit_type(line):
+    line = line.code_tokens
     if is_subroutine(line):
         return Subroutine
     elif is_function(line):

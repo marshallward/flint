@@ -34,20 +34,22 @@ class Statement(list):
         self.line_number = None
         self.source_visible = True
         self.label = None
+        self.statement_label = None
         self._code_index = 0
         self.kind = 'other'
 
         super(Statement, self).__init__(*args, **kwds)
+        if len(self) > 1 and self[0].isascii() and self[0].isdigit():
+            self.statement_label = self[0]
+            self._code_index = 1
+        start = self._code_index
         if (
-            len(self) >= 3
-            and self[1] == ':'
-            and getattr(self[0], 'is_name', False)
+            len(self) >= start + 3
+            and self[start + 1] == ':'
+            and getattr(self[start], 'is_name', False)
         ):
-            self.label = str(self[0])
-            self._code_index = 2
-        else:
-            self.label = None
-            self._code_index = 0
+            self.label = str(self[start])
+            self._code_index = start + 2
 
         self.kind = self._classify_kind()
         self._classify_token_roles()
@@ -67,7 +69,12 @@ class Statement(list):
 
     @property
     def code_tokens(self):
-        return self[self._code_index:]
+        return self[self._code_index:] if self._code_index else self
+
+    @property
+    def construct_name(self):
+        """Named construct prefix; distinct from the numeric statement label."""
+        return self.label
 
     def source_text(self):
         """Return this statement with its attached source text."""

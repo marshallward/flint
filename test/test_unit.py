@@ -25,6 +25,58 @@ def parse_source(text):
 
 
 class TestUnit(unittest.TestCase):
+    def test_labelled_end_closes_implicit_main_without_duplication(self):
+        text = 'goto 10\nerror stop\n10 end\n'
+        source = parse_source(text)
+        self.assertEqual(source.source_text(), text)
+        self.assertEqual(render(source.statements), text)
+        self.assertEqual(len(source.units), 1)
+        self.assertEqual(len(source.statements), 3)
+        self.assertEqual(source.units[0].statements[-1][:], ['10', 'end'])
+
+    def test_labelled_end_preserves_separate_program_units(self):
+        text = (
+            'program sample\n'
+            'goto 10\n'
+            'error stop\n'
+            '10 end program sample\n'
+            '\n'
+            'subroutine increment(i)\n'
+            'integer :: i\n'
+            'i = i + 1\n'
+            'goto 20\n'
+            'error stop\n'
+            '20 end subroutine increment\n'
+            '\n'
+            'integer function f()\n'
+            'f = 3\n'
+            'goto 30\n'
+            'f = 0\n'
+            '30 end function f\n'
+        )
+        source = parse_source(text)
+        self.assertEqual(source.source_text(), text)
+        self.assertEqual(render(source.statements), text)
+        self.assertEqual([(unit.utype, unit.name) for unit in source.units],
+                         [('program', 'sample'), ('subroutine', 'increment'), ('function', 'f')])
+        self.assertEqual([unit.statements[-1][0] for unit in source.units],
+                         ['10', '20', '30'])
+
+    def test_end_labels_do_not_hide_wrong_unit_kind_or_assignments(self):
+        unit = Unit()
+        unit.utype = 'subroutine'
+        for text, expected in (
+            ('10 end', True),
+            ('10 endsubroutine', True),
+            ('10 end subroutine work', True),
+            ('10 end function work', False),
+            ('10 end = 1', False),
+            ('10 endsubroutine = 1', False),
+        ):
+            with self.subTest(text=text):
+                statement = next(Lexer(io.StringIO(text + '\n')))
+                self.assertEqual(bool(unit.end_statement(statement)), expected)
+
     def test_namelist_groups_accumulate_without_duplicating_source(self):
         text = (
             'program sample\n'

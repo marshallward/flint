@@ -111,6 +111,10 @@ class Unit(object):
     @staticmethod
     def header_index(stmt):
         """Locate a unit keyword outside a procedure's return-type selector."""
+        start = getattr(stmt, 'code_index', 0)
+        if start:
+            index = Unit.header_index(stmt[start:])
+            return None if index is None else start + index
         if not stmt or stmt[0] not in Unit._unit_statement_starters:
             return None
         if getattr(stmt, 'kind', None) == 'assignment':
@@ -165,6 +169,10 @@ class Unit(object):
     def end_statement(self, stmt):
         assert self.utype
 
+        # A statement label prefixes the END statement; it is not part of
+        # its closing specification. Keep the original statement for rendering.
+        stmt = stmt.code_tokens
+
         # TODO: Very similar to construct... can I merge somehow?
         if stmt[0].startswith('end'):
             if len(stmt) == 1 and stmt[0] in ('end', 'end' + self.utype):
@@ -183,7 +191,7 @@ class Unit(object):
         self.parse_header(statements.current_line)
         self.parse_specification(statements)
         self.parse_execution(statements)
-        if self.utype == 'type' and statements.current_line[0] == 'contains':
+        if self.utype == 'type' and statements.current_line.code_tokens == ['contains']:
             self.parse_binding_part(statements)
         else:
             self.parse_subprogram(statements, graph=graph)
@@ -276,16 +284,17 @@ class Unit(object):
         # TODO: `use`, `implicit`, and declarations must appear in that order.
         #       This loop does not check order.
         for stmt in statements:
+            first = stmt[stmt.code_index]
             if stmt.kind == 'assignment':
                 break
-            elif stmt[0] == 'use':
+            elif first == 'use':
                 self.parse_use_stmt(stmt)
-            elif stmt[0] == 'import':
+            elif first == 'import':
                 self.parse_import_stmt(stmt)
-            elif stmt[0] == 'implicit':
+            elif first == 'implicit':
                 # TODO: PARAMETER, FORMAT, ENTRY
                 self.parse_implicit_stmt(stmt)
-            elif stmt[0] in Unit.declaration_types:
+            elif first in Unit.declaration_types:
                 self.parse_declaration_construct(statements, stmt)
             else:
                 break
@@ -296,7 +305,7 @@ class Unit(object):
         * USE [[, module-nature] ::] module-name [, rename-list]
         * USE [[, module-nature] ::] module-name, ONLY : [only-list]
         """
-        idx = 1
+        idx = stmt.code_index + 1
         if stmt[idx] == ',':
             idx = idx + 2
         if stmt[idx] == '::':
@@ -316,15 +325,16 @@ class Unit(object):
         self.statements.append(stmt)
 
     def parse_declaration_construct(self, statements, stmt):
-        if stmt[0] == 'interface' or (
-                len(stmt) > 1 and stmt[:2] == ['abstract', 'interface']
+        words = stmt.code_tokens
+        if words[0] == 'interface' or (
+                words[:2] == ['abstract', 'interface']
         ):
             block = Interface()
             block.parse(statements)
             self.interfaces.append(block)
             self.statements.extend(block.statements)
 
-        elif stmt[0] == 'enum':
+        elif words[0] == 'enum':
             # ENUM, BIND(C) is an unnamed declaration construct, not a
             # program unit or derived type. Retain its source without inventing
             # a nested scope; enumerator symbols are not yet modeled.
@@ -333,11 +343,11 @@ class Unit(object):
             for enum_stmt in statements:
                 enum_stmt.tag = 'd'
                 self.statements.append(enum_stmt)
-                if enum_stmt == ['end', 'enum'] or enum_stmt == ['endenum']:
+                if enum_stmt.code_tokens in (['end', 'enum'], ['endenum']):
                     break
 
         # TODO: Parse out type
-        elif stmt[0] == 'type' and stmt[1] != '(':
+        elif words[0] == 'type' and words[1] != '(':
             dtype = Unit()
             dtype.parse(statements)
 
@@ -347,17 +357,17 @@ class Unit(object):
             self.derived_types.append(dtype)
             self.statements.extend(dtype.statements)
 
-        elif stmt[0] in Unit.access_specs:
+        elif words[0] in Unit.access_specs:
             stmt.tag = 'd'
             self.statements.append(stmt)
 
         # Placeholder
-        elif stmt[0] == 'data':
+        elif words[0] == 'data':
             stmt.tag = 'd'
             self.statements.append(stmt)
 
         # Placeholder
-        elif stmt[0] == 'parameter':
+        elif words[0] == 'parameter':
             stmt.tag = 'p'
             self.statements.append(stmt)
 
@@ -367,7 +377,7 @@ class Unit(object):
                 self.parse_standard_declaration(stmt, declaration)
                 return
             stmt_vars = []
-            tokens = iter(stmt)
+            tokens = iter(words)
 
             tok = next(tokens)
 
@@ -608,8 +618,9 @@ class Unit(object):
         return var_intent, dimension
 
     def parse_namelist(self, stmt):
-        assert stmt[0] == 'namelist'
-        tokens = iter(stmt[1:])
+        words = stmt.code_tokens
+        assert words[0] == 'namelist'
+        tokens = iter(words[1:])
 
         tok = next(tokens)
         while tok:
@@ -720,7 +731,7 @@ class Unit(object):
             cons = Construct(self)
             cons.parse(statements)
             self.statements.extend(cons.statements)
-        elif self.end_statement(stmt) or stmt == ['contains']:
+        elif self.end_statement(stmt) or stmt.code_tokens == ['contains']:
             return
         else:
             # Unhandled
@@ -736,7 +747,7 @@ class Unit(object):
                 cons = Construct(self)
                 cons.parse(statements)
                 self.statements.extend(cons.statements)
-            elif self.end_statement(stmt) or stmt == ['contains']:
+            elif self.end_statement(stmt) or stmt.code_tokens == ['contains']:
                 # TODO: Use return?
                 break
             else:

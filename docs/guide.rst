@@ -797,6 +797,16 @@ Flint is broken into three stages, which closely resemble compiler frontends.
 Streaming source locations
 ==========================
 
+Statement prefixes are retained in the original token sequence.
+``statement.statement_label`` exposes an optional numeric label token,
+preserving leading zeros. ``statement.construct_name`` exposes a ``name:``
+prefix; the historical ``statement.label`` attribute remains an alias for
+that construct name, not the numeric label. ``statement.code_index`` and
+``statement.code_tokens`` locate the statement after either or both prefixes.
+Structural parsing recognizes named construct endings and numeric DO
+termination labels, including shared legacy DO terminators. This does not
+provide general GOTO target resolution or control-flow validation.
+
 ``source.source_text()`` reconstructs the parsed file, including comment-only,
 whitespace-only, and empty files. ``source.leading_liminals`` retains the initial
 source text even when there is no statement to own it; otherwise it is shared

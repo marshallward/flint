@@ -73,8 +73,12 @@ def _statement_keyword_indices(line):
 def get_callable_symbols(line, variables, *, variable_names=None):
     """Find callables, optionally reusing normalized variable names for a scope."""
     start = getattr(line, 'code_index', 0)
-    if (start < len(line) and line[start].isdigit()
-            and line[start + 1:start + 3] == ['format', '(']):
+    labelled = getattr(line, 'statement_label', None) is not None
+    if start < len(line) and line[start].isdigit():
+        labelled = True
+        start += 1
+    if (labelled and line[start:start + 2] == ['format', '(']
+            and getattr(line, 'kind', None) != 'assignment'):
         # FORMAT descriptors (including nested groups and DT edit descriptors)
         # are not executable expressions and cannot contain procedure calls.
         return []

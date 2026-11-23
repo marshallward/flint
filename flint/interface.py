@@ -48,7 +48,7 @@ class Interface(object):
         self.statements.append(stmt)
 
     def parse_header(self, stmt):
-        tokens = iter(semantic_tokens(stmt))
+        tokens = iter(semantic_tokens(stmt.code_tokens))
         tok = next(tokens)
 
         if tok == 'abstract':
@@ -71,18 +71,21 @@ class Interface(object):
 
     def procedure_stmt(self, stmt):
         # XXX: Assert self.name is set?
+        stmt = stmt.code_tokens
         return stmt[0] == 'procedure' or stmt[:2] == ['module', 'procedure']
 
     def parse_procedure_stmt(self, stmt):
         stmt.tag = 'P'
         self.statements.append(stmt)
 
-        start = 2 if stmt[0] == 'module' else 1
+        start = stmt.code_index
+        start += 2 if stmt[start] == 'module' else 1
         if stmt[start:start + 1] == ['::']:
             start += 1
         self.procedures.extend(token for token in stmt[start:] if token != ',')
 
     def end_interface_stmt(self, stmt):
+        stmt = stmt.code_tokens
         if stmt[0].startswith('end'):
             if len(stmt) == 1 and stmt[0] == 'endinterface':
                 return True
