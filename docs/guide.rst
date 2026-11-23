@@ -36,6 +36,24 @@ Basic usage
 
 Flint is under active development. Its APIs and supported features may change.
 
+Language extensions
+-------------------
+
+By default, Flint rejects the nonstandard ``Q`` exponent notation for real
+literals, such as ``1.23q-01`` and ``1.5Q2``, with an explicit error.
+Use ``flint.parse(path, standard=False)`` or the ``--no-standard`` option on a
+CLI subcommand to accept this extension, preserving the original spelling::
+
+   flint format --standard source.f90
+   flint format --no-standard source.f90
+
+The default is ``standard=True``. The setting also applies to preprocessor
+includes and macro definitions. ``Scanner``, ``Lexer``, ``Source``, and
+``Project`` accept the same keyword option.
+
+Currently this option rejects Q-exponent literals only; it is not a complete
+Fortran standards validator or a language-version selector.
+
 
 Commands
 --------

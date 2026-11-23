@@ -18,7 +18,7 @@ def _names(values):
 def format_statements(srcdirs=(), includes=None, excludes=None, *, only=None,
                       skip=(), list_rules=False, write=False, diff=False,
                       strict=None, do_controls=None, excluded_functions=None, indent=None,
-                      config=None):
+                      config=None, standard=True):
     """Report formatting issues; preview or write available spacing fixes."""
     if list_rules:
         print('\n'.join(ALL_RULES))
@@ -34,7 +34,7 @@ def format_statements(srcdirs=(), includes=None, excludes=None, *, only=None,
         raise ValueError('Provide at least one source path, or use --list-rules')
     if not checks and not diagnostics:
         return 0
-    project = flint.parse(*srcdirs, includes=includes, excludes=excludes)
+    project = flint.parse(*srcdirs, includes=includes, excludes=excludes, standard=standard)
     found = False
     # Diagnose before writing: source locations belong to the parsed snapshot.
     for name, check in diagnostics.items():

@@ -14,7 +14,8 @@ class Project(object):
     # TODO: make a control parameter
     extensions = ['.f90', '.F90']
 
-    def __init__(self):
+    def __init__(self, *, standard=True):
+        self.standard = standard
         # Source code
         self.path = None
         self.directories = []
@@ -64,7 +65,7 @@ class Project(object):
                         filepaths.append(fpath)
 
         for fpath in filepaths:
-            f90file = Source()
+            f90file = Source(standard=self.standard)
             f90file.include_paths = self.directories + self.include_dirs
             try:
                 f90file.parse(fpath, graph=self.graph)

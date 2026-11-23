@@ -123,7 +123,7 @@ def generate_graphs(references, output, *, format, depth, html_links,
 def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=None,
                   call_graphs=None, graph_depth=1, markup='plain', *,
                   include_private=False, graph_fontsize=None, reports=None,
-                  index_file=None, index_title='API reference'):
+                  index_file=None, index_title='API reference', standard=True):
     """Generate linked reST and optional graphs, returning page titles and counts.
 
     Only documentation snapshots are retained between files. ``reports`` enables
@@ -165,7 +165,7 @@ def generate_docs(srcdirs, docdir, includes=None, excludes=None, link_format=Non
             diagnostics = io.StringIO()
             try:
                 with contextlib.redirect_stderr(diagnostics):
-                    project = flint.parse(str(path), includes=include_dirs)
+                    project = flint.parse(str(path), includes=include_dirs, standard=standard)
             finally:
                 if reports is not None:
                     log.write(diagnostics.getvalue())

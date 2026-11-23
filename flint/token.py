@@ -87,7 +87,7 @@ def classify_lexeme(value):
     if value[0].isdigit() or (
         value[0] == '.' and len(value) > 1 and value[1].isdigit()
     ):
-        if any(char in value for char in '.eEdD'):
+        if any(char in value for char in '.eEdDqQ'):
             return TokenKind.REAL
         return TokenKind.INTEGER
     lower = value.lower()

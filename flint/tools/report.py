@@ -12,8 +12,8 @@ MAX_STMT_LENGTH = 132
 MAX_LINE_LENGTH = 512
 
 
-def report_issues(srcdirs, includes=None, excludes=None):
-    proj = flint.parse(*srcdirs, includes=includes, excludes=excludes)
+def report_issues(srcdirs, includes=None, excludes=None, *, standard=True):
+    proj = flint.parse(*srcdirs, includes=includes, excludes=excludes, standard=standard)
 
     for src in proj.sources:
         filename = os.path.basename(src.path)

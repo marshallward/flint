@@ -120,9 +120,9 @@ class Scanner(object):
         'num': dict(
             **{c: 'num' for c in digit},
             **{'.': 'num_frac'},
-            **{c: 'num_float' for c in 'eEdD'},
+            **{c: 'num_float' for c in 'eEdDqQ'},
             **{'_': 'op_kind'},
-            **{c: 'end' for c in notchar(digit + '._eEdD')},
+            **{c: 'end' for c in notchar(digit + '._eEdDqQ')},
         ),
         # Kind delimiter
         # NOTE: This binds the kind to the literal.
@@ -140,8 +140,8 @@ class Scanner(object):
         # Numeric: fractional digits
         'num_frac': dict(
             **{c: 'num_frac' for c in digit},
-            **{c: 'num_float' for c in 'eEdD'},
-            **{c: 'num_op_kw' for c in notchar('eEdD', alpha)},
+            **{c: 'num_float' for c in 'eEdDqQ'},
+            **{c: 'num_op_kw' for c in notchar('eEdDqQ', alpha)},
             **{'_': 'op_kind'},
             **{c: 'end' for c in notchar(alnum)},
         ),
@@ -213,7 +213,8 @@ class Scanner(object):
         ),
     }
 
-    def __init__(self):
+    def __init__(self, *, standard=True):
+        self.standard = standard
         self.delim = None
         self._at_start = True
 
@@ -361,5 +362,15 @@ class Scanner(object):
     
         if ileft < len(line):
             lexemes.append(line[ileft:])
-    
+
+        if self.standard:
+            for lexeme in lexemes:
+                if lexeme and (lexeme[0].isdigit() or (
+                        lexeme[0] == '.' and len(lexeme) > 1 and lexeme[1].isdigit())):
+                    literal = lexeme.partition('_')[0]
+                    if 'q' in literal.lower():
+                        raise ValueError(
+                            'Q exponent is a nonstandard Fortran extension: ' + lexeme
+                        )
+
         return lexemes

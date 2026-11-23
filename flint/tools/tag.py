@@ -6,8 +6,8 @@
 import flint
 
 
-def tag_statements(srcdirs, includes=None, excludes=None):
-    proj = flint.parse(*srcdirs, includes=includes, excludes=excludes)
+def tag_statements(srcdirs, includes=None, excludes=None, *, standard=True):
+    proj = flint.parse(*srcdirs, includes=includes, excludes=excludes, standard=standard)
 
     for src in proj.sources:
         for stmt in src.statements:

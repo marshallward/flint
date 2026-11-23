@@ -95,12 +95,14 @@ cpp_op_rank = {
 
 class Lexer(object):
     """An iterator which returns the lexemes from an input stream."""
-    def __init__(self, source, include_paths=None, *, macros=None, fn_macros=None):
+    def __init__(self, source, include_paths=None, *, macros=None, fn_macros=None,
+                 standard=True):
+        self.standard = standard
         self.source = source
         self.include_paths = include_paths if include_paths else []
 
         # A reuseable Lexeme scanner
-        self.scanner = Scanner()
+        self.scanner = Scanner(standard=standard)
 
         # Cached statements from preprocessed headers
         self.includes = deque()
@@ -196,7 +198,8 @@ class Lexer(object):
 
                 # If no separating whitespace, try to split via Scanner
                 if not lx_split:
-                    new_lx = resplit_tokens(statement_tokens[-1], lexemes[1])
+                    new_lx = resplit_tokens(statement_tokens[-1], lexemes[1],
+                                           standard=self.standard)
                     lx_split = len(new_lx) > 1
 
                 # The token has been split, try to reconstruct it here.
@@ -354,7 +357,7 @@ class Lexer(object):
             # replacement = words[2] if len(words) == 3 else ''
 
             # My berk scanner needs an endline
-            scanner = Scanner()
+            scanner = Scanner(standard=self.standard)
             lexemes = scanner.parse(words[1] + '\n')
             function_like = len(lexemes) > 1 and lexemes[1] == '('
 
@@ -449,7 +452,7 @@ class Lexer(object):
                     # processed by the constructor, not after their definitions
                     # and conditional results have already been consumed.
                     lexer = Lexer(inc, self.include_paths, macros=self.macros,
-                                  fn_macros=self.fn_macros)
+                                  fn_macros=self.fn_macros, standard=self.standard)
                     self.includes = deque()
                     for stmt in lexer:
                         self.includes.append(stmt)
@@ -571,7 +574,7 @@ def cpp_expr_eval(expr, macros=None):
     return bool(cpp_operand_value(macros, stack.pop()))
 
 
-def resplit_tokens(first, second):
+def resplit_tokens(first, second, *, standard=True):
     first = first[:] if isinstance(first, PToken) else str(first)
     # NOTE: Scanner needs an endline, and split strings expect line
     #   continuations in order to track the delimiter across multiple lines, so
@@ -585,7 +588,7 @@ def resplit_tokens(first, second):
     else:
         lx_join = first + second + '\n'
 
-    scanner = Scanner()
+    scanner = Scanner(standard=standard)
     new_lx = scanner.parse(lx_join)
 
     # NOTE: Remove the redudant Scanner markup tokens

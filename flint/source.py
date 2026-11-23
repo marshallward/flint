@@ -15,7 +15,8 @@ from flint.units import get_program_unit_type
 
 
 class Source(object):
-    def __init__(self):
+    def __init__(self, *, standard=True):
+        self.standard = standard
         # Configuration
         self.path = None
         self.include_paths = []
@@ -43,7 +44,7 @@ class Source(object):
         #  Using errors='replace' gets past these errors but will break
         #  roundtrip parsing.  This needs some additional thought.
         with open(path, encoding='utf-8', errors='replace', newline='') as fpath:
-            lexer = Lexer(fpath, self.include_paths)
+            lexer = Lexer(fpath, self.include_paths, standard=self.standard)
             # Ordinarily shared with the first token's head. Keep an owner
             # even when comments/directives produce no semantic statements.
             self.leading_liminals = lexer.prior_tail

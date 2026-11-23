@@ -148,6 +148,12 @@ def parse():
     report_cmd.add_argument(*arg_incdirs['flags'], **arg_incdirs['parameters'])
     report_cmd.add_argument(*arg_exclude['flags'], **arg_exclude['parameters'])
 
+    for command in (format_cmd, gendoc_cmd, checkdocs_cmd, tag_cmd, report_cmd):
+        command.add_argument(
+            '--standard', action=argparse.BooleanOptionalAction, default=True,
+            help='Reject Q-exponent literals (not yet full standards validation)',
+        )
+
     # If no argument given, then print the help page
     if len(sys.argv) == 1:
         parser.print_help()
@@ -161,7 +167,9 @@ def parse():
     run_args.pop('run_cmd')
     commands = {flint.tools.format.format_statements: format_cmd,
                 flint.tools.gendoc.generate_docs: gendoc_cmd,
-                flint.tools.checkdocs.check_docs: checkdocs_cmd}
+                flint.tools.checkdocs.check_docs: checkdocs_cmd,
+                flint.tools.tag.tag_statements: tag_cmd,
+                flint.tools.report.report_issues: report_cmd}
     if run_cmd in commands:
         try:
             result = run_cmd(**run_args)

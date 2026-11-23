@@ -40,7 +40,7 @@ def source_files(paths, excludes=()):
 
 
 def check_docs(srcdirs, includes=None, excludes=None, *, arguments=False, strict=False,
-               defer_includes=()):
+               defer_includes=(), standard=True):
     """Return 0 for complete docs, 1 for omissions, 2 for parse/input failures."""
     paths = source_files(srcdirs, excludes or ())
     include_dirs = list(dict.fromkeys([*(includes or ()), *(str(p.parent) for p in paths)]))
@@ -48,7 +48,7 @@ def check_docs(srcdirs, includes=None, excludes=None, *, arguments=False, strict
     for path in paths:
         diagnostics = io.StringIO()
         with contextlib.redirect_stderr(diagnostics):
-            project = flint.parse(str(path), includes=include_dirs)
+            project = flint.parse(str(path), includes=include_dirs, standard=standard)
         if diagnostics.getvalue():
             raise ValueError(f'Incomplete parse of {path}:\n{diagnostics.getvalue().rstrip()}')
         if len(project.sources) != 1:

@@ -9,11 +9,11 @@ from flint.project import Project
 __version__ = '0.0.1'
 
 
-def parse(*paths, includes=None, excludes=None, followlinks=False):
+def parse(*paths, includes=None, excludes=None, followlinks=False, standard=True):
     include_dirs = includes if includes else []
     exclude_dirs = excludes if excludes else []
 
-    project = Project()
+    project = Project(standard=standard)
     project.include_dirs = include_dirs
 
     project.parse(*paths, excludes=exclude_dirs, followlinks=followlinks)
