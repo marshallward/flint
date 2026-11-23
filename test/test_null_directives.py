@@ -38,8 +38,10 @@ class NullDirectiveTests(unittest.TestCase):
             self.assertEqual(diagnostics.getvalue(), '')
 
     def test_non_null_directives_are_not_silently_ignored(self):
-        for text in ('# blablab\n', '# /* comment */ blablab\n', '# /* unclosed\n'):
+        for text in ('# blablab\n', '# /* comment */ blablab\n'):
             diagnostics = io.StringIO()
             with contextlib.redirect_stderr(diagnostics):
                 list(Lexer(io.StringIO(text)))
             self.assertIn('unsupported preprocess directive', diagnostics.getvalue())
+        with self.assertRaisesRegex(ValueError, 'CPP block comment'):
+            list(Lexer(io.StringIO('# /* unclosed\n')))

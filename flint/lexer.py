@@ -18,7 +18,14 @@ from flint.statement import Statement
 from flint.token import PToken, TokenKind, classify_lexeme, _token_from_lexeme
 
 
+def _unterminated_cpp_comment(scanner, token):
+    raise ValueError('CPP block comment crosses a directive line or is unterminated')
+
+
 cpp_scanner = re.Scanner([
+    (r'/\*[^\r\n]*?\*/', None),
+    (r'//[^\r\n]*', None),
+    (r'/\*[^\r\n]*', _unterminated_cpp_comment),
     (r'defined', lambda scanner, token: token),
     (r'[_A-Za-z][_0-9a-zA-Z]*', lambda scanner, token: token),
     (r'[0-9]+', lambda scanner, token: token),
@@ -341,15 +348,10 @@ class Lexer(object):
         assert line[0] == '#'
         line = line[1:]
 
-        # A null directive contains only whitespace and comments. Inspect a
-        # separate view so its original spelling stays in the source liminals.
-        remainder = line.lstrip()
-        while remainder.startswith('/*'):
-            end = remainder.find('*/', 2)
-            if end < 0:
-                break
-            remainder = remainder[end + 2:].lstrip()
-        if not remainder or remainder.startswith('//'):
+        # Comments and whitespace produce no preprocessing tokens. The
+        # original directive remains in the source liminals.
+        tokens, remainder = cpp_scanner.scan(line)
+        if not tokens and not remainder:
             return
 
         words = line.strip().split(None, 1)
@@ -418,11 +420,11 @@ class Lexer(object):
             self.start_conditional(cpp_expr_eval(expression, self.conditional_macros()))
 
         elif directive == 'ifdef':
-            macro = words[1].strip() if len(words) > 1 else ''
+            macro = tokens[1] if len(tokens) == 2 and not remainder else ''
             self.start_conditional(macro in self.macros or macro in self.fn_macros)
 
         elif directive == 'ifndef':
-            macro = words[1].strip() if len(words) > 1 else ''
+            macro = tokens[1] if len(tokens) == 2 and not remainder else ''
             self.start_conditional(macro not in self.macros and macro not in self.fn_macros)
 
         elif directive == 'elif':
