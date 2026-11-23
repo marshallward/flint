@@ -15,6 +15,7 @@ import string
 class Scanner(object):
     _escape_states = frozenset((
         'end', 'cmt', 'op_def_slash', 'str_a_lc_end', 'str_q_lc_end', 'num_op_kw_end',
+        'num_exponent_word',
     ))
 
     # The Fortran Alphabet
@@ -149,7 +150,7 @@ class Scanner(object):
         'num_float': dict(
             **{c: 'num_float_sign' for c in '+-'},
             **{c: 'num_float_exp' for c in digit},
-            **{c: 'num_op_kw' for c in alpha + '_'},
+            **{c: 'num_exponent_word' for c in alpha + '_'},
             **{c: 'end' for c in notchar(alnum + '+-')},
         ),
         # Numeric: Signed exponent lead
@@ -359,6 +360,17 @@ class Scanner(object):
                 lexemes.append(line[ileft:dec_tok])
                 ileft = dec_tok
                 state = 'op'
+
+            elif state == 'num_exponent_word':
+                # 2DT(...), 2EN12.3, and 2ES12.3 start with a repeat
+                # count, not a real exponent. Keep dotted operators such
+                # as 1.eq. on the existing numeric/operator backtrack path.
+                if line[ileft:idx - 1].isdigit():
+                    lexemes.append(line[ileft:idx - 1])
+                    ileft = idx - 1
+                    state = 'id_kind' if char == '_' else 'id'
+                else:
+                    state = 'num_op_kw'
     
         if ileft < len(line):
             lexemes.append(line[ileft:])
