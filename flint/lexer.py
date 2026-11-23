@@ -341,6 +341,17 @@ class Lexer(object):
         assert line[0] == '#'
         line = line[1:]
 
+        # A null directive contains only whitespace and comments. Inspect a
+        # separate view so its original spelling stays in the source liminals.
+        remainder = line.lstrip()
+        while remainder.startswith('/*'):
+            end = remainder.find('*/', 2)
+            if end < 0:
+                break
+            remainder = remainder[end + 2:].lstrip()
+        if not remainder or remainder.startswith('//'):
+            return
+
         words = line.strip().split(None, 1)
         directive = words[0]
 
