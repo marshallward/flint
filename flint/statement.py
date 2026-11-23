@@ -4,7 +4,7 @@
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
 
-from flint.token import Token, TokenKind
+from flint.token import Token, TokenKind, semantic_tokens
 from flint.endlines import line_tail, normalize_endlines
 
 
@@ -94,6 +94,8 @@ class Statement(list):
     def _classify_kind(self):
         if len(self) <= self._code_index:
             return 'empty'
+        if self.is_assignment_statement():
+            return 'assignment'
 
         first = self[self._code_index]
         if first == 'call':
@@ -105,6 +107,58 @@ class Statement(list):
         if first in DECLARATION_STARTERS:
             return 'declaration'
         return 'other'
+
+    def is_assignment_statement(self):
+        """Recognize a designator followed by = or =>, without name lookup.
+
+        Parenthesized subscripts/substrings and coindices remain opaque, but
+        must be balanced. Declaration initializers and control assignments
+        have additional syntax before the equals and do not match.
+        """
+        tokens = self
+        start = self.code_index
+        # Most statements need only their first two tokens inspected. Resolve
+        # source-only macro anchors lazily if the designator reaches one.
+        if start >= len(tokens):
+            return False
+        if getattr(tokens[start], 'is_macro_anchor', False):
+            tokens = list(semantic_tokens(self.code_tokens))
+            start = 0
+        if start >= len(tokens) or not getattr(tokens[start], 'is_name', False):
+            return False
+        index = start + 1
+        while index < len(tokens):
+            token = tokens[index]
+            if getattr(token, 'is_macro_anchor', False):
+                index += 1
+                continue
+            if token in ('=', '=>'):
+                return index + 1 < len(tokens)
+            if token == '%':
+                index += 1
+                while index < len(tokens) and getattr(tokens[index], 'is_macro_anchor', False):
+                    index += 1
+                if index >= len(tokens) or not getattr(tokens[index], 'is_name', False):
+                    return False
+                index += 1
+            elif token in ('(', '['):
+                stack = []
+                while index < len(tokens):
+                    token = tokens[index]
+                    if token in ('(', '['):
+                        stack.append(token)
+                    elif token in (')', ']'):
+                        if not stack or stack.pop() != {')': '(', ']': '['}[token]:
+                            return False
+                        if not stack:
+                            index += 1
+                            break
+                    index += 1
+                else:
+                    return False
+            else:
+                return False
+        return False
 
     def _classify_token_roles(self):
         """Share temporary group state across assignment and operator analysis."""

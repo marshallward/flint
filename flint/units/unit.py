@@ -113,6 +113,8 @@ class Unit(object):
         """Locate a unit keyword outside a procedure's return-type selector."""
         if not stmt or stmt[0] not in Unit._unit_statement_starters:
             return None
+        if getattr(stmt, 'kind', None) == 'assignment':
+            return None
         if len(stmt) > 1 and stmt[1] in ('=', '=>', '%'):
             return None
         # Fortran keywords can also be unit names. Do not interpret a module
@@ -274,7 +276,9 @@ class Unit(object):
         # TODO: `use`, `implicit`, and declarations must appear in that order.
         #       This loop does not check order.
         for stmt in statements:
-            if stmt[0] == 'use':
+            if stmt.kind == 'assignment':
+                break
+            elif stmt[0] == 'use':
                 self.parse_use_stmt(stmt)
             elif stmt[0] == 'import':
                 self.parse_import_stmt(stmt)
@@ -716,7 +720,7 @@ class Unit(object):
             cons = Construct(self)
             cons.parse(statements)
             self.statements.extend(cons.statements)
-        elif self.end_statement(stmt) or stmt[0] == 'contains':
+        elif self.end_statement(stmt) or stmt == ['contains']:
             return
         else:
             # Unhandled
@@ -732,7 +736,7 @@ class Unit(object):
                 cons = Construct(self)
                 cons.parse(statements)
                 self.statements.extend(cons.statements)
-            elif self.end_statement(stmt) or stmt[0] == 'contains':
+            elif self.end_statement(stmt) or stmt == ['contains']:
                 # TODO: Use return?
                 break
             else:

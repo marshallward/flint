@@ -33,6 +33,8 @@ class Construct(object):
     # TODO: Override for individual constructs?
     @staticmethod
     def construct_stmt(stmt):
+        if stmt.kind == 'assignment':
+            return False
         # Pop off construct label
         if stmt[0][-1] == ':':
             stmt = stmt[1:]

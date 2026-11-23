@@ -76,6 +76,8 @@ def action_index(statement):
 
 def block_event(statement):
     """Classify structural statements without treating keyword variables as blocks."""
+    if statement.kind == 'assignment':
+        return None, None
     words = [str(token).lower() for token in statement.code_tokens]
     if not words:
         return None, None
