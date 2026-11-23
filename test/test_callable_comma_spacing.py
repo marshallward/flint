@@ -23,7 +23,7 @@ def format_source(text, **options):
 def format_source_with_changes(text, **options):
     with tempfile.TemporaryDirectory() as tmpdir:
         path = Path(tmpdir) / 'test.F90'
-        path.write_text(text)
+        path.write_text(text, newline='')
 
         project = flint.parse(str(path))
         source = project.sources[0]

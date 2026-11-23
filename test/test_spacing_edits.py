@@ -36,7 +36,7 @@ end subroutine demo
 
     def parse_source(self, directory):
         path = Path(directory) / 'test.F90'
-        path.write_text(self.source)
+        path.write_text(self.source, newline='')
         project = flint.parse(str(path))
         return path, project, project.sources[0]
 

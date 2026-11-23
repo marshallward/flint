@@ -26,7 +26,7 @@ class TestSpacingRunner(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.path = Path(temporary.name) / 'example.f90'
         self.text = 'subroutine demo\nreal :: x\nx=1+2; x=3+4\nend subroutine demo\n'
-        self.path.write_text(self.text)
+        self.path.write_text(self.text, newline='')
         self.project = flint.parse(str(self.path))
 
     def test_combines_checks_without_reparse_or_mutation(self):

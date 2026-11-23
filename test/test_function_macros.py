@@ -95,7 +95,7 @@ class FunctionMacroTests(unittest.TestCase):
                 'end subroutine work\nend module demo\n')
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'demo.F90'
-            path.write_text(text)
+            path.write_text(text, newline='')
             project = flint.parse(str(path))
         self.assertEqual(render(project.sources[0].statements), text)
         modules = tuple(iter_module_documentation(project))

@@ -16,7 +16,7 @@ from flint.formatting.spacing import render
 def parse_source(text):
     with tempfile.TemporaryDirectory() as tmpdir:
         path = Path(tmpdir) / 'test.F90'
-        path.write_text(text)
+        path.write_text(text, newline='')
 
         source = Source()
         source.parse(str(path))

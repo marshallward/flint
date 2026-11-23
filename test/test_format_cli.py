@@ -28,7 +28,7 @@ class FormatCLI(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.path = Path(self.tmp.name) / 'demo.F90'
-        self.path.write_text(SOURCE)
+        self.path.write_text(SOURCE, newline='')
         self.config = Path(self.tmp.name) / 'flint.toml'
         self.config.write_text('[format.indentation]\nwidth = 2\n')
 

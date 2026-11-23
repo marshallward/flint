@@ -12,7 +12,7 @@ class ProcedureArgumentTests(unittest.TestCase):
     def parse(self, text):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'demo.F90'
-            path.write_text(text)
+            path.write_text(text, newline='')
             source = flint.parse(str(path)).sources[0]
         rendered = ''.join(source.statements[0][0].head)
         rendered += ''.join(str(t) + ''.join(t.tail) for s in source.statements for t in s)
