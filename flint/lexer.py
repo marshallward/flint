@@ -15,7 +15,7 @@ import sys
 from flint.scanner import Scanner
 from flint.macros import expand_at
 from flint.statement import Statement
-from flint.token import PToken, _token_from_lexeme
+from flint.token import PToken, TokenKind, classify_lexeme, _token_from_lexeme
 
 
 cpp_scanner = re.Scanner([
@@ -207,7 +207,7 @@ class Lexer(object):
                     if isinstance(statement_tokens[-1], PToken):
                         pp_toks = statement_tokens[-1].pp
                     else:
-                        pp_toks = [statement_tokens[-1]]
+                        pp_toks = [str(statement_tokens[-1])]
 
                     tok.pp = pp_toks + prior_tail + ['&', lexemes[1]]
                     prior_tail = []
@@ -572,10 +572,14 @@ def cpp_expr_eval(expr, macros=None):
 
 
 def resplit_tokens(first, second):
+    first = first[:] if isinstance(first, PToken) else str(first)
     # NOTE: Scanner needs an endline, and split strings expect line
     #   continuations in order to track the delimiter across multiple lines, so
     #   we append these when needed.
-    str_split = first[0] in '\'"' and second[-1] != first[0]
+    delimiter = None
+    if classify_lexeme(first) is TokenKind.STRING:
+        delimiter = next(char for char in first if char in "'\"")
+    str_split = delimiter is not None and not second.endswith(delimiter)
     if str_split:
         lx_join = first + second + '&' + '\n'
     else:

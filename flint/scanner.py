@@ -59,8 +59,15 @@ class Scanner(object):
         # Identifiers (keywords, functions, variables, ...)
         # NOTE: We permit identifiers to start with _ for preprocessor support
         'id': dict(
-            **{c: 'id' for c in alnum},
+            **{c: 'id' for c in alpha + digit},
+            **{'_': 'id_kind'},
             **{c: 'end' for c in blank + special},
+        ),
+        'id_kind': dict(
+            **{c: 'id' for c in alpha + digit},
+            **{'_': 'id_kind'},
+            **{c: 'end' for c in blank + notchar("'\"", special)},
+            **{"'": 'str_a', '"': 'str_q'},
         ),
         # Blanks
         # NOTE: Endlines are not handled as blanks, but as punctuation
@@ -123,6 +130,8 @@ class Scanner(object):
         'op_kind': dict(
             **{c: 'id' for c in alpha},
             **{c: 'num_int' for c in digit},
+            **{"'": 'str_a', '"': 'str_q'},
+            **{'&': 'end'},
         ),
         'num_int': dict(
             **{c: 'num_int' for c in digit},

@@ -63,12 +63,25 @@ LOGICAL_LITERALS = {'.true.', '.false.'}
 DELIMITERS = {'(', ')', '[', ']', '{', '}'}
 SEPARATORS = {',', ':', '::'}
 
-
 @lru_cache(maxsize=4096)
 def classify_lexeme(value):
     """Return the coarse token kind for a Scanner lexeme."""
     if not value:
         return TokenKind.UNKNOWN
+    if value[0] in ('"', "'"):
+        return TokenKind.STRING
+    if '_"' in value or "_'" in value:
+        # The scanner has already established the literal's boundaries.
+        # Check its prefix without running a pattern matcher on every lexeme.
+        quote = value.find('"')
+        apostrophe = value.find("'")
+        if quote < 0 or 0 <= apostrophe < quote:
+            quote = apostrophe
+        prefix = value[:quote - 1]
+        if value[quote - 1] == '_' and prefix and prefix.isascii() and (
+            prefix.isdigit() or (prefix[0].isalpha() and prefix.isidentifier())
+        ):
+            return TokenKind.STRING
     if value[0].isalpha() or value[0] == '_':
         return TokenKind.NAME
     if value[0].isdigit() or (
@@ -77,8 +90,6 @@ def classify_lexeme(value):
         if any(char in value for char in '.eEdD'):
             return TokenKind.REAL
         return TokenKind.INTEGER
-    if value[0] in ('"', "'"):
-        return TokenKind.STRING
     lower = value.lower()
     if lower in LOGICAL_LITERALS:
         return TokenKind.LOGICAL_LITERAL
