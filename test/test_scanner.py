@@ -1,8 +1,10 @@
+import io
 import sys
 import unittest
 
 sys.path.insert(1, '../')
 from flint.scanner import Scanner
+from flint.lexer import Lexer
 
 
 class TestScanner(unittest.TestCase):
@@ -25,6 +27,24 @@ class TestScanner(unittest.TestCase):
             ('abc\tdef\n', ['abc', '\t', 'def', '\n']),
             ('_cpp_name value\n', ['_cpp_name', ' ', 'value', '\n']),
         ])
+
+    def test_continued_literal_with_intervening_comments_and_blank_lines(self):
+        for quote in ("'", '"'):
+            for prefix in ('', '    '):
+                with self.subTest(quote=quote, prefix=prefix):
+                    text = (
+                        f'print *, {quote}some string &\n'
+                        '! comment\n'
+                        '\n'
+                        '   ! another comment\n'
+                        '  \n'
+                        f'{prefix}&is continued{quote}\n'
+                    )
+                    statements = list(Lexer(io.StringIO(text)))
+                    self.assertEqual(len(statements), 1)
+                    self.assertEqual(statements[0][-1][:],
+                                     f'{quote}some string is continued{quote}')
+                    self.assertEqual(statements[0].source_text(), text)
 
     def test_string(self):
         self.assert_cases([

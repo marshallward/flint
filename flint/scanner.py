@@ -216,6 +216,14 @@ class Scanner(object):
         self.delim = value
     
     def parse(self, line):
+        if not line:
+            return []
+        if self.delim:
+            # Comments and blank physical lines do not end a continued literal.
+            if not line.strip():
+                return [line]
+            if line.lstrip().startswith('!'):
+                return Scanner().parse(line)
         lexemes = []
         ileft = 0
         transitions = Scanner.M
@@ -237,7 +245,8 @@ class Scanner(object):
             self.delim = None
     
             ileft = len(line) - len(line.lstrip())
-            lexemes.append(line[:ileft])
+            if ileft:
+                lexemes.append(line[:ileft])
     
             if line[ileft] == '&':
                 lexemes.append('&')
