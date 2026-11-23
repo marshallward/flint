@@ -1,896 +1,138 @@
 =====
-flint
+Flint
 =====
 
-Flint is a framework for building Fortran code analysis tools in Python.  It
-includes a basic command line tool for linting and code checks, and a more
-general API for developing one's own custom tests.
+Flint is a Python framework for examining Fortran source code.  It provides
+command-line tools for checking formatting, checking source documentation, and
+generating API reference documentation.
 
-More generally, flint provides an interface to a Fortran source code project
-within a Python environment.
+Its Python API exposes source files, modules, procedures, declarations, and
+comments for building project-specific analysis tools.
 
-Flint is in the early stages of development, but currently provides some basic
-functionality.
+Flint is under active development.  Its analysis is structural rather than a
+substitute for compiler validation, and its APIs may change.
 
 
 Installation
 ============
 
-From a source checkout, install flint in a virtual environment using Python
-3.10 or newer:
-
-.. code:: sh
+Flint requires Python 3.10 or newer.  From a source checkout::
 
    python -m venv .venv
    source .venv/bin/activate
    python -m pip install .
 
-For development, use an editable installation so source changes take effect
-without reinstalling:
+On Windows, activate the environment with ``.venv\Scripts\activate`` in Command
+Prompt.  Graphviz is optional and is needed only to render SVG call graphs.
 
-.. code:: sh
 
-   python -m pip install -e .
+Everyday usage
+==============
 
+Commands accept source files or directories.  Directory discovery selects
+``.f90`` and ``.F90`` files.  Use ``-I include/`` to supply additional include
+directories and ``--exclude vendor/`` to omit dependency trees.
 
-Basic usage
-===========
 
-Current functionality is described below.  During this very early stage of
-development, features may change, expand, or be dropped without any notice.
-
-
-Commands
---------
-
-Use ``flint`` to invoke the CLI.  The following tools have been implemented
-with limited features.
-
-``flint report``
-   Apply a generic linter and static analysis to a Fortran project.
-
-   The following tests are included:
-
-   * Trailing whitespace
-   * Indents with mixed tabs and spaces
-   * Tabs within statements
-   * Excessive line length (both with and without comments)
-
-``flint gendoc``
-   Generates a reST documentation file based on docstrings in the source code.
-   Currently follows the Doxygen convention.
-
-``flint format``
-    Report spacing and indentation issues with file, line, and rule name.
-    Use ``--diff`` to preview spacing fixes or ``--write`` to apply them.
-
-    The diagnostic-only ``real-addition-parentheses`` rule reports three or
-    more terms added without grouping when the operands resolve to a real
-    expression. Run it alone with::
-
-       flint format src --only real-addition-parentheses
-
-    ``a + b + c`` and ``(a + b + c)`` are reported for reals;
-    ``(a + b) + c``, ``a + (b + c)``, and integer-only sums are accepted.
-    Mixed integer/real sums are checked. Subtraction and other operators do
-    not extend addition chains. The rule checks nested expressions, including
-    arguments and initializers, and never inserts parentheses automatically.
-    Explicit local/host declarations, local derived-type components, and
-    common numeric conversion intrinsics supply type information. Unresolved
-    names, imported declarations and external function results are skipped;
-    the assignment target does not determine an expression's type.
-
-``flint tag``
-   Return the input files, with statements tagged based on type.  For example,
-   a ``module`` statement is tagged with the letter ``M``.
-
-    This is primarily a debugging tool, but might be of interest to users.
-
-
-Preprocessing
--------------
-
-The lexer expands object-like and named-argument function-like macros in
-Fortran statements, including nested invocations and chained replacements.
-Arguments may span Fortran continuation lines. Recursive macro names are
-disabled during their own expansion. Original invocations, comments, and
-whitespace are retained for source rendering; analysis uses expanded tokens.
-
-Function-like definitions participate in ``#ifdef``, ``#ifndef``,
-``defined(...)``, and ``#undef``. This is a limited Fortran-oriented
-preprocessor, not a complete C preprocessor: variadic macros, stringification,
-and token pasting are unsupported. Function invocations in ``#if`` expressions
-are not expanded by the existing conditional-expression evaluator.
-
-
-Documentation generation
-------------------------
-
-Documentation presence checks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-``flint check-docs src -I include`` checks documentation without rendering a
-site. It reports ``path:line: missing-documentation: kind qualified_name`` and
-returns a nonzero exit status when required documentation is absent. Explicit
-``!>``, ``!<``, and ``!!`` descriptions and declaration-group descriptions count;
-ordinary comments and empty markers do not. Missing includes and skipped input
-files fail the check rather than producing a successful partial assessment.
-
-The default scope includes concrete derived types, named interfaces and generic bindings,
-module variables, and type components, including private entities. Add
-``--strict`` to also require module/submodule, program, function, subroutine,
-abstract-type, type-bound procedure, and finalization-procedure descriptions,
-including private and internal procedures.
-Their variables, types, and interfaces are still checked in
-relaxed mode. Procedure-local variables are excluded. Add ``--arguments``
-independently to check dummy arguments as well; argument
-descriptions must be attached to their declarations. Function-result descriptions,
-and the quality of prose are not checked.
-This is an explicit policy over Flint's parsed entities, not an exact emulation
-of Doxygen's undocumented-entity heuristics.
-
-Private module parameters are also deferred to ``--strict``. Public parameters
-and private non-parameter variables remain checked in relaxed mode. Visibility
-honors module default accessibility, named access statements, and declaration
-attributes.
-
-Repeat ``--exclude PATH`` to omit dependency trees (including resolved symlink
-targets). Repeat ``-I PATH`` for include directories, including directories
-containing headers but no Fortran sources. Files are checked individually so
-alternative drivers with duplicate module names can be checked together.
-Exit codes are 0 for no omissions, 1 for missing documentation, and 2 for
-invalid command inputs or reported incomplete parses. Other parser failures
-also terminate unsuccessfully. This command never edits source files.
-
-``--defer-include PATH`` temporarily defers documentation diagnostics for
-declarations originating in that exact header. Repeat it for multiple headers.
-``--strict`` restores these checks. Other headers (including nested includes)
-and local declarations with macro initializers are still checked. Include
-diagnostics use the original header path and line.
-
-``flint.docgen.check.check_documentation(source, arguments=False, strict=False,
-defer_includes=())`` provides
-the same check for a parsed ``Source``, returning ``DocumentationIssue`` records.
-
-Generating the reference
-~~~~~~~~~~~~~~~~~~~~~~~~
-
-To generate linked reST, SVG call graphs, and diagnostic reports::
-
-   flint gendoc src -o reference --markup doxygen --link-format html \
-       --call-graphs svg --include-private --reports reports --index api-index.rst
-
-Source selection follows resolved symlink targets when applying ``--exclude``.
-Known excluded targets may be absent; other broken source symlinks fail the
-build. Include directories within the selected trees are discovered automatically;
-use ``-I`` for additional directories. Duplicate module names and failed source
-parses are errors. Generation retains documentation snapshots rather than the
-whole parsed project. Empty external-procedure pages are omitted.
-
-``--include-private`` adds diagrams rooted at private/internal procedures.
-``--graph-fontsize`` controls Graphviz text size in points; SVG IDs are unique
-across diagrams so images can be embedded inline. ``--graph-depth 0`` disables
-diagrams without requiring Graphviz.
-
-``--index FILE.rst`` adds an alphabetized module index. ``--index-title`` sets
-its heading (default: ``API reference``). Index links target HTML when
-``--link-format html`` is selected, otherwise they target the generated reST.
-The index filename must not collide with a module page. Project introductions
-and website navigation remain the responsibility of the caller.
-
-Python callers can use ``flint.tools.gendoc.generate_docs()`` with the same
-options (using underscores in keyword names). It returns a ``GenerationResult``
-with ``pages`` (page stems mapped to display titles) and ``summary`` (source,
-page, graph, exclusion, and reference counts). The ``excludes`` argument also
-accepts a mapping from diagnostic labels to paths. Optional ``reports`` output
-contains ``parse.log``, ``excluded-dependencies.txt``, ``external.txt``, and
-``unresolved.txt``. HTML rendering and site navigation belong to the caller.
-
-``flint gendoc`` separates source extraction from reStructuredText rendering:
-
-* ``flint.docgen.model.iter_module_documentation(project)`` yields immutable
-  module snapshots, one at a time. Each record contains plain strings and
-  tuples: signatures, descriptions, variables, nested units, and call names.
-  Qualified names distinguish entries in different scopes; ``display_name``
-  preserves the source spelling. Snapshots retain no parser objects and must
-  be rebuilt after source edits.
-* ``flint.docgen.rst.write_module(stream, module)`` renders a snapshot to a text
-  stream. It can also render records constructed without parsing Fortran.
-* ``flint.tools.gendoc`` connects parsing, extraction, and output files for the
-  command line.
-
-For example::
-
-    import flint
-    from flint.docgen.model import iter_module_documentation
-    from flint.docgen.rst import write_module
-
-    project = flint.parse('example.F90')
-    for module in iter_module_documentation(project):
-        with open(module.name + '.rst', 'w', encoding='utf-8') as output:
-            write_module(output, module)
-
-The initial model preserves the existing generator's coverage and legacy
-docstrings. It does not yet distinguish dummy arguments from local variables,
-filter private entities, or include generic interfaces and module variables in
-the rendered reference. Call names are the parser's existing evidence, not
-resolved cross-module links. The reST writer retains the existing layout;
-call lists are sorted for reproducible output.
-
-Select the source comment format explicitly with ``--markup`` (or the
-``markup=`` keyword of ``write_module``, ``write_unit``, and ``generate_docs``):
-
-* ``plain`` (default): escape punctuation and normalize prose wrapping, retaining
-  paragraph breaks. Markup is displayed literally.
-* ``rst``: retain native reStructuredText, including indentation, directives, and
-  literal blocks. Source comments must contain valid reST.
-* ``doxygen``: translate the supported Doxygen subset to reST, without invoking
-  Doxygen, Pandoc, or an HTML renderer. Existing Fortran comments can be retained
-  while changing the documentation build system.
-
-For example::
-
-    flint gendoc src --output reference --markup doxygen --link-format html
-
-All modes use the existing ``!>``, ``!<``, and ``!!`` comment markers. Extraction
-retains indentation and paragraph boundaries in both unit and variable comments.
-Declaration groups (``!>@{`` / ``!>@}``) remain supported.
-
-The Doxygen frontend supports inline and display mathematics, named mathematical
-environments, namespace/section/anchor targets, citations, references (including
-labeled Markdown reference links), verbatim/code blocks, images, pipe tables,
-simple lists, common inline HTML/code/emphasis, and descriptive commands such as
-``brief``, ``note``, ``param``, and ``return``. ASCII stencil/tree paragraphs are
-preserved as literal blocks. Explicit ``verbatim`` or ``code`` blocks are the
-reliable way to preserve arbitrary diagrams and their spacing.
-
-This is not a complete Doxygen implementation. Unsupported commands and unclosed
-math/code delimiters fail conversion. The frontend produces ``:ref:`` and
-``:cite:`` roles for a project's site-wide resolver (or Sphinx); bare Docutils
-does not resolve those roles itself. Image paths are retained for the caller to
-stage. Doxygen group/page discovery, arbitrary HTML, and implicit symbol-name
-autolinking are not implemented. Source-format migration can be a separate step
-after adopting the new build system.
-
-Cross-module documentation links
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-To prepare independently rendered HTML pages::
-
-    flint gendoc src --output reference --link-format html
-
-Render each resulting ``.rst`` file with Docutils, Pandoc, or another reST
-renderer, using the same basename and an ``.html`` extension in one directory.
-Flint does not run the renderer. Its output uses standard reST links and
-explicit targets, with qualified anchors to distinguish same-named procedures.
-Displayed names retain declaration case, and signatures use compact punctuation
-such as ``subroutine step_MOM(forces, CS)``. Resolved link labels use definition
-spelling unless the call uses a different local alias. Filenames and anchors
-remain stable. Callable entries use ordinary ``api-procedure`` reST containers,
-allowing HTML themes to offer folding without renderer-specific directives.
-
-``flint.docgen.references.ReferenceIndex`` resolves ordinary procedure names
-using local and host scopes, ``USE`` imports (including ``ONLY`` and renames),
-public module re-exports, and external procedures. Reverse caller lists are
-built from these resolved calls, rather than from the parser's unqualified
-graph. Named generic interfaces are linked as interfaces, not as guessed
-overloads. Explicit procedure interface bodies are documented as procedure
-declarations in their enclosing scope, including ``bind(c)`` signatures; no
-implementation body is required. Abstract interface prototypes are not treated
-as callable procedure definitions. Unknown or ambiguous names are omitted from published
-call lists and diagnosed on stderr by the command. Unsupported bindings are
-not guessed from similarly named procedures elsewhere.
-
-Operator, assignment, and defined-I/O interfaces retain complete semantic names,
-such as ``operator(+)``, ``operator(-)``, ``assignment(=)``, and
-``read(formatted)``. Their members, closing specifications, ``public``/``private``
-access lists, and ``USE`` lists use those identities. Equivalent intrinsic
-relational spellings, such as ``operator(.eq.)`` and ``operator(==)``, share a
-semantic identity while original source spelling is preserved. Generic punctuation
-is escaped in generated anchors so distinct operator pages/targets cannot collide.
-
-``ReferenceIndex.generic_interfaces(scope, name)`` tracks the contributors to an
-operator/assignment/I/O generic through local declarations, host scopes, ``ONLY``
-imports, defined-operator renames, and public re-exports. The result's
-``interfaces`` tuple contains the contributing qualified interface identities;
-``incomplete`` is true for unknown dependencies, cyclic re-exports, or other
-unresolved contributors. For example, importing ``operator(+)`` from two modules
-retains both contributing interfaces. Their existing ``implementations`` entries
-retain the specific procedures. This is an overload-set inventory, not compiler
-type checking: multiple contributors are not diagnosed as a semantic ambiguity,
-and expression operand types are not used to select an implementation or create
-operator call-graph edges. Ordinary ``resolve`` still returns a single hyperlink
-target only when one can be identified.
-
-An explicit import from an unindexed module produces a ``Reference.external``
-record containing the module and original symbol name, without an unresolved
-diagnostic. Here external means outside the indexed source, not necessarily
-outside the project. Applications may optionally pass
-``external_modules={module_name: library_name}`` to ``ReferenceIndex`` to add
-library labels; otherwise the record's library is empty. Such references appear
-in a separate ``external-calls`` container grouped by library or, without a
-label, by module, without guessed URLs. This identifies import provenance;
-it does not establish whether a function-like expression refers to a procedure
-or an array, nor verify a procedure signature. Wildcard imports
-without inventories remain unresolved. Library ownership is application policy,
-not built into Flint. Private targets are omitted from forward call and
-implementation lists; the underlying analysis retains them.
-
-``HtmlDestinations`` is a separate policy mapping resolved identities to HTML
-page URLs. Without ``--link-format html``, only same-page references become
-links; other references are plain text. No Sphinx extensions are required.
-A later combined-document policy can reuse symbol resolution while supplying
-different destinations.
-
-
-Call graph diagrams
-~~~~~~~~~~~~~~~~~~~
-
-To add caller/callee diagrams to the generated reference, install Graphviz
-(providing the ``dot`` executable) and run::
-
-    flint gendoc src --output reference --link-format html --call-graphs svg
-
-Flint writes DOT and SVG files beside the reST pages, which reference the SVG
-images. Render the reST to HTML in that same directory and retain the SVG files
-alongside it. Nodes link to the generated HTML pages when ``--link-format html``
-is selected. Clickable SVG links require an HTML renderer that embeds SVG as
-an object or inline SVG rather than an ordinary ``img`` element.
-With Docutils' HTML5 writer, select ``--image-loading=embed`` for inline SVG.
-
-Each public procedure or generic interface with connected calls gets separate
-**Callees** and **Callers** diagrams (empty directions are omitted).
-The highlighted node is the documented entity; arrows point from caller to
-callee. Nodes are grouped in labelled module boxes. ``--graph-depth 2`` follows calls two hops in each diagram's direction
-(default one). Edges are collected during traversal, without adding unrelated
-connections between boundary nodes.
-Cycles are retained. Private and internal procedures are included and labelled
-so that implementation paths remain visible. Unknown, ambiguous, and external
-procedure targets are omitted; generic interfaces remain distinct nodes rather
-than guessed calls to their implementations. Large neighborhoods can still
-produce large diagrams, so start with the default depth.
-
-For DOT export without installing Graphviz::
-
-    flint gendoc src --output reference --call-graphs dot
-
-The Python API separates graph extraction from rendering:
-``flint.docgen.graphs.call_graph(references, qualified_name, depth=1,
-direction='callees')`` returns
-an immutable graph, and ``write_dot(stream, graph, references)`` exports it.
-Use ``direction='callers'`` to follow incoming calls instead.
-
-
-Formatting rules
+Check formatting
 ----------------
 
-Formatting is one application of Flint's parsing and source-analysis API.
-All selected rules share one project parse::
+Report spacing and indentation issues, preview spacing fixes, or apply them::
 
    flint format src/
    flint format --diff src/
    flint format --write src/
-   flint format --only assignment-spacing,operator-spacing src/
-   flint format --skip callable-comma-spacing src/
-   flint format --only indentation src/
-   flint format --list-rules
 
-``python -m flint`` also invokes the CLI. Source paths may be files or
-directories. ``--only`` and ``--skip`` accept repeatable, comma-separated rule
-names. All four rules run by default; skipping takes precedence over selection.
-Unknown names are errors.
+Files are edited only with ``--write``.  Indentation and real-addition grouping
+checks report issues without changing them.  Report and diff modes return a
+nonzero exit status when issues remain.
 
-* ``assignment-spacing`` spaces assignments and removes spaces around named
-  argument equals signs. ``--do-controls`` also normalizes DO-control spacing.
-* ``operator-spacing`` spaces binary operators and normalizes unary spacing,
-  preserving existing exceptions for exponentiation, concatenation, DO controls,
-  and arithmetic inside callable or subscript groups.
-* ``callable-comma-spacing`` spaces commas in known callable argument lists,
-  preserving array subscripts. Repeat ``--exclude-function NAME`` to exempt
-  particular callables (case-insensitive).
-* ``indentation`` checks four-space block bodies, with unindented module contents.
-  The configuration setting ``format.indentation.width`` sets a positive number
-  of spaces per level (default 4).
-  Continuations require at least eight extra spaces, except declarations (four)
-  and continued single-line IF actions (four). ``--strict`` requires eight extra
-  spaces for declarations too, while retaining manual continuation alignment.
-  Comments, preprocessor directives, and inactive branches are skipped.
-  Legacy label-terminated DO loops are not supported.
-  With a custom width, continuation minima scale to two levels, or one level
-  for the declaration and IF-action exceptions.
-
-Default spacing is a minimum, preserving extra alignment spaces. ``--strict``
-requests exact spacing. These retain the policies of the original scripts;
-indentation fixes are future work.
-
-Report and diff modes return 1 when changes are needed, otherwise 0. Successful
-writes return 0 unless selected diagnostic-only rules still find issues.
-Indentation is diagnostic-only: it reports issues in every mode, including
-``--diff`` and ``--write``, and returns 1 when they remain. Spacing fixes can
-still be applied in the same invocation. ``--diff --write`` both previews and
-applies the spacing changes.
-The default never writes source files.
-
-Python callers can reuse a parsed project and obtain proposals without output
-or writes:
-
-.. code:: python
-
-   from flint.formatting.rules import select_rules
-   from flint.formatting.runner import check_spacing, report_spacing
-
-   project = flint.parse('src')
-   rules = select_rules(only=['assignment-spacing', 'operator-spacing'])
-   changes = list(check_spacing(project, rules.values()))
-   for change in changes:
-       print(change.path, change.formatted)
-   report_spacing(changes, diff=True)
-
-``select_rules`` also accepts ``skip``, ``strict``, ``do_controls``, and
-``excluded_functions``. Individual rule modules expose ``prepare_check`` for
-callers needing different options for each rule. Keep source files unchanged
-between parsing and checking; reparse after applying edits.
-
-Diagnostic-only rules use ``select_diagnostic_rules`` with the same rule names,
-``only``, ``skip``, and ``strict`` options, plus ``indent=4`` for the width.
-``select_rules`` returns spacing
-checks; ``select_diagnostic_rules`` returns source-to-issues callables:
-
-.. code:: python
-
-   from flint.formatting.rules import select_diagnostic_rules
-
-   for name, check in select_diagnostic_rules(only=['indentation']).items():
-       for source in project.sources:
-           for issue in check(source):
-               print(issue.path, issue.line_number, name, issue.message)
-
-The direct API is ``flint.formatting.indentation.indentation_issues(source,
-strict=False, indent=4)``. Both APIs reuse the caller's project without reparsing
-or writing.
+Use ``flint format --list-rules`` to see available rules.  Project settings can
+be stored in ``flint.toml``.
 
 
-Project formatting configuration
+Check source documentation
+--------------------------
+
+Find declarations with missing documentation::
+
+   flint check-docs src/
+
+The default policy checks concrete derived types, named interfaces and generic
+bindings, module variables, and type components, with some exclusions.  Add
+``--strict`` to also require descriptions for modules and procedures, among
+other entities; add ``--arguments`` to check dummy arguments.  Documentation
+uses explicit ``!>``, ``!<``, or ``!!`` markers.  Missing required
+documentation produces a nonzero exit status.
+
+
+Generate reference documentation
 --------------------------------
 
-``flint format`` discovers the nearest ``flint.toml`` in the current working
-directory or its parents. Only that file is loaded; files are not merged.
-Discovery starts from the working directory, not each source path.
-``--config PATH`` selects an explicit file instead. An empty configuration file
-can be used to bypass project settings. Missing explicit files, invalid TOML,
-unknown settings, and invalid values are errors before source parsing.
+Generate reStructuredText reference pages from source comments::
 
-For example:
+   flint gendoc src/ -o reference/
 
-.. code:: toml
+Comments are treated as plain prose by default.  Use ``--markup rst`` for
+native reStructuredText or ``--markup doxygen`` for supported Doxygen markup.
+Flint generates reference sources, not a complete website; render the pages
+with a separate reST tool.  Cross-module HTML links, indexes, and call graphs
+are available through additional options.
 
-   [format]
-   rules = ["assignment-spacing", "operator-spacing", "callable-comma-spacing", "indentation"]
-   exclude = ["vendor"]
-
-   [format.assignment-spacing]
-   strict = false
-   do-controls = false
-
-   [format.operator-spacing]
-   strict = false
-
-   [format.callable-comma-spacing]
-   strict = false
-   excluded-functions = ["min", "max"]
-
-   [format.indentation]
-   width = 2
-   module-contents = false
-   continuation-width = 4
-   declaration-continuation-width = 2
-   strict = false
-
-Precedence is explicit CLI options, then project settings, then Flint defaults.
-``--only`` replaces the configured rule list; ``--skip`` removes rules from the
-selection. CLI exclusion lists replace their configured lists rather than
-appending. Configured excluded directories are relative to the configuration
-file; CLI paths remain relative to the working directory. Omitting ``rules``
-enables all built-ins; ``rules = []`` enables none.
-
-``--strict`` and ``--no-strict`` override strictness for every selected rule.
-``--do-controls`` and ``--no-do-controls`` override assignment DO-control policy.
-Block width is set by ``format.indentation.width``. Explicit continuation widths remain
-independent; when omitted, they default to twice the block width (ordinary
-continuations) and once the block width (declarations). Strict indentation uses
-the ordinary continuation width for declarations too. The IF-action exception
-always uses one block width. Module headers and ``contains`` remain aligned;
-``module-contents = true`` indents module bodies by one level.
-
-Python scripts use the same configuration and override machinery:
-
-.. code:: python
-
-   from flint.formatting.config import load_config, configured_rules
-   from flint.formatting.runner import check_spacing
-
-   settings = load_config('flint.toml')
-   checks, diagnostics = configured_rules(settings, only=['indentation'])
-   project = flint.parse('src', excludes=settings.get('exclude'))
-   for name, check in diagnostics.items():
-       for source in project.sources:
-           for issue in check(source):
-               print(issue.path, issue.line_number, name, issue.message)
-   changes = list(check_spacing(project, checks.values()))
-
-``configured_rules`` also accepts a plain Python mapping shaped like the TOML
-``format`` table. Explicit ``False`` and empty lists override settings; ``None``
-means omitted. No configuration is discovered by this function itself.
-Python 3.11+ uses ``tomllib``; older supported Python versions install ``tomli``.
+Run ``flint --help`` or ``flint COMMAND --help`` for command-line options.
+``python -m flint`` provides the same interface.  The ``report`` and ``tag``
+commands provide basic lint reports and statement tags.
 
 
-Development API
----------------
+Using Flint from Python
+=======================
 
-Custom checks can iterate a unit's declared variables directly:
-
-.. code:: python
-
-   def inspect(unit):
-       for variable in unit.variables:
-           if variable.type != 'real':
-               continue
-           location = variable.location
-           documentation = variable.documentation
-           if documentation is None:
-               continue  # Unsupported declaration; choose a reporting policy.
-           for block in documentation:
-               print(variable.name, location, block.comments)
-   for source in project.sources:
-       for root in source.units:
-           for unit in root.walk():
-               inspect(unit)
-
-``unit.variables`` contains that unit's declarations, not those of nested units.
-``unit.walk()`` traverses nested derived types, implementation procedures, and
-explicit interface bodies. Interface bodies are exposed separately through
-``unit.interfaces[i].subprograms``; generic procedure references remain names in
-``interface.procedures``. Use ``walk(include_interfaces=False)`` for analyses
-that want implementation scopes only. Interface arguments have the same variable
-source/documentation API as implementation arguments, with distinct scopes.
-Standard type declarations are extracted using grammar spans so shapes and
-initializer expressions cannot introduce spurious variables. ``double
-precision`` variables have ``type == 'real'``; their full type syntax remains
-available from ``variable.declaration.type_tokens``. Entity shapes override
-declaration-wide DIMENSION attributes.
-
-Procedure declarations, including dummy procedures and procedure-pointer
-components, also populate ``unit.variables`` with ``type == 'procedure'``.
-``is_procedure`` distinguishes them from data objects; ``is_pointer`` reports
-whether the declaration has an explicit ``pointer`` attribute. Non-pointer dummy
-procedures such as ``procedure(iface), optional :: callback`` retain their
-interfaces, attributes, locations, and comments without being treated as arrays.
-The interface specification (including an empty ``procedure()``) is preserved
-in ``variable.declaration.type_tokens``. Attributes such as ``pointer``,
-``nopass``, ``pass(name)``, access, and intent remain in ``variable.attributes``;
-pointer initialization targets remain in ``declaration_tokens``. These scalar
-declarations use the same location and documentation-association APIs as data
-objects. Module procedure pointers and pointer components are checked even in
-relaxed documentation mode; procedure-local pointers remain outside the policy
-and dummy procedures (with or without ``pointer``) are checked with
-``--arguments``. ``--strict`` alone does not enable argument checks. Module-level
-non-pointer procedure declarations follow the strict-only procedure-description
-policy. An attribute-free procedure declaration may omit ``::``; pointer
-initializers require both ``pointer`` and ``::``. Separate ``pointer`` attribute
-statements are not resolved by this support. Type-bound bindings have their own
-model, described below.
-
-Type-bound procedures
-~~~~~~~~~~~~~~~~~~~~~
-
-Each derived type exposes locally declared associations through ``unit.bindings``.
-These are separate from ``unit.variables`` and executable ``unit.subprograms``.
-The binding part starts at the type's ``contains`` statement. Supported forms
-include specific procedure bindings (with implicit or renamed targets), deferred
-bindings, generic bindings, and ``final`` declarations. Generic names retain their
-full spelling, including ``operator(+)``, ``assignment(=)``, and ``read(formatted)``.
-
-Each binding exposes ``name``, ``kind`` (``binding``, ``generic-binding``, or
-``final-binding``), ``targets``, ``interface``, ``attributes``, and ``public``.
-An implicit specific target has the binding's own name; a deferred binding has
-an interface name and no implementation target. Binding accessibility defaults
-to public independently of component accessibility, honors a binding-part
-``private`` statement, and can be overridden by declaration attributes.
-Finalizers have ``public is None`` because they have no binding accessibility.
-
-``statement``, ``span``, ``location``, ``documentation`` and ``description`` retain
-source and comment evidence. Generic target lists belong to one generic binding,
-while a multi-name procedure/final statement produces one entry per name.
-Documentation snapshots expose corresponding ``UnitDocumentation.bindings``
-records. Parsing is structural: it does not resolve target implementations,
-validate override compatibility, copy inherited bindings onto child types, or
-infer dynamic-dispatch call edges.
-
-``variable.declaration`` is a source entity view, ``declaration_tokens`` exposes
-its original tokens and whitespace tails, ``location`` locates the name token,
-and ``documentation`` provides associated comment blocks. These source views
-are computed on demand without retained caches. Unsupported declarations return
-``None`` for declaration/documentation views; recognized declarations without
-comments return an empty tuple. Locations may be absent for undisplayed tokens.
-The historical ``variable.doc`` interface remains available for existing clients;
-new policy checks should use ``documentation`` for explicit association evidence.
-
-Custom declaration checks can inspect source entities without reconstructing
-the declaration's comma nesting or searching for names by spelling:
-
-.. code:: python
-
-   from flint.declarations import declared_entities
-
-   for source in project.sources:
-       for statement in source.statements:
-           entities = declared_entities(statement)
-           if entities is None:
-               continue  # Unrecognized declaration; callers may supply fallback.
-           for entity in entities:
-               print(entity.name, entity.type_tokens, entity.attribute_tokens)
-               if entity.location is not None:
-                   print(source.path, entity.location.line)
-
-Each entity references the original statement, its parsed declaration, and a
-half-open entity token span. ``name_index`` identifies the actual declaration
-token even if the same name occurs earlier in a selector or dimension attribute.
-Standard type declarations with and without ``::`` are supported; procedure
-declarations and compiler extensions may return ``None``. Locations are absent
-for tokens with no displayed span. These are syntactic source views, not
-scope-resolved symbols; recompute them after token edits.
-
-Object-like macro expansions are matched using their semantic tokens, excluding
-the source-only macro-name anchors. Returned declaration spans still index the
-original statement, preserving source spelling and whitespace. Use
-``flint.token.semantic_tokens(tokens)`` to inspect such a span without its
-anchors; hidden expansion and included-file tokens remain in that view.
-
-Comment associations are exposed separately, without imposing documentation
-requirements:
-
-.. code:: python
-
-   from flint.documentation import declaration_comments, entity_comments
-
-   entities = declared_entities(statement)
-   if entities is not None:
-       blocks = declaration_comments(statement, entities)
-       for entity in entities:
-           for block in entity_comments(entity, blocks):
-               print(entity.name, block.placement, block.kind, block.comments)
-
-``CommentBlock`` records comment text, first and last physical lines, placement
-(``leading``, ``trailing``, or ``following``), and kind (``forward`` for ``!>``,
-``backward`` for ``!<``, or ``plain``). ``entity_index`` is the name-token index,
-or ``None`` for declaration-wide documentation.
-
-Leading forward documentation is declaration-wide. Comments within an entity
-or after its separating comma belong to that entity. A final trailing comment
-on a single-line entity list is shared by the declaration. Within a continued
-declaration, a comment after several names on one physical line is shared by
-those names, with one association per entity; it does not apply to other lines.
-Comments inside unfinished shapes or initializers remain entity-specific.
-Adjacent following plain comments are
-exposed as candidates so callers can decide whether to accept them. Blank lines
-and new forward-documentation markers terminate trailing/following association.
-Conflicting forward and backward blocks are retained as evidence, not resolved
-by Flint. The caller decides whether they are an error and what constitutes
-valid documentation. Unsupported declarations return ``None`` for fallback.
-
-Consecutive trailing comment lines remain one block, including repeated ``!<``
-markers and mixtures of ``!!`` and ``!<``. A backward marker anywhere in such a
-block identifies it as backward documentation. Blank lines, intervening code,
-and new forward blocks prevent these associations from being merged.
-
-Flint provides an interface to the details of the source code, which can be
-used to develop tools which are customized to your project.
-
-To parse the source code, call the ``parse()`` function with the top-level
-directory of your project.
-
-.. code:: python
+Parse a project and list its named modules and derived types::
 
    import flint
 
-   project = flint.parse('path/to/source')
+   project = flint.parse("src")
+   for module in project.modules:
+       if not module.name:
+           continue
+       print(module.name)
+       for dtype in module.derived_types:
+           print("  ", dtype.name)
 
-This functions returns a ``Project`` object, which itself contains several
-objects representing the contents and attributes of the source code.
-
-For example, the following code block will return a list of all the modules and
-its derived types.
-
-.. code:: python
-
-   for mod in proj.modules:
-       for dtype in mod.derived_types:
-           print(dtype.name)
-
-For more examples, inspect the ``flint/tools`` directory, which describe the
-command line tools.
+The same parsed source can support custom checks, documentation extraction,
+and formatting analysis.
 
 
-How it Works
-============
+Documentation
+=============
 
-Flint is broken into three stages, which closely resemble compiler frontends.
+See the `documentation index <docs/index.rst>`_ for detailed usage:
 
-1. The ``Scanner`` object takes an input stream and returns the "lexemes", the
-   "words" of the grammar.  No semantic meaning is attached to them at this
-   stage.
+* `Command-line tools <docs/guide.rst#commands>`_.
+* `Formatting rules <docs/guide.rst#formatting-rules>`_ and
+  `project configuration <docs/guide.rst#project-formatting-configuration>`_.
+* `Documentation checks and generation <docs/guide.rst#documentation-generation>`_.
+* `Python API and custom checks <docs/guide.rst#development-api>`_.
+* `Parser architecture <docs/guide.rst#how-it-works>`_.
+* `Supported scope and limitations <docs/limitations.rst>`_.
 
-   One important feature of ``Scanner`` is that it also preserves the
-   non-semantic lexemes.  Examples include grouped whitespace, endlines, and
-   comments.
-
-   Users would generally not use the ``Scanner`` since it is a component of the
-   ``Lexer``, which is described below.
-
-
-2. The lexemes are passed to the ``Lexer``, which is structured as an iterator.
-   It has three major responsibilities:
-
-   1. Lexemes are identified as either semantic or *liminal*, which is our term
-      for non-semantic tokens such as whitespace, comments, or statement
-      separators (``;``).
-
-   2. Lexemes are converted from lines to ``Statements``.  A statement may span
-      many lines (``&``), or a line may contain many statements (``;``).  The
-      ``Lexer`` will resolve these cases and return the next semantic
-      ``Statement``.
-
-   3. Preprocessing is applied at this stage.  Macro substitutions are applied,
-      but the original macro name is preserved.
-
-   Each iteration of the lexer returns a ``Statement``, which is a ``list``
-   subclass containing the ``Token`` lexemes.
-
-   Each ``Token`` contains a ``head`` and ``tail``, which point to lists of the
-   "liminals" inbetween the semantic lexemes.  This includes whitespace
-   (including endlines), line breaks (``&``), statement terminators (``;``),
-   and comments. Each ``Token`` stores lowercase semantic text as its string
-   value, except that quoted string literals retain their case. The original
-   spelling is retained in ``token.original`` and returned by ``str(token)``.
-   Equality and hashing use ordinary string operations: compare names with
-   lowercase strings, such as ``token == 'field'``, not ``token == 'FIELD'``.
-   Token-to-token comparisons normalize both names at construction time.
-
-   Slicing, joining, and other inherited string operations use semantic text.
-   For source output use ``str(token)`` or ``Statement.source_text()``; for
-   example, use ``''.join(map(str, tokens))`` to preserve spelling. Literal
-   contents are case-sensitive. Preprocessed tokens compare and hash by their
-   semantic value while ``str(token)`` returns their macro source text.
-
-   There is also a ``PToken`` subclass from preprocessed content.  These tokens
-   display as the original unprocessed lexemes, but are evaluated as the
-   postprocessed value.  For example, macros appear unchanged but use their
-   substituted value in comparison tests.  Values from an ``#include``
-   statement appear as empty strings but are returned as semantically valid
-   statements.
-
-   Although we call these "tokens", they are not quite equivalent to the tokens
-   produced by a compiler's parser, since we do not yet classify them into, for
-   example, identifiers or operators.  There is some advantage in deferring
-   this, since most Fortran keywords can also be used as identifiers.
-
-   As with the ``Scanner``, most users will never need to interact with the
-   ``Lexer``, which is a component of the ``Parser`` described below.
+Fortran and preprocessor coverage is partial.  Flint does not provide complete
+type checking, overload selection, or dynamic-dispatch resolution.
 
 
-3. Finally, the ``Lexer`` output is passed to the ``Parser``, which interprets
-   the semantic contents to recreate an abstraction of the source code and its
-   components.
+Development
+===========
 
-   This is where modules, subprograms, variables, and other content are
-   organized into equivalent data structures which can be probed and traversed
-   for further analysis.
+Install an editable checkout and run the test suite::
 
-   The ``Parser`` is contained with the ``Source`` objects, which represent
-   abstractions of the source code (aka "translation units" in compiler-talk).
+   python -m pip install -e . docutils
+   python -m unittest discover -s test -v
 
-   If working as intended, this should be the only level at which the user is
-   required to interact with the parser.
-
-   This is also the least developed part of flint, so at this point I will just
-   say to watch this space for future work.
+Some optional tests require Graphviz or external project tooling.
 
 
-Streaming source locations
-==========================
+License
+========
 
-``flint.locations.source_locations(source)`` yields ``(statement, location)``
-pairs without adding token fields or storing an index. Each location includes
-the token, its index within the statement, and one-based ``line``, ``column``,
-``end_line``, and ``end_column`` coordinates. Ends are exclusive; columns count
-characters, not bytes or expanded tabs. Consume the iterator directly to keep
-memory bounded; collecting all results into a list naturally retains them.
-
-``statement_locations(statement)`` provides the same locations for an isolated
-statement. Columns are ``None`` until an absolute column can be determined from
-a newline or the optional ``column=`` argument. This matters for statements
-following a semicolon. Whole-source traversal provides exact columns.
-
-Positions describe the current rendered source and must be recomputed after
-edits. A continued token can span several lines. Macro tokens that display an
-invocation point to that invocation; invisible expansion tokens have no separate
-span and are omitted. This API does not reconstruct included-file origins.
-
-
-Shared spacing runner
-=====================
-
-``flint.formatting.runner`` separates checking from reporting and writing.
-A check is a function that receives a source and returns a statement edit
-collector. This permits scope-dependent checks to prepare context once per file.
-Several checks can share one parse and propose edits against the same unchanged
-tokens::
-
-   import flint
-   from flint.formatting.runner import check_spacing, report_spacing
-   from flint.formatting.spacing import spacing_edits
-
-   def assignment_check(source):
-       def collect(statement):
-           for token in statement:
-               if token.syntax_role == 'assignment':
-                   yield from spacing_edits(token, ' ', ' ')
-       return collect
-
-   project = flint.parse('src')
-   results = list(check_spacing(project, [assignment_check]))
-   status = report_spacing(results, diff=True)
-
-``FileChange`` results expose the path, original text, proposed text, and changed
-lines. ``report_spacing`` supports ``report``, ``diff``, and ``write``; a dry run
-returns 1 when changes are proposed, otherwise 0. ``run_spacing`` is a convenience
-wrapper accepting paths and excludes, or an existing ``project``. Source files
-must remain unchanged between parsing and checking. After writing edits, reparse
-before another run. Identical gap edits coalesce; conflicting edits raise an
-error. Checks retain their own policies and options, for example via
-``functools.partial``.
-
-
-Experimental declaration grammar
-================================
-
-``flint.declarations.parse_declaration(statement)`` recognizes the structure of
-a type declaration using an explicit grammar tree. It returns a ``Declaration``
-with half-open token spans for the type specifier, attributes, entities, and
-initializers, plus the index of ``::`` when present. Slice the original statement
-with these spans to retain token identity, original spelling, and whitespace::
-
-   from flint.declarations import parse_declaration
-
-   declaration = parse_declaration(statement)
-   if declaration is not None:
-       for start, end in declaration.entities:
-           entity_tokens = statement[start:end]
-
-The grammar covers intrinsic, derived, and polymorphic type declarations,
-including nested selectors, array/coarray shapes, and initialization. Expressions
-inside these regions remain opaque; recognition is not full Fortran validation.
-Attribute compatibility and scope constraints are not checked. Unsupported forms
-(including procedure declarations and nonstandard type-size syntax) return
-``None`` so callers can retain their existing analysis path.
-
-This API is opt-in while the grammar is evaluated as a replacement for existing
-declaration analysis. It does not mutate or cache statements. Recompute spans
-after inserting, removing, or replacing tokens. The rule descriptions follow
-J3/24-007 R703 and R801-R805.
-
-
-Unimplemented Features
-======================
-
-The "unknown unknowns" probably exceed the "known unknowns" at this stage, but
-we are aware of the following issues.
-
-* The Fortran expressions themselves remain unparsed beyond identification of
-  its tokens.  Further parsing such as AST generation is not yet attempted.
-
-* Expressions inside of an ``#if`` or ``#elif`` statement are not parsed, and
-  for simplicity are currently assumed to always be false.
-
-  To fix this would require a full expression parser, which is not yet
-  available.
+Flint is distributed under the `Apache License, Version 2.0 <LICENSE>`_.
+See also `NOTICE <NOTICE>`_ and `AUTHORS <AUTHORS>`_.
