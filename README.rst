@@ -61,8 +61,24 @@ with limited features.
    Currently follows the Doxygen convention.
 
 ``flint format``
-   Report spacing and indentation issues with file, line, and rule name.
-   Use ``--diff`` to preview spacing fixes or ``--write`` to apply them.
+    Report spacing and indentation issues with file, line, and rule name.
+    Use ``--diff`` to preview spacing fixes or ``--write`` to apply them.
+
+    The diagnostic-only ``real-addition-parentheses`` rule reports three or
+    more terms added without grouping when the operands resolve to a real
+    expression. Run it alone with::
+
+       flint format src --only real-addition-parentheses
+
+    ``a + b + c`` and ``(a + b + c)`` are reported for reals;
+    ``(a + b) + c``, ``a + (b + c)``, and integer-only sums are accepted.
+    Mixed integer/real sums are checked. Subtraction and other operators do
+    not extend addition chains. The rule checks nested expressions, including
+    arguments and initializers, and never inserts parentheses automatically.
+    Explicit local/host declarations, local derived-type components, and
+    common numeric conversion intrinsics supply type information. Unresolved
+    names, imported declarations and external function results are skipped;
+    the assignment target does not determine an expression's type.
 
 ``flint tag``
    Return the input files, with statements tagged based on type.  For example,

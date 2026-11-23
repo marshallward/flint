@@ -6,6 +6,7 @@ from flint.formatting.rules import ALL_RULES, RULES
 
 
 SCHEMA = {
+    'real-addition-parentheses': {},
     'assignment-spacing': {'strict': bool, 'do-controls': bool},
     'operator-spacing': {'strict': bool},
     'callable-comma-spacing': {'strict': bool, 'excluded-functions': list},

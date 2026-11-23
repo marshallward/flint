@@ -1,7 +1,7 @@
 """Named built-in formatting rules, usable from Python or the CLI."""
 from functools import partial
 
-from flint.formatting import assignment, callables, indentation, operators
+from flint.formatting import addition, assignment, callables, indentation, operators
 
 
 RULES = {
@@ -12,6 +12,7 @@ RULES = {
 
 DIAGNOSTIC_RULES = {
     'indentation': indentation.indentation_issues,
+    'real-addition-parentheses': addition.addition_issues,
 }
 
 ALL_RULES = {**RULES, **DIAGNOSTIC_RULES}
@@ -53,6 +54,7 @@ def select_diagnostic_rules(only=None, skip=(), *, strict=False, indent=4):
     if unknown:
         raise ValueError('Unknown formatting rule(s): ' + ', '.join(sorted(unknown)))
     return {
-        name: partial(DIAGNOSTIC_RULES[name], strict=strict, indent=indent)
+        name: (partial(DIAGNOSTIC_RULES[name], strict=strict, indent=indent)
+               if name == 'indentation' else DIAGNOSTIC_RULES[name])
         for name in names if name in DIAGNOSTIC_RULES and name not in skip
     }
