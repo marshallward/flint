@@ -443,7 +443,7 @@ class Lexer(object):
                     break
 
             if inc_path:
-                with open(inc_path) as inc:
+                with open(inc_path, newline='') as inc:
                     # Share the macro environment before leading directives are
                     # processed by the constructor, not after their definitions
                     # and conditional results have already been consumed.

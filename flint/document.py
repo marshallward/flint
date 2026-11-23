@@ -3,6 +3,8 @@
 :copyright: Copyright 2021 Marshall Ward, see AUTHORS for details.
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
+from flint.endlines import count_endlines
+
 # TODO: Make this a class with a configurable token set
 
 doc_tokens = ('!<', '!>', '!!')
@@ -23,7 +25,7 @@ def docstrip(tokens, oneline=False):
     gap = ''
     for tok in tokens:
         if any(tok.startswith(d) for d in doc_tokens):
-            if docstr_tokens and gap.count('\n') > 1 and docstr_tokens[-1]:
+            if docstr_tokens and count_endlines(gap) > 1 and docstr_tokens[-1]:
                 docstr_tokens.append('')
             docstr_tokens.append(tok[2:].removeprefix(' '))
             gap = ''

@@ -6,6 +6,7 @@ after whitespace edits, recompute them. Macro expansions with no displayed text
 have no separate source span. Included-file origins are not inferred.
 """
 from typing import NamedTuple
+from flint.endlines import count_endlines, line_tail
 
 
 class TokenLocation(NamedTuple):
@@ -18,9 +19,9 @@ class TokenLocation(NamedTuple):
 
 
 def _advance(text, line, column):
-    count = text.count('\n')
+    count = count_endlines(text)
     if count:
-        return line + count, len(text) - text.rfind('\n')
+        return line + count, len(line_tail(text)) + 1
     return line, None if column is None else column + len(text)
 
 
@@ -40,8 +41,8 @@ def statement_locations(statement, *, column=None):
         raise ValueError('Statement has no source line number')
     if column is None:
         head = ''.join(statement[0].head)
-        if '\n' in head:
-            column = len(head) - head.rfind('\n')
+        if count_endlines(head):
+            column = len(line_tail(head)) + 1
     yield from _locations(statement, line, column)
 
 
@@ -54,12 +55,12 @@ def _statement_line_locations(statement):
         raise ValueError('Statement has no source line number')
     for index, token in enumerate(statement):
         text = str(token)
-        end_line = line + text.count('\n')
+        end_line = line + count_endlines(text)
         if text:
             yield TokenLocation(index, token, line, None, end_line, None)
         line = end_line
         for gap in token.tail:
-            line += gap.count('\n')
+            line += count_endlines(gap)
 
 
 def _locations(statement, line, column):

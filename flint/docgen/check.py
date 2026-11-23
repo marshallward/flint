@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from flint.document import docstrip
+from flint.endlines import count_endlines
 from flint.documentation import documentation_pass, declaration_comments, _comments, _groups
 from flint.docgen.model import _scope_metadata
 from flint.token import semantic_tokens
@@ -47,7 +48,7 @@ def _leading_scope_documented(statement, *, first=False):
     """A preceding declaration's backward comment does not describe this scope."""
     statement = getattr(statement, 'origin_statement', statement)
     head = statement[0].head
-    start_line = statement.line_number - sum(text.count('\n') for text in head)
+    start_line = statement.line_number - sum(count_endlines(text) for text in head)
     for group in reversed(list(_groups(_comments(head, start_line)))):
         marked = [(line, text) for line, text in group if text.startswith(('!>', '!<', '!!'))]
         if not marked:

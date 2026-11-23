@@ -1,7 +1,7 @@
 """The flint Scanner.
 
-The ``Scanner`` object creates a list of Fortran lexemes from a line of Fortran
-source.  The line is expected to be terminated with an endline (``\n``).
+The ``Scanner`` object creates a list of Fortran lexemes from a physical line.
+LF, CRLF, and CR are preserved as single endline lexemes.
 
 We use an object here because there is some "state" regarding line continuation
 of split strings.  But more modular design options are possible and could be
@@ -216,11 +216,24 @@ class Scanner(object):
         self.delim = value
     
     def parse(self, line):
+        # The state machine uses LF internally. Only the physical terminator
+        # is normalized; restore its exact spelling in the resulting lexeme.
+        ending = '\r\n' if line.endswith('\r\n') else '\r' if line.endswith('\r') else None
+        if ending is None:
+            return self._parse_line(line)
+        lexemes = self._parse_line(line[:-len(ending)] + '\n')
+        if lexemes and lexemes[-1].endswith('\n'):
+            lexemes[-1] = lexemes[-1][:-1] + ending
+        return lexemes
+
+    def _parse_line(self, line):
         if not line:
             return []
         if self.delim:
             # Comments and blank physical lines do not end a continued literal.
             if not line.strip():
+                if line.endswith('\n'):
+                    return ([line[:-1]] if line[:-1] else []) + ['\n']
                 return [line]
             if line.lstrip().startswith('!'):
                 return Scanner().parse(line)

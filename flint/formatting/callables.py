@@ -1,6 +1,7 @@
 """Spacing of commas in known callable argument lists."""
 from typing import NamedTuple
 from functools import partial
+from flint.endlines import count_endlines
 
 from flint.intrinsics import intrinsic_fns
 from flint.formatting.spacing import format_spacing, propose_edit, spacing_edits
@@ -28,7 +29,7 @@ def prepare_check(source, strict=False, excluded_functions=()):
 
 
 def comma_spacing_edits(token, strict=False):
-    newline_indices = [index for index, item in enumerate(token.tail) if '\n' in item]
+    newline_indices = [index for index, item in enumerate(token.tail) if count_endlines(item)]
     if newline_indices:
         if not strict:
             return []

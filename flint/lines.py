@@ -4,6 +4,7 @@
 :license: Apache License, Version 2.0, see LICENSE for details.
 """
 import itertools
+from flint.endlines import is_endline
 
 
 class Lines(object):
@@ -19,7 +20,7 @@ class Lines(object):
         next_stmt = next(self.statements)
 
         # Create a new list with semantic and liminal tokens in a single list
-        self.buffer = next_stmt[0].head
+        self.buffer = list(next_stmt[0].head)
         for tok in next_stmt:
             self.buffer += tok.pp if hasattr(tok, 'pp') else [tok]
             self.buffer += tok.tail
@@ -31,7 +32,7 @@ class Lines(object):
         return self.__next__()
 
     def __next__(self):
-        while '\n' not in self.buffer:
+        while not any(is_endline(item) for item in self.buffer):
             try:
                 next_stmt = next(self.statements)
             except StopIteration:
@@ -49,7 +50,7 @@ class Lines(object):
                 self.buffer += tok.pp if hasattr(tok, 'pp') else [tok]
                 self.buffer += tok.tail
 
-        idx = self.buffer.index('\n')
+        idx = next(i for i, item in enumerate(self.buffer) if is_endline(item))
         line, self.buffer = self.buffer[:idx], self.buffer[idx+1:]
 
         return line

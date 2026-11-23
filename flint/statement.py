@@ -5,6 +5,7 @@
 """
 
 from flint.token import Token, TokenKind
+from flint.endlines import line_tail, normalize_endlines
 
 
 DECLARATION_STARTERS = {
@@ -83,8 +84,8 @@ class Statement(list):
         if not self:
             return ''
         head = ''.join(self[0].head)
-        prefix = head.rsplit('\n', 1)[-1] if head else ''
-        return (prefix + self.source_text()[len(head):]).rstrip('\n')
+        prefix = line_tail(head)
+        return (prefix + self.source_text()[len(head):]).rstrip('\r\n')
 
     def compact_text(self):
         """Return this statement with whitespace collapsed."""
@@ -302,8 +303,8 @@ class Statement(list):
     # XXX: Dumb name... override __str__?
     def gen_stmt(self):
         """Recreate the statement by gathering tokens and null tokens."""
-        header = ''.join(self[0].head)
-        footer = ''.join(self[-1].tail)
+        header = normalize_endlines(''.join(self[0].head))
+        footer = normalize_endlines(''.join(self[-1].tail))
         tag = getattr(self, 'tag', None) or '~'
 
         stmt = '{}│ '.format(tag)
@@ -312,7 +313,7 @@ class Statement(list):
         stmt += str(self[-1])
         stmt += ''.join(footer.rsplit('\n', 1)[:-1]) if footer else ''
 
-        return stmt.replace('\n', '\n │ ')
+        return normalize_endlines(stmt).replace('\n', '\n │ ')
 
     def reformat(self):
         """This is just a placeholder at the moment, but the idea is that this

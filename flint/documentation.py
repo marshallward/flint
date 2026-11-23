@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from flint.declarations import declared_entities
 from flint.locations import _statement_line_locations
+from flint.endlines import count_endlines
 
 
 _active_pass = ContextVar('flint_documentation_pass', default=None)
@@ -53,7 +54,7 @@ def _comments(gap, line):
     for item in gap:
         if item.startswith('!'):
             yield line, item
-        line += item.count('\n')
+        line += count_endlines(item)
 
 
 def _groups(comments):
@@ -106,7 +107,7 @@ def _analyze_declaration(statement, entities=None):
     result = []
     head = statement[0].head
     first_line = statement.line_number
-    leading = list(_groups(_comments(head, first_line - sum(s.count('\n') for s in head))))
+    leading = list(_groups(_comments(head, first_line - sum(count_endlines(s) for s in head))))
     for group in reversed(leading):
         if group[0][1].startswith('!>'):
             result.append(CommentBlock(tuple(text for _, text in group), group[0][0],
@@ -119,8 +120,8 @@ def _analyze_declaration(statement, entities=None):
         # Macro expansion tokens have no displayed span, but may own the
         # original trailing comments. Count their liminals without inventing
         # physical token locations for declaration names.
-        end_line = cursor_line + str(token).count('\n')
-        cursor_line = end_line + sum(text.count('\n') for text in token.tail)
+        end_line = cursor_line + count_endlines(str(token))
+        cursor_line = end_line + sum(count_endlines(text) for text in token.tail)
         for group in _groups(_comments(token.tail, end_line)):
             owner = next((name for name in reversed(names) if name <= index), None)
             if owner is None:

@@ -11,6 +11,7 @@ offsets and should not be reused with a different parse.
 """
 
 from typing import NamedTuple
+from flint.endlines import count_endlines, line_tail
 
 
 class LineChange(NamedTuple):
@@ -35,7 +36,7 @@ class SpacingEdit(NamedTuple):
 def simple_liminals(liminals) -> bool:
     """Return true for simple same-line whitespace."""
     return all(
-        (item == '' or item.isspace()) and '\n' not in item
+        (item == '' or item.isspace()) and not count_endlines(item)
         for item in liminals
     )
 
@@ -117,8 +118,8 @@ def statement_line(statement, replacements):
     if not statement:
         return ''
     head = liminal_text(statement[0].head, replacements)
-    prefix = head.rsplit('\n', 1)[-1] if head else ''
-    return (prefix + statement_text(statement, replacements)[len(head):]).rstrip('\n')
+    prefix = line_tail(head)
+    return (prefix + statement_text(statement, replacements)[len(head):]).rstrip('\r\n')
 
 
 def render(statements, edits=()) -> str:

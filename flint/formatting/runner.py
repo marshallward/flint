@@ -43,7 +43,8 @@ def check_spacing(project, checks):
         return
     for source in project.sources:
         path = Path(source.path)
-        original = path.read_text(encoding='utf-8', errors='ignore')
+        with path.open(encoding='utf-8', errors='ignore', newline='') as stream:
+            original = stream.read()
         collectors = [check(source) for check in checks]
         formatted, changes = format_spacing(
             source.statements,
@@ -72,7 +73,8 @@ def report_spacing(results, *, write=False, report=False, diff=False):
                 fromfile=str(result.path), tofile=str(result.path),
             )), end='')
         if write:
-            result.path.write_text(result.formatted, encoding='utf-8')
+            with result.path.open('w', encoding='utf-8', newline='') as stream:
+                stream.write(result.formatted)
     if report:
         seen = set()
         for change in all_changes:

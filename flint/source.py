@@ -34,7 +34,7 @@ class Source(object):
         # XXX: This chokes on non-unicode strings (e.g. latin-1).
         #  Using errors='replace' gets past these errors but will break
         #  roundtrip parsing.  This needs some additional thought.
-        with open(path, errors='replace') as fpath:
+        with open(path, errors='replace', newline='') as fpath:
             lexer = Lexer(fpath, self.include_paths)
             for stmt in lexer:
                 unit_type = get_program_unit_type(stmt)
