@@ -245,7 +245,7 @@ class Lexer(object):
 
                 elif lx == '&':
                     idx = lexemes.index('&')
-                    prior_tail += lexemes[idx:] + self.get_liminals()
+                    prior_tail += lexemes[idx:] + self.get_liminals(stop_at_semicolon=True)
                     line_continue = True
                     break
 
@@ -305,14 +305,15 @@ class Lexer(object):
         # expression is not an invocation and evaluates to zero.
         return {**self.macros, **{name: [name, '0'] for name in self.fn_macros}}
 
-    def get_liminals(self):
+    def get_liminals(self, *, stop_at_semicolon=False):
         lims = []
         for line in self.source:
             self.line_number += 1
             lexemes = self.scanner.parse(line)
 
             split = 0
-            while split < len(lexemes) and is_liminal(lexemes[split]):
+            while (split < len(lexemes) and is_liminal(lexemes[split])
+                   and not (stop_at_semicolon and lexemes[split] == ';')):
                 split += 1
             new_lims = lexemes[:split]
             lims += new_lims

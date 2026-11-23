@@ -320,8 +320,20 @@ class Unit(object):
             self.interfaces.append(block)
             self.statements.extend(block.statements)
 
+        elif stmt[0] == 'enum':
+            # ENUM, BIND(C) is an unnamed declaration construct, not a
+            # program unit or derived type. Retain its source without inventing
+            # a nested scope; enumerator symbols are not yet modeled.
+            stmt.tag = 'D'
+            self.statements.append(stmt)
+            for enum_stmt in statements:
+                enum_stmt.tag = 'd'
+                self.statements.append(enum_stmt)
+                if enum_stmt == ['end', 'enum'] or enum_stmt == ['endenum']:
+                    break
+
         # TODO: Parse out type
-        elif (stmt[0] == 'enum' or (stmt[0] == 'type' and stmt[1] != '(')):
+        elif stmt[0] == 'type' and stmt[1] != '(':
             dtype = Unit()
             dtype.parse(statements)
 

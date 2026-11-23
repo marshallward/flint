@@ -25,6 +25,55 @@ def parse_source(text):
 
 
 class TestUnit(unittest.TestCase):
+    def test_continued_end_before_semicolon_keeps_unit_boundaries(self):
+        text = (
+            'program sample\n'
+            'integer :: endsubroutine\n'
+            'contains\n'
+            'subroutine integer\n'
+            'integer :: subroutine\n'
+            'endsubroutine &\n'
+            '= subroutine/subroutine\n'
+            'endsubroutine &\n'
+            '\n'
+            '! keep the statement separator\n'
+            '; end program\n'
+        )
+        source = parse_source(text)
+        self.assertEqual(render(source.statements), text)
+        root = source.units[0]
+        self.assertEqual(len(root.subprograms), 1)
+        child = root.subprograms[0]
+        self.assertEqual(child.name, 'integer')
+        self.assertEqual(child.statements[-2][:], [
+            'endsubroutine', '=', 'subroutine', '/', 'subroutine',
+        ])
+        self.assertEqual(child.statements[-1][:], ['endsubroutine'])
+        self.assertEqual(root.statements[-1][:], ['end', 'program'])
+
+    def test_enum_does_not_consume_following_declarations_or_units(self):
+        for closing in ('end enum', 'endenum'):
+            with self.subTest(closing=closing):
+                text = (
+                    'program sample\n'
+                    'implicit none\n'
+                    'enum, bind(c)\n'
+                    'enumerator :: a = 1, b = 2\n'
+                    + closing + '\n'
+                    'integer :: value\n'
+                    'value = a\n'
+                    'contains\n'
+                    'subroutine work()\n'
+                    'end subroutine work\n'
+                    'end program sample\n'
+                )
+                source = parse_source(text)
+                self.assertEqual(render(source.statements), text)
+                root = source.units[0]
+                self.assertEqual(root.derived_types, [])
+                self.assertEqual([v.name for v in root.variables], ['value'])
+                self.assertEqual([u.name for u in root.subprograms], ['work'])
+
     def test_forall_statement_and_construct_preserve_following_units(self):
         for body in (
             'forall (i = 1:size(a)) a(i) = real(i)\n',
