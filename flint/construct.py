@@ -45,7 +45,7 @@ class Construct(object):
                 return len(stmt) == 1
             elif stmt[0] == 'if':
                 return (stmt[0], stmt[-1]) == ('if', 'then')
-            elif stmt[0] == 'where':
+            elif stmt[0] in ('where', 'forall'):
                 assert stmt[1] == '('
                 par_count = 1
                 for idx, tok in enumerate(stmt[2:], start=2):

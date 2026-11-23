@@ -25,6 +25,38 @@ def parse_source(text):
 
 
 class TestUnit(unittest.TestCase):
+    def test_forall_statement_and_construct_preserve_following_units(self):
+        for body in (
+            'forall (i = 1:size(a)) a(i) = real(i)\n',
+            'forall (i = 1:size(a))\n'
+            '  a(i) = real(i)\n'
+            'end forall\n',
+            'forall (i = 1:size(a))\n'
+            '  forall (j = 1:size(a)) a(j) = real(j)\n'
+            'end forall\n',
+        ):
+            with self.subTest(body=body):
+                text = (
+                    'program sample\n'
+                    'contains\n'
+                    'subroutine work(a)\n'
+                    'real :: a(:)\n'
+                    'integer :: i, j\n'
+                    + body
+                    + 'print *, a\n'
+                    'end subroutine work\n'
+                    'subroutine after()\n'
+                    'print *, "after"\n'
+                    'end subroutine after\n'
+                    'end program sample\n'
+                )
+                source = parse_source(text)
+                self.assertEqual(render(source.statements), text)
+                self.assertEqual(
+                    [unit.name for unit in source.units[0].subprograms],
+                    ['work', 'after'],
+                )
+
     def test_non_header_rejected_before_later_keyword(self):
         for text in ('call work(function)\n', 'x = function(1)\n'):
             with self.subTest(text=text):
