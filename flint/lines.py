@@ -13,15 +13,16 @@ class Lines(object):
     This is more of a proof-of-concept than for actual use; it's much more
     efficient to just open the file!
     """
-    def __init__(self, statements):
+    def __init__(self, statements, *, leading_liminals=None):
         self.statements = iter(statements)
 
         # Initialize the buffer, including the head liminals
-        next_stmt = next(self.statements)
+        next_stmt = next(self.statements, None)
 
         # Create a new list with semantic and liminal tokens in a single list
-        self.buffer = list(next_stmt[0].head)
-        for tok in next_stmt:
+        self.buffer = list(leading_liminals if leading_liminals is not None
+                           else next_stmt[0].head if next_stmt else [])
+        for tok in next_stmt or ():
             self.buffer += tok.pp if hasattr(tok, 'pp') else [tok]
             self.buffer += tok.tail
 

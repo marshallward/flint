@@ -343,6 +343,7 @@ class Scanner(object):
                 ileft = dec_tok
                 state = 'op'
     
-        lexemes.append(line[ileft:])
+        if ileft < len(line):
+            lexemes.append(line[ileft:])
     
         return lexemes

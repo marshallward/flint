@@ -24,10 +24,18 @@ class Source(object):
         # Contents
         self.units = []
         self.statements = []
+        self.leading_liminals = []
 
     @property
     def lines(self):
-        return Lines(self.statements)
+        return Lines(self.statements, leading_liminals=self.leading_liminals)
+
+    def source_text(self):
+        """Reconstruct source, including files with no Fortran statements."""
+        return ''.join(self.leading_liminals) + ''.join(
+            str(token) + ''.join(token.tail)
+            for statement in self.statements for token in statement
+        )
 
     def parse(self, path, graph=None):
         self.path = path
@@ -36,6 +44,9 @@ class Source(object):
         #  roundtrip parsing.  This needs some additional thought.
         with open(path, errors='replace', newline='') as fpath:
             lexer = Lexer(fpath, self.include_paths)
+            # Ordinarily shared with the first token's head. Keep an owner
+            # even when comments/directives produce no semantic statements.
+            self.leading_liminals = lexer.prior_tail
             for stmt in lexer:
                 unit_type = get_program_unit_type(stmt)
                 unit = unit_type()

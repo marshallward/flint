@@ -122,11 +122,12 @@ def statement_line(statement, replacements):
     return (prefix + statement_text(statement, replacements)[len(head):]).rstrip('\r\n')
 
 
-def render(statements, edits=()) -> str:
+def render(statements, edits=(), *, leading_liminals=None) -> str:
     """Render parsed source, optionally applying proposals only to output."""
     replacements = edit_replacements(edits)
-    output = []
-    first = True
+    output = ([] if leading_liminals is None
+              else [liminal_text(leading_liminals, replacements)])
+    first = leading_liminals is None
     for statement in statements:
         if not statement:
             continue
@@ -151,7 +152,7 @@ def changed_lines(statement, original, formatted, source_lines=None):
                 yield line_number, original_line
 
 
-def format_spacing(statements, collect_edits, source_lines=None):
+def format_spacing(statements, collect_edits, source_lines=None, *, leading_liminals=None):
     """Collect proposals and return formatted output plus line diagnostics."""
     statements = list(statements)
     edits = []
@@ -171,4 +172,4 @@ def format_spacing(statements, collect_edits, source_lines=None):
                 source_lines,
             ):
                 changes.append(LineChange(line_number, original))
-    return render(statements, edits), changes
+    return render(statements, edits, leading_liminals=leading_liminals), changes

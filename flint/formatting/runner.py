@@ -52,6 +52,7 @@ def check_spacing(project, checks):
                 collect(statement) for collect in collectors
             ),
             original.splitlines(),
+            leading_liminals=getattr(source, 'leading_liminals', None),
         )
         if formatted != original:
             yield FileChange(path, original, formatted, tuple(

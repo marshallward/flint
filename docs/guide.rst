@@ -797,6 +797,13 @@ Flint is broken into three stages, which closely resemble compiler frontends.
 Streaming source locations
 ==========================
 
+``source.source_text()`` reconstructs the parsed file, including comment-only,
+whitespace-only, and empty files. ``source.leading_liminals`` retains the initial
+source text even when there is no statement to own it; otherwise it is shared
+with the first token's head. No synthetic Fortran statement is introduced.
+For low-level rendering, ``flint.formatting.spacing.render`` accepts an optional
+``leading_liminals=`` argument for the same purpose.
+
 ``flint.locations.source_locations(source)`` yields ``(statement, location)``
 pairs without adding token fields or storing an index. Each location includes
 the token, its index within the statement, and one-based ``line``, ``column``,
