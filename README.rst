@@ -2,12 +2,13 @@
 Flint
 =====
 
-Flint is a Python framework for examining Fortran source code.  It provides
-command-line tools for checking formatting, checking source documentation, and
-generating API reference documentation.
+Flint is a Python library and command-line toolkit for understanding and working
+with Fortran source code.
 
-Its Python API exposes source files, modules, procedures, declarations, and
-comments for building project-specific analysis tools.
+Flint provides an API for exploring and analyzing source code, and making
+precise, context-aware changes where needed.  Command-line tools built on this
+API cover common tasks, from linter-style checks to higher-level features such
+as comment analysis and documentation generation.
 
 Flint is under active development.  Its analysis is structural rather than a
 substitute for compiler validation, and its APIs may change.
